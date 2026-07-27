@@ -12,7 +12,7 @@ import {
 	ComboboxValue,
 	useComboboxAnchor
 } from '@pherus/ui/combobox'
-import { FieldShell, useFieldState } from '@pherus/utilities/forms'
+import { FieldShell, useFieldState } from '@base/ui/forms'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useMemo, useState } from 'react'
 import type { CollectionSlug } from '../types'

@@ -1,6 +1,6 @@
 import { AuthBanner } from './auth-banner'
 import { cn } from '@pherus/ui/lib/utils'
-import { useAppForm } from '@pherus/utilities/forms'
+import { useAppForm } from '@base/ui/forms'
 import type { z } from 'zod'
 
 export type CreateAccountFormValues = {

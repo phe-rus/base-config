@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { FC } from 'react'
 import type { z } from 'zod'
 import type { BetterAuthAdminClient } from './db/collections'
-import type { BasePlugin } from './plugins/types'
+import type { PendingPlugin } from './plugins/types'
 
 // `@base/config`'s own root shape — independent of any one consumer's actual
 // values. A consuming app (e.g. `www/src/hooks/config/base.config.ts`)
@@ -36,8 +36,14 @@ export type BaseConfigProps = {
 	config: AdminSettings
 	collections: CollectionConfig[]
 	globals: GlobalConfig[]
-	/** Each contributes config the engine already knows how to consume (`definePlugin()`, `plugins/types.ts`) — `baseConfig()` registers them via `registerPlugins()`. */
-	plugins: BasePlugin[]
+	/**
+	 * Each entry is a *called* plugin factory (`myPlugin({...options})`, not
+	 * the bare `myPlugin` export) — `definePlugin()` returns a factory, not
+	 * a plugin instance directly, so `order`/cross-plugin communication can
+	 * work (see `plugins/types.ts`'s `PendingPlugin`). `baseConfig()`
+	 * resolves them via `registerPlugins()`.
+	 */
+	plugins: PendingPlugin[]
 	/** Client-only localStorage collections, no D1 persistence yet — this just documents current reality. */
 	offlineFirst: boolean
 	/**

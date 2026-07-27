@@ -7,10 +7,8 @@
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"paths": {
 			"@base/config/*": ["./src/*"],
-			"@pherus/ui/*": ["../../shared/ui/src/*"],
-			"@pherus/utilities/*": ["../../shared/utilities/src/*"],
-			"@pherus/basiccn": ["../../shared/basiccn/src/index.ts"],
-			"@pherus/basiccn/*": ["../../shared/basiccn/src/*"]
+			"@base/ui/*": ["../ui/src/*"],
+			"@pherus/ui/*": ["../../shared/ui/src/*"]
 		},
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,

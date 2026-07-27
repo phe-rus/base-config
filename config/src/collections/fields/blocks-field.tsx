@@ -8,7 +8,7 @@ import {
 	DialogTrigger
 } from '@pherus/ui/dialog'
 import { cn } from '@pherus/ui/lib/utils'
-import { ArrayField } from '@pherus/utilities/forms'
+import { ArrayField } from '@base/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
 import { blockRegistry } from '../blocks'
 import type { BlockSlug } from '../blocks/types'

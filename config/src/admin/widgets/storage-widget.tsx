@@ -43,7 +43,7 @@ function formatBytes(bytes: number) {
 
 /**
  * The `Upload` field's "choose existing, or drag-and-drop a new one" picker
- * — injected into `@pherus/utilities/forms`'s `Upload` primitive via its
+ * — injected into `@base/ui/forms`'s `Upload` primitive via its
  * `renderBrowser` prop, so that package stays free of any real backend
  * dependency (this is the one place in `@base/config` that knows about
  * `/api/storage/*`, alongside `admin/views/storage/component.tsx`).

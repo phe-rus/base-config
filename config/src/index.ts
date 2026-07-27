@@ -16,4 +16,9 @@ export type {
 } from './base.types'
 export type { FieldConfig, PluginFieldConfig, TabConfig } from './fields/types'
 export { definePlugin } from './plugins/define'
-export type { BasePlugin, PluginFieldType } from './plugins/types'
+export type {
+	BasePlugin,
+	PendingPlugin,
+	PluginContext,
+	PluginFieldType
+} from './plugins/types'

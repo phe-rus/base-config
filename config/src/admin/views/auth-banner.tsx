@@ -1,4 +1,4 @@
-import { TanstackImage } from '@pherus/utilities/image'
+import { TanstackImage } from '@base/ui/image'
 import type { ReactNode } from 'react'
 
 type AuthBannerProps = {

@@ -1,6 +1,6 @@
 import { Button } from '@pherus/ui/button'
 import { cn } from '@pherus/ui/lib/utils'
-import { ArrayField } from '@pherus/utilities/forms'
+import { ArrayField } from '@base/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
 import { appearanceValues, collectionPath } from '../types'
 import { collectionsBySlug } from '../registry'

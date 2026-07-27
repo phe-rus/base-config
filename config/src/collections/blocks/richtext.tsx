@@ -1,4 +1,4 @@
-import type { BasiccnContent } from '@pherus/basiccn'
+import type { BasiccnContent } from '@base/ui/basiccn'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
