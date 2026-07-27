@@ -1,0 +1,27 @@
+{
+	"include": ["src", "**/*.ts", "**/*.tsx"],
+	"compilerOptions": {
+		"target": "ES2022",
+		"jsx": "react-jsx",
+		"module": "ESNext",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"paths": {
+			"@base/config/*": ["./src/*"],
+			"@pherus/ui/*": ["../ui/src/*"],
+			"@pherus/utilities/*": ["../utilities/src/*"],
+			"@pherus/basiccn": ["../basiccn/src/index.ts"],
+			"@pherus/basiccn/*": ["../basiccn/src/*"]
+		},
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedSideEffectImports": true
+	},
+	"exclude": ["node_modules", "dist"]
+}

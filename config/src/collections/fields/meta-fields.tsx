@@ -1,0 +1,96 @@
+import {
+	StorageWidget,
+	type StorageWidgetTriggerProps
+} from '../../admin/widgets/storage-widget'
+import { uploadFile } from '../../fields/upload'
+import {
+	registerKeyword,
+	useGlobalKeywordSuggestions
+} from '../../db/collections'
+import { useSelector } from '@tanstack/react-store'
+import type { CollectionFieldsProps } from '../types'
+
+export function MetaFields({
+	form,
+	uploadFolder,
+	id
+}: Pick<CollectionFieldsProps, 'form'> & {
+	/** The owning collection's own `slug` — the share image lands under `meta/<uploadFolder>/<id>` rather than every collection's (and every document's) SEO image colliding in one flat `metadata.image` folder. */
+	uploadFolder?: string
+	/** The document's own id — see `uploadFolder` above. */
+	id?: string
+}) {
+	const store = useSelector(form.store, (s: any) => s.values)
+	const keywordSuggestions = useGlobalKeywordSuggestions()
+	const metaUploadPrefix = ['meta', uploadFolder, id].filter(Boolean).join('/')
+
+	return (
+		<div className='flex flex-col gap-5'>
+			<form.AppField name='metadata.title'>
+				{(f: any) => (
+					<f.Input
+						label='Title'
+						placeholder='SEO Title'
+						maxLength={60}
+						minLength={50}
+						description='This should be between 50 and 60 characters. Auto-generation will format a title using the page title. For help in writing quality meta titles, see best practices.'
+					/>
+				)}
+			</form.AppField>
+			<form.AppField name='metadata.description'>
+				{(f: any) => (
+					<f.Textarea
+						label='Description'
+						placeholder='SEO Description'
+						maxLength={160}
+						minLength={100}
+						description='This should be between 100 and 160 characters. Auto-generation will format a description using the page content. For help in writing quality meta descriptions,'
+					/>
+				)}
+			</form.AppField>
+			<form.AppField name='metadata.image'>
+				{(f: any) => (
+					<f.Upload
+						label='Image'
+						description='The share image used for SEO/social previews (og:image).'
+						accept='image/*'
+						onUpload={(file: File) => uploadFile(file, metaUploadPrefix)}
+						renderBrowser={(browserProps: StorageWidgetTriggerProps) => (
+							<StorageWidget
+								{...browserProps}
+								defaultFolder={metaUploadPrefix}
+								accept='image/*'
+							/>
+						)}
+					/>
+				)}
+			</form.AppField>
+			<form.AppField name='metadata.keywords'>
+				{(f: any) => (
+					<f.KeywordsInput
+						label='Keywords'
+						description='Keywords used for SEO purposes'
+						suggestions={keywordSuggestions}
+						onCreate={registerKeyword}
+					/>
+				)}
+			</form.AppField>
+
+			<section className='flex bg-card rounded-md p-5'>
+				{store.metadata?.image?.url && (
+					<img
+						src={store.metadata.image.url}
+						alt={store.metadata?.title}
+						className='size-8 object-cover rounded-full'
+					/>
+				)}
+				<div className='flex flex-col ml-5'>
+					<span>{`/${store?.slug}`}</span>
+					<h2>{store.metadata?.title}</h2>
+					<p>{store.metadata?.description}</p>
+					<span className='mt-2'>{store.metadata?.keywords?.join(', ')}</span>
+				</div>
+			</section>
+		</div>
+	)
+}
