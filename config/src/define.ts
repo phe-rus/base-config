@@ -9,7 +9,10 @@ import { RelationsField } from './collections/fields/relations-field'
 import { RelationshipField } from './collections/fields/relationship-field'
 import { registerBaseConfig } from './collections/registry'
 import { labelFromSlug } from './collections/slug'
-import { registerUsersDataSource } from './db/collections'
+import {
+	registerContentDataSource,
+	registerUsersDataSource
+} from './db/collections'
 import { registerPlugins } from './plugins/registry'
 import type {
 	CollectionConfig,
@@ -199,6 +202,7 @@ export function defineGlobal(definition: GlobalDefinition): GlobalConfig {
  */
 export function baseConfig(config: BaseConfigProps): BaseConfigProps {
 	registerBaseConfig(config.collections, config.globals)
+	registerContentDataSource(config.queryClient)
 	if (config.auth) {
 		registerUsersDataSource({
 			queryClient: config.queryClient,

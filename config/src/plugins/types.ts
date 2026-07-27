@@ -28,9 +28,26 @@ export type PluginFieldType = {
  * A plugin contributes config the engine already knows how to consume —
  * mirroring Payload's own plugin model (a plugin hands back field/config
  * objects, it never patches the framework itself). `admin` and `fieldTypes`
- * are the extension surfaces built so far; API routes are still planned —
- * see the project roadmap — deliberately not stubbed in yet so this type
- * never carries a surface nothing reads.
+ * are two of the three extension surfaces; the third — API routes — is
+ * deliberately **not** a field on this type. `BasePlugin` (and the whole
+ * `plugins: BasePlugin[]` array passed to `baseConfig()`) flows through
+ * isomorphic code — `admin/dashboard/component.tsx` reads `admin` slots,
+ * `fields/renderer.tsx` reads `fieldTypes`, both client-side — so a plugin
+ * object itself must never carry anything that touches server-only
+ * bindings (`env`, D1, R2, …), the same reason route code never lives in a
+ * route file's loader/top-level.
+ *
+ * A plugin that needs its own API routes exports them as a *separate*
+ * named export from the same module — a plain Hono app (or a factory
+ * function, if it needs a binding passed in, matching
+ * `createContentRoute(db)`/`createStorageRoute(bucket)`'s own shape) — and
+ * a consumer imports that export directly into their own server-only
+ * `api.ts`, mounting it with `.route('/my-plugin', ...)` exactly like any
+ * other library-owned route. It's never registered through
+ * `baseConfig()`/`registerPlugins()`, and the plugin's main
+ * `definePlugin({...})` object never references it. See
+ * `www/src/config/plugins/example-api-plugin.ts` for a minimal, fully
+ * wired demonstration of this shape end to end.
  */
 export type BasePlugin = {
 	/** Unique, human-readable — shown nowhere yet, but every registry entry needs one for future debugging/ordering. */

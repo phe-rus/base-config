@@ -1,10 +1,6 @@
 import { collectionsBySlug } from '../collections/registry'
 import type { CollectionSlug } from '../collections/types'
-import {
-	createCollection,
-	localStorageCollectionOptions,
-	useLiveQuery
-} from '@tanstack/react-db'
+import { createCollection, useLiveQuery } from '@tanstack/react-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import type { QueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
@@ -21,6 +17,25 @@ export type DocumentRow<TData> = {
 	updatedAt: string
 }
 
+/** The wire shape `GET/POST/PATCH /api/content/documents/*` actually returns/accepts — `title`/`slug` are real D1 columns there (see `www/db/schemas/contents.ts`), not part of `data`. */
+type ContentDocumentRow = {
+	id: string
+	collection: string
+	title: string | null
+	slug: string | null
+	status: 'draft' | 'published'
+	data: Record<string, unknown>
+	createdAt: string
+	updatedAt: string
+}
+
+/** The wire shape `GET /api/content/globals*` returns — one row per global slug, no `title`/`status`/`createdAt` (see `www/db/schemas/contents.ts`'s `globals` table). */
+type ContentGlobalRow = {
+	slug: string
+	data: Record<string, unknown>
+	updatedAt: string
+}
+
 const baseFieldsSchema = z.object({ title: z.string(), slug: z.string() })
 export function withBaseFields<TSchema extends z.ZodTypeAny>(
 	dataSchema: TSchema
@@ -28,29 +43,142 @@ export function withBaseFields<TSchema extends z.ZodTypeAny>(
 	return baseFieldsSchema.and(dataSchema)
 }
 
-/** A persisted CMS document — has the draft/published workflow (`status`/`createdAt`/`updatedAt`) every collection/global row needs. */
-function createRowCollection(
-	id: string,
-	storageKey: string,
-	dataSchema: z.ZodTypeAny
-) {
+export type ContentCollection = ReturnType<typeof createContentCollection>
+
+let contentQueryClient: QueryClient | undefined
+
+/** Call once, client-side — `baseConfig()` does this unconditionally (unlike `registerUsersDataSource`, every consumer needs content persistence, not just ones with an `auth: true` collection). */
+export function registerContentDataSource(queryClient: QueryClient) {
+	contentQueryClient = queryClient
+}
+
+function requireContentQueryClient(): QueryClient {
+	if (!contentQueryClient) {
+		throw new Error(
+			'A content collection was rendered before registerContentDataSource() was called — see db/collections.ts.'
+		)
+	}
+	return contentQueryClient
+}
+
+/** `title`/`slug` live inside a regular collection's own `data` (per `withBaseFields`) on the client, but as real top-level D1 columns on the wire — every fetch/write crosses that seam once, here. */
+function splitDocumentFields(data: Record<string, unknown>) {
+	const { title, slug, ...rest } = data
+	return {
+		title: typeof title === 'string' ? title : undefined,
+		slug: typeof slug === 'string' ? slug : undefined,
+		rest
+	}
+}
+
+function toDocumentRow(
+	row: ContentDocumentRow
+): DocumentRow<Record<string, unknown>> {
+	return {
+		id: row.id,
+		data: { ...row.data, title: row.title ?? '', slug: row.slug ?? '' },
+		status: row.status,
+		createdAt: row.createdAt,
+		updatedAt: row.updatedAt
+	}
+}
+
+/**
+ * The `localStorage`-free replacement for every non-`auth` collection —
+ * same lazy, mutation-triggered-refetch policy as `createUsersCollection`
+ * below (`staleTime: Infinity`, explicit `refetch()` after a mutation
+ * resolves), backed by `/api/content/documents/:collection` instead of a
+ * server-backed auth endpoint. `onUpdate` diffs `original`/`modified` the
+ * same way `createUsersCollection`'s own `onUpdate` does, so a save only
+ * ever sends the fields that actually changed (see `content-db.ts`'s
+ * `updateDocument`, which merges rather than replaces `data`).
+ */
+function createContentCollection(slug: string) {
+	const queryClient = requireContentQueryClient()
+
 	return createCollection(
-		localStorageCollectionOptions({
-			id,
-			storageKey,
+		queryCollectionOptions<DocumentRow<Record<string, unknown>>>({
+			queryKey: ['content', 'documents', slug],
+			queryClient,
 			getKey: (item) => item.id,
-			schema: z.object({
-				id: z.string(),
-				data: dataSchema,
-				status: z.enum(statusValues),
-				createdAt: z.string(),
-				updatedAt: z.string()
-			})
+			staleTime: Number.POSITIVE_INFINITY,
+			refetchOnWindowFocus: false,
+			refetchOnReconnect: false,
+			queryFn: async () => {
+				const res = await fetch(`/api/content/documents/${slug}`)
+				const rows: ContentDocumentRow[] = await res.json()
+				return rows.map(toDocumentRow)
+			},
+			onInsert: async ({ transaction, collection }) => {
+				await Promise.all(
+					transaction.mutations.map(async (mutation) => {
+						const {
+							title,
+							slug: docSlug,
+							rest
+						} = splitDocumentFields(
+							mutation.modified.data as Record<string, unknown>
+						)
+						await fetch(`/api/content/documents/${slug}`, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								id: mutation.modified.id,
+								title,
+								slug: docSlug,
+								status: mutation.modified.status,
+								data: rest
+							})
+						})
+					})
+				)
+				await collection.utils.refetch()
+			},
+			onUpdate: async ({ transaction, collection }) => {
+				await Promise.all(
+					transaction.mutations.map(async (mutation) => {
+						const original = splitDocumentFields(
+							mutation.original.data as Record<string, unknown>
+						)
+						const modified = splitDocumentFields(
+							mutation.modified.data as Record<string, unknown>
+						)
+						const fields: Record<string, unknown> = {}
+						for (const key of Object.keys(modified.rest)) {
+							if (!Object.is(modified.rest[key], original.rest[key])) {
+								fields[key] = modified.rest[key]
+							}
+						}
+						const body: Record<string, unknown> = {}
+						if (modified.title !== original.title) body.title = modified.title
+						if (modified.slug !== original.slug) body.slug = modified.slug
+						if (mutation.modified.status !== mutation.original.status) {
+							body.status = mutation.modified.status
+						}
+						if (Object.keys(fields).length > 0) body.fields = fields
+						if (Object.keys(body).length === 0) return
+						await fetch(`/api/content/documents/${slug}/${mutation.key}`, {
+							method: 'PATCH',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(body)
+						})
+					})
+				)
+				await collection.utils.refetch()
+			},
+			onDelete: async ({ transaction, collection }) => {
+				await Promise.all(
+					transaction.mutations.map(async (mutation) => {
+						await fetch(`/api/content/documents/${slug}/${mutation.key}`, {
+							method: 'DELETE'
+						})
+					})
+				)
+				await collection.utils.refetch()
+			}
 		})
 	)
 }
-
-export type ContentCollection = ReturnType<typeof createRowCollection>
 
 // --- `auth: true` collections (see `CollectionConfig['auth']`) are real,
 // server-backed accounts — not `localStorage` like every other collection.
@@ -307,11 +435,7 @@ function getContentCollection(slug: string): ContentCollection {
 		const config = collectionsBySlug[slug as CollectionSlug]
 		collection = config.auth
 			? createUsersCollection()
-			: createRowCollection(
-					slug,
-					`pherus:${slug}`,
-					withBaseFields(config.schema)
-				)
+			: createContentCollection(slug)
 		contentCollectionCache.set(slug, collection)
 	}
 	return collection
@@ -321,10 +445,99 @@ export const contentCollections: Record<CollectionSlug, ContentCollection> =
 	new Proxy({} as Record<CollectionSlug, ContentCollection>, {
 		get: (_target, slug: string) => getContentCollection(slug)
 	})
-export const globalsCollection: ContentCollection = createRowCollection(
-	'globals',
-	'pherus:globals',
-	z.record(z.string(), z.unknown())
+
+/**
+ * `localStorage`-free, same shape as `createContentCollection` above but
+ * backed by `/api/content/globals*` — one row per global slug instead of
+ * per-collection-per-document. No `onDelete`: globals are never deleted,
+ * only ever edited (see `www/db/schemas/contents.ts`'s `globals` table,
+ * one row per slug, created lazily on first save via `useDocument`'s
+ * `autoCreate`).
+ */
+function createGlobalsCollection() {
+	const queryClient = requireContentQueryClient()
+
+	return createCollection(
+		queryCollectionOptions<DocumentRow<Record<string, unknown>>>({
+			queryKey: ['content', 'globals'],
+			queryClient,
+			getKey: (item) => item.id,
+			staleTime: Number.POSITIVE_INFINITY,
+			refetchOnWindowFocus: false,
+			refetchOnReconnect: false,
+			queryFn: async () => {
+				const res = await fetch('/api/content/globals')
+				const rows: ContentGlobalRow[] = await res.json()
+				return rows.map((row) => ({
+					id: row.slug,
+					data: row.data,
+					status: 'published' as const,
+					createdAt: row.updatedAt,
+					updatedAt: row.updatedAt
+				}))
+			},
+			onInsert: async ({ transaction, collection }) => {
+				await Promise.all(
+					transaction.mutations.map(async (mutation) =>
+						fetch(`/api/content/globals/${mutation.modified.id}`, {
+							method: 'PATCH',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(mutation.modified.data)
+						})
+					)
+				)
+				await collection.utils.refetch()
+			},
+			onUpdate: async ({ transaction, collection }) => {
+				await Promise.all(
+					transaction.mutations.map(async (mutation) => {
+						const original = mutation.original.data as Record<string, unknown>
+						const modified = mutation.modified.data as Record<string, unknown>
+						const fields: Record<string, unknown> = {}
+						for (const key of Object.keys(modified)) {
+							if (!Object.is(modified[key], original[key])) {
+								fields[key] = modified[key]
+							}
+						}
+						if (Object.keys(fields).length === 0) return
+						await fetch(`/api/content/globals/${mutation.key}`, {
+							method: 'PATCH',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(fields)
+						})
+					})
+				)
+				await collection.utils.refetch()
+			}
+		})
+	)
+}
+
+/**
+ * Lazily creates the real collection on first property access rather than
+ * at module-eval time — `createGlobalsCollection()` needs
+ * `registerContentDataSource()` (called by `baseConfig()`) to have already
+ * run, which isn't guaranteed yet at the point this module itself is first
+ * imported (see "The circular-import trap" in the project's own docs).
+ * `contentCollections` above gets this for free from its per-slug Proxy;
+ * `globalsCollection` is a single eagerly-exported object, so it needs its
+ * own lazy indirection to get the same safety.
+ */
+function createLazyCollection<T extends object>(factory: () => T): T {
+	let instance: T | undefined
+	const resolve = () => (instance ??= factory())
+
+	return new Proxy({} as T, {
+		get: (_target, prop, receiver) => {
+			const target = resolve()
+			const value = Reflect.get(target, prop, receiver)
+			return typeof value === 'function' ? value.bind(target) : value
+		}
+	})
+}
+
+export const globalsCollection: ContentCollection = createLazyCollection(
+	createGlobalsCollection
 )
 
 // --- Keywords: not a separate collection — the shared, site-wide keyword
