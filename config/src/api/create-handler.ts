@@ -56,6 +56,29 @@ export type CreateHandlerOptions = {
 	hooks?: BaseConfigRouteBindings['hooks']
 	/** See `ContentEndpoint`'s own doc comment (`db/content-route.ts`) — Tier-2 endpoints, merged with whatever every registered plugin's own `EndpointFactory` already contributed. */
 	endpoints?: BaseConfigRouteBindings['endpoints']
+	/**
+	 * A deliberate, named, one-off exception to "no capability-specific
+	 * params on this function" (see `EndpointFactoryBindings`' own doc
+	 * comment, `db/content-route.ts`, for the general rule this narrows) —
+	 * forwarded as-is to every registered `EndpointFactory` (merged into
+	 * `{db, handleEmail}`), so a plugin that needs it (today, only
+	 * `@base/plugin-form-builder`'s own `formBuilderEndpoints`) reads it
+	 * straight off its own factory arguments. This package still never
+	 * imports `@base/plugin-form-builder` — the shape here is a plain
+	 * structural type, the same trade-off `AuthServerLike`/`R2BucketLike`
+	 * already make, not a real dependency on that plugin's own types.
+	 * Configure directly here, right alongside `db`/`auth`/`bindings` — not
+	 * a separate call, and never through `base.config.ts`'s own
+	 * `formBuilderPlugin({...})`, since that config is isomorphic (also
+	 * evaluated in the browser for the admin UI) and can never safely hold
+	 * a real email implementation or its secrets.
+	 */
+	handleEmail?: (email: {
+		to: string
+		from: string
+		subject: string
+		html: string
+	}) => Promise<void>
 	requestTimeoutMs?: number
 	etag?: boolean
 }
@@ -76,15 +99,12 @@ export type CreateHandlerOptions = {
  * `CreateHandlerBindings`' own doc comment for what it does when given),
  * `auth` (no dependency on any one auth library), `hooks`/`endpoints`
  * (Tier-2, binding-capable — see `CollectionHooks`'/`ContentEndpoint`'s own
- * doc comments for the tier split), and `cors`/`bindings.isdev` (a
+ * doc comments for the tier split), `cors`/`bindings.isdev` (a
  * deployment's own CORS/origin policy — e.g. which domains are allowed —
- * that this package has no way to know on its own). **Deliberately not a
- * param here**: anything capability-specific to one particular plugin (an
- * email sender, a payments client, …) — those stay on that plugin's own
- * dedicated hook instead (e.g. `@base/plugin-form-builder`'s own
- * `onFormBuilderEmail()`), never growing this function's signature per
- * plugin. See `EndpointFactoryBindings`' own doc comment
- * (`db/content-route.ts`) for the full reasoning.
+ * that this package has no way to know on its own), and `handleEmail` (see
+ * its own doc comment above — a deliberate, named exception to "no
+ * capability-specific params," not a pattern to repeat reflexively for
+ * every future plugin need without a similarly explicit reason).
  *
  * **Merges `hooks` with `collectHooks()`'s own Tier-1 map** (`collections/registry.ts`)
  * before passing either down — a plain shallow merge, per-slug: if the same
@@ -95,12 +115,12 @@ export type CreateHandlerOptions = {
  * inside the one Tier-2 entry instead of splitting them.
  *
  * **Also invokes every registered `EndpointFactory`** (`collectEndpointFactories()`,
- * `collections/registry.ts`) with `{db}`, merging the results with the
- * explicit `endpoints` param — see `EndpointFactory`'s own doc comment
- * (`db/content-route.ts`) for why this is *the* mechanism that keeps a
- * plugin's entire footprint inside `base.config.ts`'s `plugins: [...]`: a
- * consumer's server entry only ever hands this function truly generic
- * bindings, never anything plugin-specific.
+ * `collections/registry.ts`) with `{db, handleEmail}`, merging the results
+ * with the explicit `endpoints` param — see `EndpointFactory`'s own doc
+ * comment (`db/content-route.ts`) for why this is *the* mechanism that
+ * keeps a plugin's entire footprint inside `base.config.ts`'s
+ * `plugins: [...]` for everything except `handleEmail`, which this
+ * function forwards from its own `handleEmail` option instead.
  *
  * A consumer's entire server-side footprint collapses to building this
  * once and serving it from whatever route file matches `/api/*` — e.g.
@@ -114,6 +134,7 @@ export function createHandler({
 	cors,
 	hooks,
 	endpoints,
+	handleEmail,
 	requestTimeoutMs,
 	etag
 }: CreateHandlerOptions) {
@@ -131,7 +152,7 @@ export function createHandler({
 
 	const mergedHooks = { ...collectHooks(), ...hooks }
 	const factoryEndpoints = collectEndpointFactories().flatMap((factory) =>
-		factory({ db })
+		factory({ db, handleEmail })
 	)
 	const mergedEndpoints = [...factoryEndpoints, ...(endpoints ?? [])]
 

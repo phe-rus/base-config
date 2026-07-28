@@ -58,21 +58,32 @@ export type ContentEndpoint = {
 }
 
 /**
- * What an `EndpointFactory` is handed — deliberately just `db`, the one
- * binding every conceivable endpoint factory needs (content persistence).
- * **Not a place for capability-specific bindings** (email, payments,
- * anything else a *particular* plugin might want) — those are each
- * plugin's own contract, configured directly on that plugin's own
- * dedicated hook (e.g. `@base/plugin-form-builder`'s own
- * `onFormBuilderEmail()`, see that package's own `plugin.ts`), never
- * threaded generically through `createHandler()`. Keeping this narrow is
- * what lets `createHandler()`'s own signature stay stable as more plugins
- * with completely different needs (Stripe keys, a queue binding, whatever)
- * get added later — none of them should ever need a new `createHandler()`
- * param.
+ * What an `EndpointFactory` is handed — always `db`, the one binding every
+ * conceivable endpoint factory needs (content persistence). **Not
+ * automatically a place for capability-specific bindings** (email,
+ * payments, anything else a *particular* plugin might want) — the default
+ * is still that those stay on that plugin's own contract, not threaded
+ * through `createHandler()`, so its own signature stays stable as more
+ * plugins with completely different needs (Stripe keys, a queue binding,
+ * whatever) get added later. `handleEmail` (`CreateHandlerOptions`,
+ * `api/create-handler.ts`) is the one deliberate, named exception today —
+ * `createHandler()` forwards it into every factory's own bindings
+ * alongside `db` when given, so a factory that wants it (only
+ * `@base/plugin-form-builder`'s own `formBuilderEndpoints` does) can widen
+ * its own declared parameter type to read it, still structurally
+ * assignable to `EndpointFactory` below since the field is optional. Not a
+ * pattern to repeat reflexively for every future plugin need — see
+ * `CreateHandlerOptions['handleEmail']`'s own doc comment for why this one
+ * exception was made.
  */
 export type EndpointFactoryBindings = {
 	db: ContentDatabase
+	handleEmail?: (email: {
+		to: string
+		from: string
+		subject: string
+		html: string
+	}) => Promise<void>
 }
 
 /**

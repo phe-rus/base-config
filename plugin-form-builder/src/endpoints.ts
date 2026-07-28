@@ -1,5 +1,5 @@
 import { createDocument, createId, getDocument } from '@base/config'
-import type { EndpointFactory } from '@base/config'
+import type { EndpointFactory, EndpointFactoryBindings } from '@base/config'
 import { getFormBuilderOptions } from './plugin'
 import type { FormData } from './forms-collection'
 
@@ -24,25 +24,30 @@ function interpolate(template: string, data: Record<string, unknown>): string {
  * (`@base/config`'s own `db/content-route.ts`), not a function a consumer
  * calls directly. `plugin.ts` registers this itself, into
  * `config.endpointFactories`, the moment `formBuilderPlugin()` runs — so
- * `createHandler()` picks it up automatically (invoked with just `{db}`,
- * the one generic binding every factory gets) and a consumer never imports
- * this file at all. `handleEmail` is *not* part of that generic bindings
- * shape — it's read from `getFormBuilderOptions()` below instead, this
- * plugin's own registered contract (see `plugin.ts`'s own doc comment for
- * why). One real endpoint: `POST /api/forms/:id/submit`, unauthenticated
- * by design (matching Payload's own default for its equivalent
- * `/api/form-submissions` route) — a public visitor has no session to
- * check. Validates submitted data against the referenced form's own
- * `fields` config (required-field presence only — real per-type validation,
- * e.g. a genuine email-format check, isn't attempted here), stores a
- * `form-submissions` row (see that collection's own doc comment for why
- * it's never publicly readable), then hands off every configured email to
- * `handleEmail` (best-effort — one failing call doesn't fail the
+ * `createHandler()` picks it up automatically and a consumer never imports
+ * this file at all. `handleEmail` comes straight off this factory's own
+ * `EndpointFactoryBindings` argument — `createHandler({handleEmail: ...})`
+ * is what actually supplies it (see that option's own doc comment,
+ * `@base/config`'s `api/create-handler.ts`); `beforeEmail` is the one
+ * piece still read from `getFormBuilderOptions()` (this plugin's own
+ * isomorphic-safe registry, configured via `formBuilderPlugin({beforeEmail})`
+ * in `base.config.ts`). One real endpoint: `POST /api/forms/:id/submit`,
+ * unauthenticated by design (matching Payload's own default for its
+ * equivalent `/api/form-submissions` route) — a public visitor has no
+ * session to check. Validates submitted data against the referenced form's
+ * own `fields` config (required-field presence only — real per-type
+ * validation, e.g. a genuine email-format check, isn't attempted here),
+ * stores a `form-submissions` row (see that collection's own doc comment
+ * for why it's never publicly readable), then hands off every configured
+ * email to `handleEmail` (best-effort — one failing call doesn't fail the
  * submission itself, it's logged and swallowed) before returning the
  * form's own confirmation config (a message to show, or a URL to redirect
  * to).
  */
-export const formBuilderEndpoints: EndpointFactory = ({ db }) => {
+export const formBuilderEndpoints: EndpointFactory = ({
+	db,
+	handleEmail
+}: EndpointFactoryBindings) => {
 	return [
 		{
 			collection: 'forms',
@@ -95,7 +100,7 @@ export const formBuilderEndpoints: EndpointFactory = ({ db }) => {
 					}
 				})
 
-				const { handleEmail, beforeEmail } = getFormBuilderOptions()
+				const { beforeEmail } = getFormBuilderOptions()
 				if (handleEmail && formData.emails?.length) {
 					const interpolated = formData.emails.map((email) => ({
 						to: interpolate(email.to, submissionData),

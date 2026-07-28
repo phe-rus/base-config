@@ -13,21 +13,18 @@ export type FormBuilderEmail = {
 }
 
 /**
- * This plugin's own email contract — deliberately not a shape
- * `@base/config` knows about at all (see `EndpointFactoryBindings`' own
- * doc comment, `@base/config`'s `db/content-route.ts`, for why
- * capability-specific things like this stay on the plugin that actually
- * needs them), and deliberately **no built-in implementation shipped
- * anywhere in this repo** — not Cloudflare's own `env.EMAIL` binding, not
- * Resend, nothing. Every real option here has its own cost/plan model;
- * this plugin doesn't pick one for you. "Bring your own": wire this up to
- * whatever you actually want to pay for (or not) — Resend, Postmark, a
- * self-hosted SMTP relay, Cloudflare's own binding, or just a
+ * This plugin's own email contract, matching `@base/config`'s own
+ * `CreateHandlerOptions['handleEmail']` structurally (that's the *only*
+ * place a real implementation is ever configured — `createHandler({handleEmail})`
+ * in the consumer's own server-only API entry, never here, never in
+ * `base.config.ts`) — and deliberately **no built-in implementation
+ * shipped anywhere in this repo**: not Cloudflare's own `env.EMAIL`
+ * binding, not Resend, nothing. Every real option here has its own
+ * cost/plan model; this plugin doesn't pick one for you. "Bring your own":
+ * wire it up to whatever you actually want to pay for (or not) — Resend,
+ * Postmark, a self-hosted SMTP relay, Cloudflare's own binding, or just a
  * `console.log` while you decide. This plugin only ever calls the
- * function, never cares how it's implemented. Set via `onFormBuilderEmail()`
- * below — see that function's own doc comment for why it's the *only* way
- * in (no second, isomorphic-only path — a real, deliberate simplification:
- * one hook, one place, one rule, nothing to merge).
+ * function, never cares how it's implemented.
  */
 export type HandleEmailFn = (email: FormBuilderEmail) => Promise<void>
 
@@ -62,44 +59,19 @@ export type FormBuilderPluginOptions = {
 }
 
 let registeredOptions: FormBuilderPluginOptions = {}
-let handleEmail: HandleEmailFn | undefined
 
-/** Read by `endpoints.ts` at request time — combines `formBuilderPlugin()`'s own isomorphic options with whatever `onFormBuilderEmail()` separately registered. Two independent module-level values, not one merged object — see that function's own doc comment for why `handleEmail` deliberately isn't part of `registeredOptions`. */
-export function getFormBuilderOptions(): FormBuilderPluginOptions & {
-	handleEmail?: HandleEmailFn
-} {
-	return { ...registeredOptions, handleEmail }
-}
-
-/**
- * The one and only place a real `handleEmail` implementation is wired —
- * one plain hook, one module-level value, one writer. Call this once from
- * the consumer's own server-only entry (`www/src/api/index.ts` — already
- * the one file that wires every other secret-bearing binding: `db`,
- * `bucket`, `cache`, `auth`), typically right after the
- * `import '@/config/base.config'` side-effect import that file already
- * needs (see `formBuilderPlugin`'s own doc comment for why that import
- * exists at all).
- *
- * **Deliberately never settable through `formBuilderPlugin({...})`
- * itself** — an earlier version of this API allowed `handleEmail` there
- * too, "safe" only for a no-secret implementation, with a second path
- * (this function) for anything real. Two ways to set the same thing, with
- * different rules for when each was safe, was needless complexity for
- * what's fundamentally one job. Now there's exactly one rule: `handleEmail`
- * always comes from here, always server-side, full stop — `base.config.ts`
- * never references it at all.
- */
-export function onFormBuilderEmail(handler: HandleEmailFn) {
-	handleEmail = handler
+/** Read by `endpoints.ts` at request time — `formBuilderPlugin()`'s own isomorphic-safe options (`beforeEmail`/`handlePayment`). `handleEmail` isn't here at all — it comes from `createHandler({handleEmail})` directly, forwarded into `formBuilderEndpoints`' own `EndpointFactoryBindings` argument (see that function's own doc comment, `endpoints.ts`), never from this registry. */
+export function getFormBuilderOptions(): FormBuilderPluginOptions {
+	return registeredOptions
 }
 
 /**
  * Adds the `forms`/`form-submissions` collections, the `form` block, *and*
  * the public submission endpoint to the config — the one place a consumer
  * configures this plugin's own isomorphic-safe options (`beforeEmail`/
- * `handlePayment` — see `onFormBuilderEmail()` for the one, single,
- * always-server-only exception, `handleEmail`). Modeled on Payload's own
+ * `handlePayment` — `handleEmail` is deliberately not one of them, see
+ * `HandleEmailFn`'s own doc comment for where it's actually configured).
+ * Modeled on Payload's own
  * `@payloadcms/plugin-form-builder`, itself "just a plugin" built on
  * Payload's own public collection API — same idea here: this calls the
  * normal `defineCollection()`/block-registry factories, no special-cased
@@ -114,9 +86,11 @@ export function onFormBuilderEmail(handler: HandleEmailFn) {
  * isomorphic-safe to merely *exist* in the config (it only touches a
  * binding once actually *called*, and it's only ever called from
  * `createHandler()`, server-only). `createHandler()` invokes every
- * registered factory with just `{db}` — the one thing every conceivable
- * factory needs — so `www/src/api/index.ts` never imports anything from
- * this package at all beyond `onFormBuilderEmail()` itself, and a plain
+ * registered factory with `{db, handleEmail}` — see
+ * `CreateHandlerOptions['handleEmail']`'s own doc comment for why that one
+ * extra field is threaded through too — so `www/src/api/index.ts` never
+ * imports anything from this package at all beyond `formBuilderEndpoints`
+ * being reachable through `config.endpointFactories`, and a plain
  * `import '@/config/base.config'` for its side effect (see `@base/config`'s
  * own CLAUDE.md, "The circular-import trap," for why that one import is
  * required — without it, `createHandler()` can read an empty registry if
