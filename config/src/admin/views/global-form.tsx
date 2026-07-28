@@ -2,6 +2,8 @@ import type { GlobalConfig, GlobalSlug } from '../../collections/types'
 import { globalsCollection } from '../../db/collections'
 import { useDocument } from '../../db/use-document'
 import { DocumentHeader } from './document-header'
+import { Button } from '@base/ui/components/button'
+import { t } from '@base/ui/components/sonner'
 import { useEffect, useState } from 'react'
 
 type GlobalFormProps = {
@@ -19,7 +21,7 @@ export function GlobalForm({ config, id }: GlobalFormProps) {
 }
 
 function GlobalEditor({ config, id }: GlobalFormProps) {
-	const { form, row } = useDocument({
+	const { form, row, save, isDirty } = useDocument({
 		collection: globalsCollection,
 		id,
 		schema: config.schema,
@@ -39,6 +41,27 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 				status={row.status}
 				createdAt={row.createdAt}
 				updatedAt={row.updatedAt}
+				actions={
+					<Button
+						size='xs'
+						variant='secondary'
+						disabled={!isDirty}
+						title={isDirty ? undefined : 'No changes to save'}
+						onClick={async () => {
+							try {
+								await save()?.isPersisted.promise
+								t.success('Success', { description: 'Changes saved.' })
+							} catch (error) {
+								t.error(error instanceof Error ? error.name : 'Error', {
+									description:
+										error instanceof Error ? error.message : String(error)
+								})
+							}
+						}}
+					>
+						Save
+					</Button>
+				}
 			/>
 
 			<section className='container flex flex-col gap-2 w-full md:max-w-4xl mx-auto'>

@@ -18,6 +18,30 @@ type CollectionFormProps = {
 	id: string
 }
 
+/**
+ * Shared by every explicit save action ("Commit & push", "Save", "Publish")
+ * — awaits the real write's `isPersisted` promise and toasts success/error,
+ * so a network failure surfaces to the admin instead of silently vanishing.
+ */
+async function runSave(
+	save: (
+		statusOverride?: 'draft' | 'published'
+	) => { isPersisted: { promise: Promise<unknown> } } | undefined,
+	statusOverride?: 'draft' | 'published'
+) {
+	try {
+		await save(statusOverride)?.isPersisted.promise
+		t.success('Success', {
+			description:
+				statusOverride === 'published' ? 'Published.' : 'Changes saved.'
+		})
+	} catch (error) {
+		t.error(error instanceof Error ? error.name : 'Error', {
+			description: error instanceof Error ? error.message : String(error)
+		})
+	}
+}
+
 export function CollectionForm({
 	config,
 	collection,
@@ -62,10 +86,7 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 		schema,
 		defaultValues: () =>
 			({ title: '', slug: '', ...config.defaultValues() }) as BaseData &
-				Record<string, unknown>,
-		// A real backend collection (`auth: true`) shouldn't call its API on
-		// every keystroke — see `useDocument`'s own `autoSave` doc comment.
-		autoSave: !config.auth
+				Record<string, unknown>
 	})
 	const slugTouched = useRef(!!(row?.data as BaseData | undefined)?.slug)
 
@@ -124,19 +145,7 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 							variant='secondary'
 							disabled={!isDirty}
 							title={isDirty ? undefined : 'No changes to save'}
-							onClick={async () => {
-								try {
-									await save()?.isPersisted.promise
-									t.success('Success', {
-										description: 'Changes saved.'
-									})
-								} catch (error) {
-									t.error(error instanceof Error ? error.name : 'Error', {
-										description:
-											error instanceof Error ? error.message : String(error)
-									})
-								}
-							}}
+							onClick={() => runSave(save)}
 						>
 							Commit & push
 						</Button>
@@ -158,18 +167,17 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 							<Button
 								size='xs'
 								variant='secondary'
-								disabled={row.status === 'published'}
-								title={
-									row.status === 'published' ? 'Already published' : undefined
-								}
-								onClick={() => {
-									collection.update(id, (draft) => {
-										draft.status = 'published'
-									})
-								}}
+								disabled={!isDirty}
+								title={isDirty ? undefined : 'No changes to save'}
+								onClick={() => runSave(save)}
 							>
-								Commit & publish
+								Save
 							</Button>
+							{row.status !== 'published' && (
+								<Button size='xs' onClick={() => runSave(save, 'published')}>
+									Publish
+								</Button>
+							)}
 						</>
 					)
 				}

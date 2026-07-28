@@ -8,7 +8,7 @@ type DocumentHeaderProps = {
 	status: string
 	createdAt: string | Date
 	updatedAt: string | Date
-	/** Publish/unpublish/commit buttons — omitted entirely for a global, which has no explicit publish workflow. */
+	/** Save/publish/unpublish buttons — a global only ever gets a bare "Save" (no draft/published concept, see `content-schema.ts`'s `globals` table). */
 	actions?: ReactNode
 }
 
