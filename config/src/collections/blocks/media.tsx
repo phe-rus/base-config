@@ -1,3 +1,4 @@
+import { IconPhoto } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
@@ -33,5 +34,6 @@ export const mediaBlock: BlockConfig = {
 	label: 'Media / image',
 	schema: mediaBlockSchema,
 	defaultValue: { image: undefined, alt: undefined, caption: undefined },
-	Fields: MediaBlockFields
+	Fields: MediaBlockFields,
+	Icon: IconPhoto
 }

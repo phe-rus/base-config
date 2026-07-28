@@ -1,3 +1,4 @@
+import { IconAd2 } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
@@ -45,5 +46,6 @@ export const bannerBlock: BlockConfig = {
 		buttonLabel: undefined,
 		buttonLink: undefined
 	},
-	Fields: BannerBlockFields
+	Fields: BannerBlockFields,
+	Icon: IconAd2
 }

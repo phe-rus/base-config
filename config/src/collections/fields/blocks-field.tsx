@@ -1,15 +1,16 @@
 import { buttonVariants } from '@base/ui/components/button'
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger
 } from '@base/ui/components/dialog'
-import { cn } from '@base/ui/lib/utils'
 import { ArrayField } from '@base/ui/forms'
-import { IconPlus } from '@tabler/icons-react'
+import { cn } from '@base/ui/lib/utils'
+import { IconBox, IconPlus } from '@tabler/icons-react'
 import { blocksBySlug } from '../blocks'
 
 type BlocksFieldProps = {
@@ -39,6 +40,9 @@ export function BlocksField({
 				<ArrayField
 					label={label}
 					description={description}
+					getItemLabel={(item) =>
+						blocksBySlug[item?.blockType as string]?.label ?? 'Unknown block'
+					}
 					renderAdd={(add) => (
 						<>
 							<Dialog>
@@ -54,7 +58,7 @@ export function BlocksField({
 									<IconPlus />
 									Add block
 								</DialogTrigger>
-								<DialogContent>
+								<DialogContent className='sm:max-w-lg'>
 									<DialogHeader>
 										<DialogTitle>Pick block</DialogTitle>
 										<DialogDescription>
@@ -62,24 +66,34 @@ export function BlocksField({
 										</DialogDescription>
 									</DialogHeader>
 
-									<section className='grid grid-cols-2 md:grid-cols-3 gap-3'>
-										{slugs.map((slug) => (
-											<article
-												key={slug}
-												onClick={() =>
-													add({
-														blockType: slug,
-														...blocksBySlug[slug].defaultValue
-													})
-												}
-												className={cn(
-													'flex flex-col p-4 rounded-md',
-													'bg-input hover:bg-input/50 cursor-pointer transition-colors'
-												)}
-											>
-												{blocksBySlug[slug].label}
-											</article>
-										))}
+									<section className='grid grid-cols-2 gap-3 sm:grid-cols-3'>
+										{slugs.map((slug) => {
+											const block = blocksBySlug[slug]
+											const Icon = block.Icon ?? IconBox
+											return (
+												<DialogClose
+													key={slug}
+													onClick={() =>
+														add({
+															blockType: slug,
+															...block.defaultValue
+														})
+													}
+													className={cn(
+														'flex flex-col items-center gap-2 rounded-md p-4',
+														'border border-dashed bg-input/20',
+														'hover:bg-input/50 cursor-pointer transition-colors'
+													)}
+												>
+													<span className='flex size-10 items-center justify-center rounded-md bg-input text-muted-foreground'>
+														<Icon className='size-5' />
+													</span>
+													<span className='text-center text-xs font-medium'>
+														{block.label}
+													</span>
+												</DialogClose>
+											)
+										})}
 									</section>
 								</DialogContent>
 							</Dialog>

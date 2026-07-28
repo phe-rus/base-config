@@ -1,4 +1,5 @@
 import { buttonVariants } from '@base/ui/components/button'
+import { IconClick } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
@@ -67,5 +68,6 @@ export const ctaBlock: BlockConfig = {
 		buttonLink: undefined
 	},
 	Fields: CtaBlockFields,
-	Render: CtaBlockRender
+	Render: CtaBlockRender,
+	Icon: IconClick
 }

@@ -1,3 +1,4 @@
+import { IconNews } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { base } from '../../db/content-client'
@@ -104,5 +105,6 @@ export const relatedPostsBlock: BlockConfig = {
 	schema: relatedPostsBlockSchema,
 	defaultValue: { label: undefined, mode: 'manual', ids: [], keywords: [] },
 	Fields: RelatedPostsBlockFields,
-	Render: RelatedPostsGroupRender
+	Render: RelatedPostsGroupRender,
+	Icon: IconNews
 }

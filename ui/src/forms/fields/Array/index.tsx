@@ -18,6 +18,8 @@ type ArrayFieldProps = BaseFieldProps & {
 	 * given item to the array — call it with no argument to append `{}`.
 	 */
 	renderAdd?: (add: (item?: Record<string, any>) => void) => React.ReactNode
+	/** Overrides the collapsed row header's label — the default falls back through `item?.label ?? item?.title ?? item?.name ?? 'No name'`, which only ever matches when an item happens to have one of those exact fields (e.g. a block instance never does, since a block's own type name lives in `blockType`/a registry, not on the item itself — see `@base/config`'s `BlocksField`, the one real consumer of this so far). */
+	getItemLabel?: (item: Record<string, any>, index: number) => string
 	children: (props: {
 		path: string
 		index: number
@@ -30,6 +32,7 @@ export const ArrayField = ({
 	description,
 	required,
 	renderAdd,
+	getItemLabel,
 	children
 }: ArrayFieldProps) => {
 	const {
@@ -105,7 +108,9 @@ export const ArrayField = ({
 				<div className='flex flex-col gap-1 ml-6'>
 					{list.map((item, index) => {
 						const itemPath = `${name}[${index}]`
-						const label = item?.label ?? item?.title ?? item?.name ?? 'No name'
+						const label = getItemLabel
+							? getItemLabel(item, index)
+							: (item?.label ?? item?.title ?? item?.name ?? 'No name')
 						const isDragging = draggedIndex === index
 						const isDragOver = dragOverIndex === index
 

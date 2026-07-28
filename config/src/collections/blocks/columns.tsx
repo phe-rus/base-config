@@ -1,3 +1,4 @@
+import { IconColumns } from '@tabler/icons-react'
 import { z } from 'zod'
 import { BlocksField } from '../fields/blocks-field'
 import type { BlockConfig, BlockFieldsProps } from './types'
@@ -35,5 +36,6 @@ export const columnsBlock: BlockConfig = {
 	label: 'Columns / layout',
 	schema: columnsBlockSchema,
 	defaultValue: { columns: [[], []] },
-	Fields: ColumnsBlockFields
+	Fields: ColumnsBlockFields,
+	Icon: IconColumns
 }

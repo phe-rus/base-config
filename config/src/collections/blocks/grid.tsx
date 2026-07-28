@@ -1,3 +1,4 @@
+import { IconLayoutGrid } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
@@ -46,5 +47,6 @@ export const gridBlock: BlockConfig = {
 	label: 'Grid',
 	schema: gridBlockSchema,
 	defaultValue: { tiles: [] },
-	Fields: GridBlockFields
+	Fields: GridBlockFields,
+	Icon: IconLayoutGrid
 }

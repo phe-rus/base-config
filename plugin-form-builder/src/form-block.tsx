@@ -13,6 +13,7 @@ import {
 import { Input } from '@base/ui/components/input'
 import { Textarea } from '@base/ui/components/textarea'
 import { FieldShell, useFieldState } from '@base/ui/forms'
+import { IconForms } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useLiveQuery } from '@tanstack/react-db'
 import { type FormEvent, useMemo, useState } from 'react'
@@ -266,5 +267,6 @@ export const formBlock: BlockConfig = {
 		form: undefined
 	},
 	Fields: FormBlockFields,
-	Render: FormBlockRender
+	Render: FormBlockRender,
+	Icon: IconForms
 }

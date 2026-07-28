@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@base/config": "workspace:*",
 		"@base/ui": "workspace:*",
+		"@tabler/icons-react": "^3.45.0",
 		"@tanstack/react-db": "latest",
 		"zod": "^4.4.3"
 	},

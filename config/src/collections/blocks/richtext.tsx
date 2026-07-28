@@ -1,5 +1,6 @@
 import type { BasiccnContent } from '@base/ui/basiccn'
 import { Preview } from '@base/ui/basiccn/preview'
+import { IconArticle } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
@@ -50,5 +51,6 @@ export const richTextBlock: BlockConfig = {
 	schema: richTextBlockSchema,
 	defaultValue: { content: undefined },
 	Fields: RichTextBlockFields,
-	Render: RichTextBlockRender
+	Render: RichTextBlockRender,
+	Icon: IconArticle
 }

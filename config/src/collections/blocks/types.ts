@@ -41,4 +41,14 @@ export type BlockConfig = {
 	 * — never `form`/`path`, since there's no form on a public page.
 	 */
 	Render?: FC<{ data: Record<string, unknown> }>
+	/**
+	 * Shown in the "Pick block" picker (`fields/blocks-field.tsx`) — a
+	 * plain `@tabler/icons-react` component (matching this app's
+	 * icon-only convention throughout `base/ui`/`base/config`), not a
+	 * Payload-style uploaded image/URL; this app has no per-block asset
+	 * pipeline and doesn't need one at its current block count. Falls
+	 * back to a generic placeholder icon when omitted (e.g. a
+	 * third-party plugin block that hasn't set one).
+	 */
+	Icon?: FC<{ className?: string }>
 }
