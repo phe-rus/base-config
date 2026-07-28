@@ -1,0 +1,29 @@
+{
+	"name": "@base/plugin-form-builder",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./*": "./src/*"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"dependencies": {
+		"@base/config": "workspace:*",
+		"@base/ui": "workspace:*",
+		"@tanstack/react-db": "latest",
+		"zod": "^4.4.3"
+	},
+	"peerDependencies": {
+		"@tanstack/react-query": "^5.101.4",
+		"@types/react": "^19",
+		"hono": "^4",
+		"react": ">=19",
+		"typescript": ">=5"
+	}
+}

@@ -1,5 +1,4 @@
-import { defineCollection } from '../../define'
-import type { CollectionConfig } from '../../collections/types'
+import { defineCollection } from '@base/config'
 
 /**
  * The `form-submissions` collection — one row per real public submission,
@@ -12,7 +11,7 @@ import type { CollectionConfig } from '../../collections/types'
  * invisible to anyone but an admin, with no new "admin-only reads" route
  * concept needed.
  */
-export const formSubmissionsCollection: CollectionConfig = defineCollection({
+export const formSubmissionsCollection = defineCollection({
 	slug: 'form-submissions',
 	label: 'Form Submissions',
 	admin: { useAsTitle: 'form' },

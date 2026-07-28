@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { MiddlewareHandler } from 'hono'
-import { collectHooks } from '../collections/registry'
+import { collectEndpointFactories, collectHooks } from '../collections/registry'
+import type { SendEmailFn } from '../db/content-route'
 import { createIgnite } from './ignite'
 import type { IgniteOptions } from './ignite'
 import { createBaseConfigRoute } from './route'
@@ -29,6 +30,13 @@ export type AuthServerLike = {
 export type CreateHandlerOptions = BaseConfigRouteBindings & {
 	/** The consumer's own `betterAuth()` instance — see `AuthServerLike`'s own doc comment for why this stays structural. */
 	auth: AuthServerLike
+	/**
+	 * A general-purpose email sender — see `SendEmailFn`'s own doc comment
+	 * (`db/content-route.ts`). Optional: omit if nothing registered needs
+	 * to send mail. Handed to every registered `EndpointFactory` alongside
+	 * `db` — see this function's own doc comment for the full mechanism.
+	 */
+	sendEmail?: SendEmailFn
 } & Pick<
 		IgniteOptions,
 		'isDevelopment' | 'matchOrigin' | 'requestTimeoutMs' | 'etag'
@@ -64,6 +72,14 @@ export type CreateHandlerOptions = BaseConfigRouteBindings & {
  * config-level hook and a binding-capable one should just define both
  * inside the one Tier-2 entry instead of splitting them.
  *
+ * **Also invokes every registered `EndpointFactory`** (`collectEndpointFactories()`,
+ * `collections/registry.ts`) with `{db, sendEmail}`, merging the results
+ * with the explicit `endpoints` param — see `EndpointFactory`'s own doc
+ * comment (`db/content-route.ts`) for why this is *the* mechanism that
+ * keeps a plugin's entire footprint inside `base.config.ts`'s
+ * `plugins: [...]`: a consumer's server entry only ever hands this
+ * function generic bindings, never anything plugin-specific.
+ *
  * A consumer's entire server-side footprint collapses to building this
  * once and serving it from whatever route file matches `/api/*` — e.g.
  * TanStack Start's own `@base/config/api`'s `Handler(app)` wrapping the
@@ -76,6 +92,7 @@ export function createHandler({
 	hooks,
 	endpoints,
 	auth,
+	sendEmail,
 	isDevelopment,
 	matchOrigin,
 	requestTimeoutMs,
@@ -94,6 +111,10 @@ export function createHandler({
 	}
 
 	const mergedHooks = { ...collectHooks(), ...hooks }
+	const factoryEndpoints = collectEndpointFactories().flatMap((factory) =>
+		factory({ db, sendEmail })
+	)
+	const mergedEndpoints = [...factoryEndpoints, ...(endpoints ?? [])]
 
 	return ignite({
 		enabled: true,
@@ -112,7 +133,7 @@ export function createHandler({
 					bucket,
 					cache,
 					hooks: mergedHooks,
-					endpoints
+					endpoints: mergedEndpoints
 				})
 			)
 		)

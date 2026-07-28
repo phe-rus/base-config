@@ -10,8 +10,7 @@ import {
 import { cn } from '@base/ui/lib/utils'
 import { ArrayField } from '@base/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
-import { blockRegistry } from '../blocks'
-import type { BlockSlug } from '../blocks/types'
+import { blocksBySlug } from '../blocks'
 
 type BlocksFieldProps = {
 	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */
@@ -20,7 +19,7 @@ type BlocksFieldProps = {
 	label?: string
 	description?: string
 	/** Block slugs to omit from the "Add block" menu — used to cap `columns` at one level of nesting. */
-	exclude?: BlockSlug[]
+	exclude?: string[]
 }
 
 export function BlocksField({
@@ -30,7 +29,7 @@ export function BlocksField({
 	description,
 	exclude = []
 }: BlocksFieldProps) {
-	const slugs = (Object.keys(blockRegistry) as BlockSlug[]).filter(
+	const slugs = Object.keys(blocksBySlug).filter(
 		(slug) => !exclude.includes(slug)
 	)
 
@@ -70,7 +69,7 @@ export function BlocksField({
 												onClick={() =>
 													add({
 														blockType: slug,
-														...blockRegistry[slug].defaultValue
+														...blocksBySlug[slug].defaultValue
 													})
 												}
 												className={cn(
@@ -78,7 +77,7 @@ export function BlocksField({
 													'bg-input hover:bg-input/50 cursor-pointer transition-colors'
 												)}
 											>
-												{blockRegistry[slug].label}
+												{blocksBySlug[slug].label}
 											</article>
 										))}
 									</section>
@@ -88,7 +87,7 @@ export function BlocksField({
 					)}
 				>
 					{({ path, value }) => {
-						const block = blockRegistry[value?.blockType as BlockSlug]
+						const block = blocksBySlug[value?.blockType as string]
 						if (!block) {
 							return (
 								<p className='text-muted-foreground text-xs'>

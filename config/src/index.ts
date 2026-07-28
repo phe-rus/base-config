@@ -18,9 +18,12 @@ export type {
 	Plugin
 } from './base.types'
 export type { FieldConfig, TabConfig } from './fields/types'
-export { createContentApiClient } from './db/collections'
+export { registerBlocks } from './collections/blocks'
+export type { BlockConfig, BlockFieldsProps } from './collections/blocks'
+export { createContentApiClient, getContentCollection } from './db/collections'
 export type {
 	ContentApiClient,
+	ContentCollection,
 	ContentDocumentRow,
 	ContentGlobalRow,
 	ContentPaginatedResult,
@@ -36,7 +39,23 @@ export type {
 	UpdateOptions
 } from './db/collections'
 export { base } from './db/content-client'
-export type { WhereCondition } from './db/content-queries'
+export {
+	createDocument,
+	getDocument,
+	updateDocument,
+	deleteDocument,
+	getGlobal,
+	upsertGlobal
+} from './db/content-queries'
+export type {
+	ContentDatabase,
+	CreateDocumentInput,
+	DocumentRow,
+	GlobalRow,
+	UpdateDocumentInput,
+	WhereCondition
+} from './db/content-queries'
+export { createId } from './collections/id'
 export { createStorageApiClient } from './fields/storage-client'
 export type {
 	StorageApiClient,
@@ -48,5 +67,10 @@ export { createBaseConfigRoute } from './api/route'
 export type { BaseConfigRouteBindings } from './api/route'
 export { createHandler } from './api/create-handler'
 export type { AuthServerLike, CreateHandlerOptions } from './api/create-handler'
-export type { ContentEndpoint } from './db/content-route'
+export type {
+	ContentEndpoint,
+	EndpointFactory,
+	EndpointFactoryBindings,
+	SendEmailFn
+} from './db/content-route'
 export { collectHooks } from './collections/registry'

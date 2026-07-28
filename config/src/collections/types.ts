@@ -7,23 +7,7 @@ import { z } from 'zod'
 
 export type { CollectionFieldsProps } from '../base.types'
 
-// `forms`/`form-submissions` are the plugins/form-builder's own two
-// collections (`base/config/src/plugins/form-builder/`) — a real, disclosed
-// limitation of this union living here at all: it's meant to model "this
-// app's own slugs," but a plugin has no way to extend a closed union from
-// outside this file, so its slugs get folded in directly instead. A
-// consumer that never installs `formBuilderPlugin()` still gets these two
-// extra members in the type (harmless — they just never appear in the
-// live registry), which is the honest trade-off until this union is made
-// genuinely open/generic per consumer, a bigger change than this plugin's
-// own scope.
-export type CollectionSlug =
-	| 'pages'
-	| 'posts'
-	| 'policies'
-	| 'users'
-	| 'forms'
-	| 'form-submissions'
+export type CollectionSlug = 'pages' | 'posts' | 'policies' | 'users'
 export type GlobalSlug = 'topbar' | 'footer' | 'keywords' | 'storage'
 
 export const metaSchema = z.object({

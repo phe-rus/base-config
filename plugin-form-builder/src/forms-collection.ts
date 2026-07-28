@@ -1,5 +1,4 @@
-import { defineCollection } from '../../define'
-import type { CollectionConfig } from '../../collections/types'
+import { defineCollection } from '@base/config'
 
 /**
  * One row of a form's own `fields` array — modeled on Payload's own
@@ -42,7 +41,7 @@ export type FormData = {
  * via `formBuilderPlugin()` (`plugin.ts`), never hand-registered directly —
  * see that file's own doc comment.
  */
-export const formsCollection: CollectionConfig = defineCollection({
+export const formsCollection = defineCollection({
 	slug: 'forms',
 	label: 'Forms',
 	columns: [{ key: 'title', label: 'Title' }],

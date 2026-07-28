@@ -1,0 +1,27 @@
+{
+	"include": ["src", "**/*.ts", "**/*.tsx"],
+	"compilerOptions": {
+		"target": "ES2022",
+		"jsx": "react-jsx",
+		"module": "ESNext",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"types": ["bun"],
+		"paths": {
+			"@base/plugin-form-builder/*": ["./src/*"],
+			"@base/config": ["../config/src/index.ts"],
+			"@base/config/*": ["../config/src/*"],
+			"@base/ui/*": ["../ui/src/*"]
+		},
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedSideEffectImports": true
+	},
+	"exclude": ["node_modules", "dist"]
+}

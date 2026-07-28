@@ -1,36 +1,32 @@
 import { z } from 'zod'
-import { bannerBlock, bannerBlockSchema } from './banner'
-import { columnsBlock, columnsBlockSchema } from './columns'
-import { ctaBlock, ctaBlockSchema } from './cta'
-import { formBlock, formBlockSchema } from './form'
-import { gridBlock, gridBlockSchema } from './grid'
-import { mediaBlock, mediaBlockSchema } from './media'
-import { relatedPostsBlock, relatedPostsBlockSchema } from './related-posts'
-import { richTextBlock, richTextBlockSchema } from './richtext'
-import type { BlockConfig, BlockSlug } from './types'
+import { blocksBySlug } from './registry'
 
-export const blockRegistry: Record<BlockSlug, BlockConfig> = {
-	richtext: richTextBlock,
-	media: mediaBlock,
-	cta: ctaBlock,
-	banner: bannerBlock,
-	grid: gridBlock,
-	columns: columnsBlock,
-	relatedPosts: relatedPostsBlock,
-	form: formBlock
+export { blocksBySlug, registerBlocks } from './registry'
+
+/**
+ * Built lazily, on every call, from the *current* `blocksBySlug` registry —
+ * never cached as a top-level constant the way this used to be a static
+ * `blocksSchema` export. That mattered once blocks became registry-based:
+ * `define.ts`'s `schemaResolvers.blocks` is evaluated once, at that
+ * module's own eval time, which happens when `www/src/config/collections/*.ts`
+ * files are first imported — *before* `baseConfig({plugins: [...]})` has
+ * run and registered a plugin's own blocks (e.g.
+ * `@base/plugin-form-builder`'s `formBlock`). `define.ts` wraps this in
+ * `z.lazy(() => getBlocksSchema())` instead, deferring the actual
+ * discriminated-union build until a real validation happens — always after
+ * `baseConfig()` has finished, by which point every plugin's blocks are in
+ * the registry.
+ */
+export function getBlocksSchema() {
+	const schemas = Object.values(blocksBySlug).map((block) => block.schema)
+	// `discriminatedUnion` wants each member's discriminant statically
+	// provable — real for every individual block's own `z.object({blockType:
+	// z.literal(...), ...})` schema, but lost once erased to `ZodTypeAny` and
+	// collected through a runtime registry. Still a real discriminated union
+	// at runtime (every `BlockConfig.schema` is one), just not provable to
+	// this degree by the type checker once dynamic — same trade-off the rest
+	// of this registry-based design already accepts.
+	return z.array(z.discriminatedUnion('blockType', schemas as any))
 }
-
-export const blocksSchema = z.array(
-	z.discriminatedUnion('blockType', [
-		richTextBlockSchema,
-		mediaBlockSchema,
-		ctaBlockSchema,
-		bannerBlockSchema,
-		gridBlockSchema,
-		columnsBlockSchema,
-		relatedPostsBlockSchema,
-		formBlockSchema
-	])
-)
 
 export type { BlockConfig, BlockFieldsProps, BlockSlug } from './types'

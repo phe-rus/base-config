@@ -26,7 +26,7 @@ export const Checkbox = ({
 			<CheckboxUi
 				id={name}
 				name={name}
-				checked={value}
+				checked={value ?? false}
 				aria-invalid={isInvalid}
 				onBlur={handleBlur}
 				disabled={disabled}

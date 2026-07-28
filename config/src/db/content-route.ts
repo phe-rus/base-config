@@ -57,6 +57,54 @@ export type ContentEndpoint = {
 	handler: (c: Context) => Response | Promise<Response>
 }
 
+/**
+ * A general-purpose email-sending capability — not form-builder-specific,
+ * even though `@base/plugin-form-builder` is its first real consumer. A
+ * plain callback rather than Cloudflare's real `send_email` binding
+ * directly, same reasoning `R2BucketLike`/`KVNamespaceLike` already follow
+ * (no `@cloudflare/workers-types` dependency for one ambient type), taken
+ * one step further here since actually sending mail needs more than one
+ * binding call (MIME construction, etc.) — the consumer's own
+ * `www/src/api/index.ts` implements this however it wants, closing over
+ * `env.EMAIL` internally, and hands the result to `createHandler({sendEmail})`
+ * once, generically.
+ */
+export type SendEmailFn = (email: {
+	to: string
+	from: string
+	subject: string
+	html: string
+}) => Promise<void>
+
+/** What an `EndpointFactory` is handed — every real binding `createHandler()` itself already has, so a plugin's factory never needs its own separate wiring step. */
+export type EndpointFactoryBindings = {
+	db: ContentDatabase
+	sendEmail?: SendEmailFn
+}
+
+/**
+ * **The mechanism that makes "plugins only configured in `base.config.ts`"
+ * real**, not just true for isomorphic collections/blocks/hooks. A plugin
+ * (e.g. `formBuilderPlugin()`) can't hand `createHandler()` real
+ * `ContentEndpoint`s directly — building one needs `db`/`sendEmail`, real
+ * bindings the plugin's own isomorphic `Plugin` function (running inside
+ * `baseConfig()`, evaluated in the browser too) can never have. What it
+ * *can* safely include in its returned config is this: a plain function
+ * reference that *knows how* to build its endpoints once it's later handed
+ * bindings — the function itself touches no binding just by existing in
+ * the client bundle, only by being *called*, and it's only ever called
+ * from `createHandler()` (server-only). `baseConfig()` registers every
+ * `BaseConfigProps['endpointFactories']` entry (`collections/registry.ts`'s
+ * `registerEndpointFactories()`); `createHandler()` calls
+ * `collectEndpointFactories()`, invokes each with the real bindings it
+ * already has in scope, and merges the result with its own Tier-2
+ * `endpoints` param — so a consumer's server entry only ever passes
+ * generic bindings (`db`, `sendEmail`, …), never anything plugin-specific.
+ */
+export type EndpointFactory = (
+	bindings: EndpointFactoryBindings
+) => ContentEndpoint[]
+
 export type ContentRouteBindings = {
 	db: ContentDatabase
 	/**

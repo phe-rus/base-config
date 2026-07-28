@@ -3,6 +3,7 @@ import type {
 	CollectionHooks,
 	GlobalConfig as BaseGlobalConfig
 } from '../base.types'
+import type { EndpointFactory } from '../db/content-route'
 import type { CollectionConfig, GlobalConfig } from './types'
 
 // A plain, passive store — populated by a consumer's `base.config.ts` (e.g.
@@ -79,4 +80,16 @@ export function collectHooks(): Record<string, CollectionHooks> {
 		if (global.hooks) hooks[global.slug] = global.hooks
 	}
 	return hooks
+}
+
+const endpointFactories: EndpointFactory[] = []
+
+/** Called once by `baseConfig()` with `config.endpointFactories ?? []` — see `EndpointFactory`'s own doc comment (`db/content-route.ts`) for the full mechanism. */
+export function registerEndpointFactories(factories: EndpointFactory[]) {
+	endpointFactories.push(...factories)
+}
+
+/** `createHandler()` calls this once, internally, invoking every registered factory with the real bindings it has and merging the results with its own Tier-2 `endpoints` param. */
+export function collectEndpointFactories(): EndpointFactory[] {
+	return endpointFactories
 }

@@ -470,6 +470,22 @@ export type RealUserRow = {
 export type BetterAuthAdminClient = {
 	/** Core client method (not part of `adminClient()`) — used by `Topbar`'s sign-out button. */
 	signOut: () => Promise<{ data: unknown; error: unknown }>
+	/**
+	 * better-auth's own real reactive hook (`createAuthClient()`'s built-in
+	 * `useSession`, confirmed against its own `.d.ts` — `{data, isPending,
+	 * isRefetching, error, refetch}`, trimmed here to the two fields
+	 * anything in this package actually reads) — a real, live client-side
+	 * session read with no query/cache machinery of its own to get wrong,
+	 * used so `Topbar`/a consumer's own header don't need a `session` prop
+	 * threaded down just to show who's signed in (see `Topbar`'s own doc
+	 * comment).
+	 */
+	useSession: () => {
+		data: {
+			user: { name?: string | null; role?: string | string[] | null }
+		} | null
+		isPending: boolean
+	}
 	admin: {
 		listUsers: (opts: {
 			query: Record<string, unknown>
@@ -685,7 +701,17 @@ function createUsersCollection() {
 
 const contentCollectionCache = new Map<string, ContentCollection>()
 
-function getContentCollection(slug: string): ContentCollection {
+/**
+ * The plain-`string`-keyed lookup `contentCollections`'s own Proxy uses
+ * internally — exported directly (unlike the Proxy, which is typed to this
+ * app's own closed `CollectionSlug`) so a plugin package can fetch its own,
+ * dynamically-registered collection (e.g. `@base/plugin-form-builder`'s
+ * `forms`) without needing that slug to be a member of a union it doesn't
+ * own. Safe for any slug actually present in `collectionsBySlug` at call
+ * time (i.e. after `baseConfig()` has registered it) — same caching
+ * behavior `contentCollections[slug]` already has.
+ */
+export function getContentCollection(slug: string): ContentCollection {
 	let collection = contentCollectionCache.get(slug)
 	if (!collection) {
 		const config = collectionsBySlug[slug as CollectionSlug]

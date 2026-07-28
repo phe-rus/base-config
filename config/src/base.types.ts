@@ -1,7 +1,9 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { FC } from 'react'
 import type { z } from 'zod'
+import type { BlockConfig } from './collections/blocks/types'
 import type { BetterAuthAdminClient } from './db/collections'
+import type { EndpointFactory } from './db/content-route'
 
 // `@base/config`'s own root shape — independent of any one consumer's actual
 // values. A consuming app (e.g. `www/src/hooks/config/base.config.ts`)
@@ -108,6 +110,27 @@ export type BaseConfigProps = {
 	config: AdminSettings
 	collections: CollectionConfig[]
 	globals: GlobalConfig[]
+	/**
+	 * Extra block types beyond this package's own 7 built-ins (richtext/
+	 * media/cta/banner/grid/columns/relatedPosts) — almost always populated
+	 * by a plugin (e.g. `@base/plugin-form-builder`'s `formBlock`) rather
+	 * than hand-written here directly. `baseConfig()` merges these into the
+	 * live `blocksBySlug` registry (`collections/blocks/registry.ts`) as a
+	 * side effect, same pattern `collections`/`globals` already use.
+	 */
+	blocks?: BlockConfig[]
+	/**
+	 * Server-only endpoint builders, almost always populated by a plugin —
+	 * see `EndpointFactory`'s own doc comment (`db/content-route.ts`) for
+	 * the full mechanism this enables: a plugin registers a function here
+	 * instead of real endpoints (which would need bindings this isomorphic
+	 * config can never have), and `createHandler()` calls it once it has
+	 * those bindings in hand. This is *the* piece that keeps a plugin's
+	 * entire footprint inside `base.config.ts`'s own `plugins: [...]` —
+	 * without it, a plugin needing a real endpoint would force a second,
+	 * separate call somewhere in the consumer's server entry.
+	 */
+	endpointFactories?: EndpointFactory[]
 	/**
 	 * Not yet read anywhere in this package — a real gap, not a documented
 	 * behavior. Content collections' actual offline behavior today rides

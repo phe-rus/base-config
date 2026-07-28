@@ -1,30 +1,7 @@
-import { createId } from '../../collections/id'
-import type { ContentDatabase } from '../../db/content-queries'
-import { createDocument, getDocument } from '../../db/content-queries'
-import type { ContentEndpoint } from '../../db/content-route'
+import { createDocument, createId, getDocument } from '@base/config'
+import type { EndpointFactory } from '@base/config'
+import { getFormBuilderOptions } from './plugin'
 import type { FormData } from './forms-collection'
-
-/**
- * A plain callback rather than Cloudflare's real `send_email` binding
- * directly — same reasoning `R2BucketLike`/`KVNamespaceLike` already
- * follow (no `@cloudflare/workers-types` dependency for one ambient type),
- * taken one step further here since actually sending mail needs more than
- * one binding call (MIME construction, etc.) — the consumer's own
- * `www/src/api/index.ts` implements this however it wants, closing over
- * `env.EMAIL` internally.
- */
-export type SendEmailFn = (email: {
-	to: string
-	from: string
-	subject: string
-	html: string
-}) => Promise<void>
-
-export type FormBuilderEndpointsOptions = {
-	db: ContentDatabase
-	/** Omit to accept submissions without ever sending mail (still stores them, still returns a confirmation). */
-	sendEmail?: SendEmailFn
-}
 
 /**
  * `{{fieldName}}` → that field's submitted value, `{{*}}` → every
@@ -43,24 +20,26 @@ function interpolate(template: string, data: Record<string, unknown>): string {
 }
 
 /**
- * The public half of the form builder — see `plugin.ts`'s own doc comment
- * for why this is a separate call from `formBuilderPlugin()`, not folded
- * into it. One real endpoint: `POST /api/forms/:id/submit`, unauthenticated
- * by design (matching Payload's own default for its equivalent
- * `/api/form-submissions` route) — a public visitor has no session to
- * check. Validates submitted data against the referenced form's own
- * `fields` config (required-field presence only — real per-type validation,
- * e.g. a genuine email-format check, isn't attempted here), stores a
- * `form-submissions` row (see that collection's own doc comment for why
- * it's never publicly readable), then fires every configured email
- * (best-effort — one failing email doesn't fail the submission itself, it's
- * logged and swallowed) before returning the form's own confirmation
- * config (a message to show, or a URL to redirect to).
+ * The public half of the form builder — an `EndpointFactory`
+ * (`@base/config`'s own `db/content-route.ts`), not a function a consumer
+ * calls directly. `plugin.ts` registers this itself, into
+ * `config.endpointFactories`, the moment `formBuilderPlugin()` runs — so
+ * `createHandler()` picks it up automatically (invoked with whatever real
+ * `db`/`sendEmail` the consumer's own server entry handed it) and a
+ * consumer never imports this file at all. One real endpoint:
+ * `POST /api/forms/:id/submit`, unauthenticated by design (matching
+ * Payload's own default for its equivalent `/api/form-submissions` route)
+ * — a public visitor has no session to check. Validates submitted data
+ * against the referenced form's own `fields` config (required-field
+ * presence only — real per-type validation, e.g. a genuine email-format
+ * check, isn't attempted here), stores a `form-submissions` row (see that
+ * collection's own doc comment for why it's never publicly readable), then
+ * fires every configured email (best-effort — one failing email doesn't
+ * fail the submission itself, it's logged and swallowed) before returning
+ * the form's own confirmation config (a message to show, or a URL to
+ * redirect to).
  */
-export function formBuilderEndpoints({
-	db,
-	sendEmail
-}: FormBuilderEndpointsOptions): ContentEndpoint[] {
+export const formBuilderEndpoints: EndpointFactory = ({ db, sendEmail }) => {
 	return [
 		{
 			collection: 'forms',
@@ -114,14 +93,23 @@ export function formBuilderEndpoints({
 				})
 
 				if (sendEmail && formData.emails?.length) {
+					const interpolated = formData.emails.map((email) => ({
+						to: interpolate(email.to, submissionData),
+						from: interpolate(email.from, submissionData),
+						subject: interpolate(email.subject, submissionData),
+						html: interpolate(email.message ?? '', submissionData)
+					}))
+					// `beforeEmail` (configured once, via `formBuilderPlugin({beforeEmail})`
+					// in `base.config.ts` — see `plugin.ts`'s own doc comment) gets the
+					// last word on what actually gets sent.
+					const { beforeEmail } = getFormBuilderOptions()
+					const emailsToSend = beforeEmail
+						? beforeEmail(interpolated, { doc: row })
+						: interpolated
+
 					await Promise.all(
-						formData.emails.map((email) =>
-							sendEmail({
-								to: interpolate(email.to, submissionData),
-								from: interpolate(email.from, submissionData),
-								subject: interpolate(email.subject, submissionData),
-								html: interpolate(email.message ?? '', submissionData)
-							}).catch((error) => {
+						emailsToSend.map((email) =>
+							sendEmail(email).catch((error) => {
 								console.error(
 									'formBuilderEndpoints: failed to send an email for a form submission',
 									error

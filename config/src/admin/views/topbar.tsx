@@ -6,6 +6,7 @@ import {
 	contentCollections,
 	getAuthClient,
 	unwrap,
+	type BetterAuthAdminClient,
 	type ContentCollection
 } from '../../db/collections'
 import { Button } from '@base/ui/components/button'
@@ -114,19 +115,30 @@ function ItemBreadcrumbLive({ collection, itemId, href }: ItemSegment) {
 	)
 }
 
+/**
+ * Split out from `Topbar` itself so `useSession()` (a real hook) is only
+ * ever called from a subtree that's *conditionally rendered as a whole*
+ * (`{authClient && <SessionGreeting authClient={authClient} />}` below) —
+ * never conditionally *called*, which would break React's rules of hooks.
+ * Real, live reactive read (better-auth's own `useSession()`, see
+ * `BetterAuthAdminClient`'s own doc comment) rather than a `sessions` prop
+ * a consumer's own route loader used to have to thread down just for this
+ * one display — same self-contained shape the sign-out mutation already has.
+ */
+function SessionGreeting({
+	authClient
+}: {
+	authClient: BetterAuthAdminClient
+}) {
+	const { data: session } = authClient.useSession()
+	return <p className='hidden md:flex text-sm!'>Holla, {session?.user?.name}</p>
+}
+
 type TopbarProps = PropsWithChildren<{
-	/**
-	 * Kept structural/minimal on purpose — this package has no dependency on
-	 * any particular auth library, so it only ever reads `user.name`. Passed
-	 * explicitly rather than fetched here so this stays a single value the
-	 * consumer's own route loader already resolved once — not a live query
-	 * this component re-fetches on its own.
-	 */
-	sessions?: { user?: { name?: string | null } | null } | null
 	config: AdminSettings
 }>
 
-export const Topbar: FC<TopbarProps> = ({ sessions, children, config }) => {
+export const Topbar: FC<TopbarProps> = ({ children, config }) => {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname
 	})
@@ -192,9 +204,7 @@ export const Topbar: FC<TopbarProps> = ({ sessions, children, config }) => {
 					</div>
 
 					<nav className='flex items-center gap-2'>
-						<p className='hidden md:flex text-sm!'>
-							Holla, {sessions?.user?.name}
-						</p>
+						{authClient && <SessionGreeting authClient={authClient} />}
 						{authClient && (
 							<Button
 								variant='destructive'
