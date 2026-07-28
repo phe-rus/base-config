@@ -1,7 +1,8 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
-import type { MiddlewareHandler } from 'hono'
+import type { Context, MiddlewareHandler } from 'hono'
 import { z } from 'zod'
+import type { CollectionHooks, HookContext } from '../base.types'
 import {
 	createDocument,
 	deleteDocument,
@@ -20,6 +21,77 @@ type SessionLike = { user: { role?: string | null } }
 type ContentRouteEnv = { Variables: { session?: SessionLike } }
 
 export type ContentRouteType = ReturnType<typeof createContentRoute>
+
+/**
+ * The exact slice of Cloudflare's real `KVNamespace` this route calls —
+ * structural, same trade-off `R2BucketLike`/`BetterAuthAdminClient` already
+ * make so this package never needs `@cloudflare/workers-types` as a
+ * dependency for one binding's ambient type. A consumer's real `env.CACHE`
+ * satisfies this without a cast.
+ */
+export type KVNamespaceLike = {
+	get: (key: string) => Promise<string | null>
+	put: (key: string, value: string) => Promise<void>
+	delete: (key: string) => Promise<void>
+}
+
+/**
+ * A Payload-style custom endpoint (https://payloadcms.com/docs/rest-api/overview) —
+ * `collection`/`path`/`method` describe where it's mounted (`/api/<collection><path>`,
+ * registered *before* the generic `/:collection`/`/:collection/:id` wildcards
+ * — same registration-order rule `/globals` already relies on, since e.g.
+ * `form-submissions` + `/submit` would otherwise ambiguously match
+ * `/:collection/:id` with `id: 'submit'`). `handler` is a plain Hono
+ * handler — loosely typed (`Context`, not this file's own internal
+ * `ContentRouteEnv`) since a plugin author outside this file can't name
+ * that type. Always Tier 2 (never declared inside `defineCollection`'s
+ * isomorphic config, same as binding-capable hooks — see
+ * `CollectionHooks`' own doc comment): a custom endpoint's whole reason to
+ * exist is almost always binding/DB access, so it's registered directly at
+ * `createHandler({endpoints: [...]})` instead.
+ */
+export type ContentEndpoint = {
+	collection: string
+	path: string
+	method: 'get' | 'post' | 'put' | 'patch' | 'delete'
+	handler: (c: Context) => Response | Promise<Response>
+}
+
+export type ContentRouteBindings = {
+	db: ContentDatabase
+	/**
+	 * Optional public-read cache — omit for no caching at all (every read
+	 * goes straight to D1, today's behavior). Only ever consulted/populated
+	 * for genuinely public reads (`publishedOnly` document reads, and every
+	 * global read — globals have no draft/published concept at all); an
+	 * authenticated admin request always bypasses it, since admins need to
+	 * see drafts. A cache-aside pattern, not "populate on publish": every
+	 * write (`PATCH`/`DELETE`) just invalidates the relevant key, and the
+	 * next public read repopulates it — simpler and harder to get subtly
+	 * wrong than trying to compute what a fresh read *would* return at
+	 * write time.
+	 */
+	cache?: KVNamespaceLike
+	/**
+	 * Tier-1 (isomorphic, pure) hooks, keyed by collection/global slug —
+	 * `createHandler()` builds this by merging `collectHooks()`
+	 * (`collections/registry.ts`) with its own Tier-2 `hooks` param before
+	 * ever reaching here; a consumer calling `createContentRoute()`
+	 * directly (bypassing `createHandler()`) can pass its own map too. See
+	 * `CollectionHooks`' own doc comment for what a hook may/may not do.
+	 */
+	hooks?: Record<string, CollectionHooks>
+	/** See `ContentEndpoint`'s own doc comment. */
+	endpoints?: ContentEndpoint[]
+}
+
+function documentCacheKey(collection: string, id: string): string {
+	return `content:${collection}:${id}`
+}
+
+function globalCacheKey(slug: string): string {
+	return `content:global:${slug}`
+}
 
 const createDocumentSchema = z.object({
 	id: z.string(),
@@ -78,7 +150,7 @@ function isAdmin(session: SessionLike | undefined): boolean {
 /**
  * Content CRUD, factored out as a plain Hono app rather than something a
  * consumer hand-writes — `createBaseConfigRoute()` mounts this at the
- * *root* of the API (`.route('/', createContentRoute(contentdb))`), not
+ * *root* of the API (`.route('/', createContentRoute({db, cache}))`), not
  * under a `/content` prefix — so a collection's real REST address is
  * `/api/<slug>` (`/api/pages`, `/api/posts`) and a global's is
  * `/api/globals/<slug>`, matching Payload's own REST shape exactly.
@@ -115,21 +187,49 @@ function isAdmin(session: SessionLike | undefined): boolean {
  * to edit them before publishing); anyone else only ever sees
  * `status: 'published'` documents. Globals have no draft/published concept
  * (no `status` column) — `GET` on them is unconditionally public.
+ *
+ * **`cache` (optional) fronts the single-document/single-global public
+ * reads** — see `ContentRouteBindings['cache']`'s own doc comment. List
+ * reads (`GET /:collection`, `GET /globals`) are never cached — a filtered/
+ * paginated list has no single natural cache key the way one document does.
+ *
+ * **`hooks`/`endpoints` (both optional)** — see `CollectionHooks`'/
+ * `ContentEndpoint`'s own doc comments. `endpoints` are mounted first,
+ * ahead of every built-in route, via a `reduce()` (a plugin's endpoint list
+ * is only known at runtime, so it can't be part of the single static
+ * chained expression the built-in routes are — meaning custom endpoints
+ * aren't part of `ContentRouteType`'s own RPC-inferred shape, which is
+ * fine: nothing in this package's own admin UI calls a plugin's endpoint
+ * through the typed client, only a public page's plain `fetch()` does).
  */
-export function createContentRoute(db: ContentDatabase) {
+export function createContentRoute({
+	db,
+	cache,
+	hooks,
+	endpoints
+}: ContentRouteBindings) {
 	const adminOnly: MiddlewareHandler<ContentRouteEnv> = async (c, next) => {
 		if (!isAdmin(c.get('session'))) return c.text('Unauthorized', 401)
 		await next()
 	}
 
-	const app = new Hono<ContentRouteEnv>()
-		.onError((error, c) => {
+	const withEndpoints = (endpoints ?? []).reduce(
+		(current, endpoint) =>
+			current.on(
+				endpoint.method.toUpperCase(),
+				`/${endpoint.collection}${endpoint.path}`,
+				endpoint.handler
+			),
+		new Hono<ContentRouteEnv>().onError((error, c) => {
 			if (error instanceof UnknownTableError) {
 				return c.json({ error: 'Not found' }, 404)
 			}
 			console.error(error)
 			return c.json({ error: 'Internal Server Error' }, 500)
 		})
+	)
+
+	const app = withEndpoints
 		.get('/globals', async (c) => {
 			const slugs = await listGlobalSlugs(db)
 			const rows = await Promise.all(
@@ -146,8 +246,16 @@ export function createContentRoute(db: ContentDatabase) {
 		})
 		.get('/globals/:slug', async (c) => {
 			const slug = c.req.param('slug')
+			if (cache) {
+				const cached = await cache.get(globalCacheKey(slug))
+				if (cached) return c.json(JSON.parse(cached))
+			}
 			const row = await getGlobal(db, slug)
-			return c.json(row ? { slug, ...row } : null)
+			const result = row ? { slug, ...row } : null
+			if (cache && result) {
+				await cache.put(globalCacheKey(slug), JSON.stringify(result))
+			}
+			return c.json(result)
 		})
 		.patch(
 			'/globals/:slug',
@@ -155,9 +263,17 @@ export function createContentRoute(db: ContentDatabase) {
 			zValidator('json', upsertGlobalSchema),
 			async (c) => {
 				const slug = c.req.param('slug')
-				const fields = c.req.valid('json')
+				const globalHooks = hooks?.[slug]
+				const ctx: HookContext = { slug, operation: 'update' }
+				let fields = c.req.valid('json')
+				if (globalHooks?.beforeChange) {
+					fields = await globalHooks.beforeChange(fields, ctx)
+				}
 				const row = await upsertGlobal(db, slug, fields)
-				return c.json({ slug, ...row })
+				if (cache) await cache.delete(globalCacheKey(slug))
+				const result = { slug, ...row }
+				if (globalHooks?.afterChange) await globalHooks.afterChange(result, ctx)
+				return c.json(result)
 			}
 		)
 		.get('/:collection', zValidator('query', listQuerySchema), async (c) => {
@@ -175,8 +291,17 @@ export function createContentRoute(db: ContentDatabase) {
 		.get('/:collection/:id', async (c) => {
 			const { collection, id } = c.req.param()
 			const publishedOnly = !isAdmin(c.get('session'))
+			// Only the genuinely public path ever touches the cache — an admin
+			// request needs to see drafts, which this cache never stores.
+			if (cache && publishedOnly) {
+				const cached = await cache.get(documentCacheKey(collection, id))
+				if (cached) return c.json(JSON.parse(cached))
+			}
 			const row = await getDocument(db, collection, id, { publishedOnly })
 			if (!row) return c.json({ error: 'Not found' }, 404)
+			if (cache && publishedOnly) {
+				await cache.put(documentCacheKey(collection, id), JSON.stringify(row))
+			}
 			return c.json(row)
 		})
 		.post(
@@ -185,8 +310,16 @@ export function createContentRoute(db: ContentDatabase) {
 			zValidator('json', createDocumentSchema),
 			async (c) => {
 				const collection = c.req.param('collection')
+				const collectionHooks = hooks?.[collection]
+				const ctx: HookContext = { slug: collection, operation: 'create' }
 				const body = c.req.valid('json')
-				const row = await createDocument(db, collection, body)
+				const data = collectionHooks?.beforeChange
+					? await collectionHooks.beforeChange(body.data, ctx)
+					: body.data
+				const row = await createDocument(db, collection, { ...body, data })
+				if (collectionHooks?.afterChange) {
+					await collectionHooks.afterChange(row, ctx)
+				}
 				return c.json(row, 201)
 			}
 		)
@@ -196,15 +329,33 @@ export function createContentRoute(db: ContentDatabase) {
 			zValidator('json', updateDocumentSchema),
 			async (c) => {
 				const { collection, id } = c.req.param()
+				const collectionHooks = hooks?.[collection]
+				const ctx: HookContext = { slug: collection, operation: 'update' }
 				const body = c.req.valid('json')
-				const row = await updateDocument(db, collection, id, body)
+				const fields =
+					collectionHooks?.beforeChange && body.fields
+						? await collectionHooks.beforeChange(body.fields, ctx)
+						: body.fields
+				const row = await updateDocument(db, collection, id, {
+					...body,
+					fields
+				})
 				if (!row) return c.json({ error: 'Not found' }, 404)
+				// Invalidate rather than recompute-and-repopulate here — covers
+				// publish, unpublish, and a plain draft edit alike (the next
+				// public read repopulates correctly either way, including
+				// caching nothing at all if the doc isn't publicly visible).
+				if (cache) await cache.delete(documentCacheKey(collection, id))
+				if (collectionHooks?.afterChange) {
+					await collectionHooks.afterChange(row, ctx)
+				}
 				return c.json(row)
 			}
 		)
 		.delete('/:collection/:id', adminOnly, async (c) => {
 			const { collection, id } = c.req.param()
 			await deleteDocument(db, collection, id)
+			if (cache) await cache.delete(documentCacheKey(collection, id))
 			return c.json({ ok: true })
 		})
 

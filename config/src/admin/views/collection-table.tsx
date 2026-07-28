@@ -27,7 +27,7 @@ type TableRow = {
 	[key: string]: unknown
 }
 
-const DEFAULT_COLUMNS = [
+const DEFAULT_COLUMNS: NonNullable<CollectionConfig['columns']> = [
 	{ key: 'title', label: 'Title' },
 	{ key: 'slug', label: 'Slug' }
 ]
@@ -170,10 +170,23 @@ function CollectionTableLive({
 					...dataColumns.map((column) => ({
 						accessorKey: column.key,
 						header: column.label,
-						cell: ({ row }: { row: { original: TableRow } }) =>
-							row.original[column.key] || (
-								<span className='text-muted-foreground'>—</span>
-							)
+						// A plain `value || '—'` fallback treats `false` the same as
+						// "no value" — wrong specifically for boolean-valued columns,
+						// where `false` is a real, meaningful value, not a blank.
+						cell: ({ row }: { row: { original: TableRow } }) => {
+							const value = row.original[column.key]
+							if (column.type === 'checkbox' || column.type === 'switch') {
+								return (
+									<Badge
+										className='rounded-none capitalize text-[8px]'
+										variant={value ? 'secondary' : 'outline'}
+									>
+										{value ? 'True' : 'False'}
+									</Badge>
+								)
+							}
+							return value || <span className='text-muted-foreground'>—</span>
+						}
 					})),
 					{
 						accessorKey: 'status',

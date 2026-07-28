@@ -56,7 +56,7 @@ export const Textarea = ({
 				<InputGroupTextarea
 					id={name}
 					name={name}
-					value={value}
+					value={value ?? ''}
 					placeholder={placeholder}
 					rows={rows}
 					maxLength={maxLength}

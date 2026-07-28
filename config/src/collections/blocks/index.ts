@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { bannerBlock, bannerBlockSchema } from './banner'
 import { columnsBlock, columnsBlockSchema } from './columns'
 import { ctaBlock, ctaBlockSchema } from './cta'
+import { formBlock, formBlockSchema } from './form'
 import { gridBlock, gridBlockSchema } from './grid'
 import { mediaBlock, mediaBlockSchema } from './media'
 import { relatedPostsBlock, relatedPostsBlockSchema } from './related-posts'
@@ -15,7 +16,8 @@ export const blockRegistry: Record<BlockSlug, BlockConfig> = {
 	banner: bannerBlock,
 	grid: gridBlock,
 	columns: columnsBlock,
-	relatedPosts: relatedPostsBlock
+	relatedPosts: relatedPostsBlock,
+	form: formBlock
 }
 
 export const blocksSchema = z.array(
@@ -26,7 +28,8 @@ export const blocksSchema = z.array(
 		bannerBlockSchema,
 		gridBlockSchema,
 		columnsBlockSchema,
-		relatedPostsBlockSchema
+		relatedPostsBlockSchema,
+		formBlockSchema
 	])
 )
 

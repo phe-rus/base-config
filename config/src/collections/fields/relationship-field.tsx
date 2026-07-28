@@ -64,15 +64,19 @@ function useRelationshipOptions(
 	const { data: pages } = useLiveQuery(contentCollections.pages)
 	const { data: posts } = useLiveQuery(contentCollections.posts)
 	const { data: policies } = useLiveQuery(contentCollections.policies)
+	const { data: forms } = useLiveQuery(contentCollections.forms)
 
 	return useMemo(() => {
-		// `users` is deliberately excluded — real accounts aren't a relatable
-		// content type, and (being server-backed, not `localStorage`) aren't
-		// queried here at all. See `CollectionConfig['auth']`.
+		// `users`/`form-submissions` are deliberately excluded — real accounts
+		// aren't a relatable content type (and, being server-backed, not
+		// `localStorage`, aren't queried here at all — see
+		// `CollectionConfig['auth']`); a submission is a private record, not
+		// something a page ever references.
 		const bySlug: Partial<Record<CollectionSlug, typeof pages>> = {
 			pages,
 			posts,
-			policies
+			policies,
+			forms
 		}
 		const targets: CollectionSlug[] = targetType
 			? Array.isArray(targetType)
@@ -94,7 +98,7 @@ function useRelationshipOptions(
 					collection: collectionSlug
 				}
 			})
-	}, [pages, posts, policies, targetType, excludeId])
+	}, [pages, posts, policies, forms, targetType, excludeId])
 }
 
 export function RelationshipField(props: RelationshipFieldProps) {

@@ -9,6 +9,7 @@ export type BlockSlug =
 	| 'grid'
 	| 'columns'
 	| 'relatedPosts'
+	| 'form'
 
 export type BlockFieldsProps = {
 	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */

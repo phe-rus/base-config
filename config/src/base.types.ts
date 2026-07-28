@@ -8,6 +8,69 @@ import type { BetterAuthAdminClient } from './db/collections'
 // imports these types and fills in the real collections/globals/admin
 // settings for its own site.
 
+/**
+ * What a `beforeChange`/`afterChange` hook is told about the write it's
+ * running alongside — modeled on Payload's own collection hooks
+ * (`beforeChange`/`afterChange` receive `{data, originalDoc, operation, ...}`),
+ * trimmed to what this repo's own write path (`content-route.ts`) actually
+ * has in hand at each point. `slug` is a collection's own slug for a
+ * document write, or a global's own slug for a global write — both are
+ * looked up from the same flat `collectHooks()` map (`collections/registry.ts`),
+ * since collection/global slugs are already required to be disjoint (see
+ * that file's own `registerBaseConfig`).
+ */
+export type HookContext = {
+	slug: string
+	operation: 'create' | 'update'
+}
+
+/**
+ * Modeled on Payload's own collection-level hooks
+ * (https://payloadcms.com/docs/hooks/collections) — trimmed to the two
+ * load-bearing ones (`beforeChange`/`afterChange`; more can be added the
+ * same way later). **Must stay pure — no server-only bindings (`env`,
+ * `EMAIL`, `MEDIA`).** `defineCollection`/`defineGlobal`'s config is
+ * isomorphic (the same object is evaluated in the browser too, for
+ * `RelationshipField`/the registry), and this session already established
+ * that server-only bindings must never be reachable from isomorphic code —
+ * a hook that genuinely needs one (e.g. sending an email) doesn't belong
+ * here; it gets registered directly where `createHandler()` is actually
+ * called instead (`www/src/api/index.ts`, already server-only, already has
+ * `env` in scope) — see `createHandler`'s own `hooks` param.
+ *
+ * `beforeChange` runs against the incoming field-level data before it's
+ * persisted — a document create's own `data`, or a document/global
+ * update's own partial `fields` diff (see `content-route.ts`'s own
+ * `updateDocumentSchema`/`upsertGlobalSchema` — both already diff-shaped,
+ * not a whole-document replace) — and returns the (possibly modified)
+ * version actually written. `afterChange` runs once the write has actually
+ * happened, given the resulting row; its return value is discarded
+ * (side-effects only, e.g. recomputing a derived field on a *different*
+ * document — still isomorphic-safe as long as it only calls back into this
+ * package's own data layer, not a binding).
+ */
+export type CollectionHooks = {
+	beforeChange?: (
+		data: Record<string, unknown>,
+		ctx: HookContext
+	) => Record<string, unknown> | Promise<Record<string, unknown>>
+	afterChange?: (
+		doc: Record<string, unknown>,
+		ctx: HookContext
+	) => void | Promise<void>
+}
+
+/**
+ * Payload's own plugin shape (https://payloadcms.com/docs/plugins/overview):
+ * "a function that takes in an existing config and returns a *modified*
+ * config." `baseConfig({plugins: [...]})` runs every plugin over the
+ * incoming config first, before registering `collections`/`globals` or
+ * building the RPC client — so a plugin's own added collections/globals
+ * (e.g. a form-builder plugin's `forms`/`form-submissions`) get registered
+ * exactly like hand-written ones, with zero special-casing.
+ */
+export type Plugin = (config: BaseConfigProps) => BaseConfigProps
+
 export type AdminSettings = {
 	/**
 	 * Admin panel route prefix, without a leading slash (e.g. `'admin'`) —
@@ -76,6 +139,13 @@ export type BaseConfigProps = {
 	 * `BetterAuthAdminClient`'s own comment.
 	 */
 	auth?: BetterAuthAdminClient
+	/**
+	 * Payload-modeled plugins — see `Plugin`'s own doc comment. Run over the
+	 * incoming config first, in order, before anything else in
+	 * `baseConfig()` — a later plugin sees an earlier plugin's own
+	 * additions (more `collections`/`globals`/etc. already appended).
+	 */
+	plugins?: Plugin[]
 }
 
 export type CollectionFieldsProps = {
@@ -103,6 +173,8 @@ export type BaseConfig<TSlug extends string> = {
 	schema: z.ZodTypeAny
 	defaultValues: () => Record<string, unknown>
 	Fields: FC<CollectionFieldsProps>
+	/** Pure, isomorphic-safe lifecycle hooks — see `CollectionHooks`' own doc comment for the tier-1/tier-2 split. */
+	hooks?: CollectionHooks
 }
 
 export type CollectionConfig<TSlug extends string = string> =
@@ -152,9 +224,15 @@ export type CollectionConfig<TSlug extends string = string> =
 		 * matching every collection's own base fields (`db/collections.ts`'s
 		 * `withBaseFields`). A collection with its own more meaningful fields
 		 * (e.g. `users`' `name`/`email`/`role`) can show those instead of being
-		 * forced into the title/slug shape.
+		 * forced into the title/slug shape. `type` is optional (omitted for the
+		 * hand-written title/slug default, where it isn't needed) — when
+		 * present, `CollectionTable` uses it to render a value's cell
+		 * correctly for that field's own type rather than guessing from the
+		 * runtime value alone (a plain `value || '—'` fallback treats a real
+		 * `false` the same as "no value," which is wrong specifically for
+		 * `checkbox`/`switch` columns — see that component's own doc comment).
 		 */
-		columns?: { key: string; label: string }[]
+		columns?: { key: string; label: string; type?: string }[]
 		/**
 		 * Which column the table's search box filters on — must be one of
 		 * `columns`' keys (or `'title'`/`'slug'` if `columns` was omitted).

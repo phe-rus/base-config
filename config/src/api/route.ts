@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
+import type { CollectionHooks } from '../base.types'
 import type { ContentDatabase } from '../db/content-queries'
 import { createContentRoute } from '../db/content-route'
+import type { ContentEndpoint, KVNamespaceLike } from '../db/content-route'
 import { createStorageRoute } from './storage-route'
 
 export type BaseConfigRouteBindings = {
@@ -8,6 +10,12 @@ export type BaseConfigRouteBindings = {
 	db: ContentDatabase
 	/** The consumer's own R2 bucket binding — see `createStorageRoute`'s own doc comment. */
 	bucket: Parameters<typeof createStorageRoute>[0]
+	/** The consumer's own KV binding for the public-read cache — see `createContentRoute`'s `ContentRouteBindings['cache']`. Omit for no caching. */
+	cache?: KVNamespaceLike
+	/** See `createContentRoute`'s `ContentRouteBindings['hooks']`. */
+	hooks?: Record<string, CollectionHooks>
+	/** See `ContentEndpoint`'s own doc comment (`db/content-route.ts`). */
+	endpoints?: ContentEndpoint[]
 }
 
 /**
@@ -35,7 +43,15 @@ export type BaseConfigRouteBindings = {
 export function createBaseConfigRoute(bindings: BaseConfigRouteBindings) {
 	return new Hono()
 		.route('/storage', createStorageRoute(bindings.bucket))
-		.route('/', createContentRoute(bindings.db))
+		.route(
+			'/',
+			createContentRoute({
+				db: bindings.db,
+				cache: bindings.cache,
+				hooks: bindings.hooks,
+				endpoints: bindings.endpoints
+			})
+		)
 }
 
 /** The type `createHandler()` (`api/create-handler.ts`) and `baseConfig()`'s own internal `hc<BaseConfigRouteType>()` client both key off — the one Hono app type this package's client-side RPC building needs, now that a consumer no longer builds and injects its own `hc<TypeRouter>()` client (see `create-handler.ts`'s own doc comment). */

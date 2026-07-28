@@ -21,7 +21,7 @@ export function Editor({
 }: EditorProps) {
 	const editor = useEditor({
 		extensions: BasiccnExtensions.configure({ placeholder }),
-		content: value,
+		content: value ?? '',
 		editorProps: {
 			attributes: {
 				class: cn(basiccnTheme, contentClass)

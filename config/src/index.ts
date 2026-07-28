@@ -12,7 +12,10 @@ export { baseConfig, defineCollection, defineGlobal } from './define'
 export type {
 	AdminSettings,
 	BaseConfigProps,
-	CollectionFieldsProps
+	CollectionFieldsProps,
+	CollectionHooks,
+	HookContext,
+	Plugin
 } from './base.types'
 export type { FieldConfig, TabConfig } from './fields/types'
 export { createContentApiClient } from './db/collections'
@@ -45,3 +48,5 @@ export { createBaseConfigRoute } from './api/route'
 export type { BaseConfigRouteBindings } from './api/route'
 export { createHandler } from './api/create-handler'
 export type { AuthServerLike, CreateHandlerOptions } from './api/create-handler'
+export type { ContentEndpoint } from './db/content-route'
+export { collectHooks } from './collections/registry'

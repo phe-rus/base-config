@@ -86,7 +86,7 @@ const RENDERABLE_COLUMN_FIELD_TYPES = new Set([
 function deriveDefaultColumns(
 	tabs: TabConfig<CollectionSlug, BlockSlug>[],
 	useAsTitle?: string
-): { key: string; label: string }[] {
+): { key: string; label: string; type?: string }[] {
 	const fieldColumns = flattenTabFields(tabs)
 		.filter((field) => RENDERABLE_COLUMN_FIELD_TYPES.has(field.type))
 		.map((field) => ({
@@ -94,7 +94,8 @@ function deriveDefaultColumns(
 			label:
 				'label' in field && field.label
 					? field.label
-					: labelFromSlug(field.name)
+					: labelFromSlug(field.name),
+			type: field.type
 		}))
 	if (useAsTitle) return fieldColumns
 	return [
@@ -217,8 +218,20 @@ export function defineGlobal(definition: GlobalDefinition): GlobalConfig {
  * dev-port drift); `config.hostDomain` is the SSR-only fallback, read
  * exclusively when there's no `window` to ask (see its own doc comment,
  * `base.types.ts`).
+ *
+ * **Runs `config.plugins` first**, each one folding its own return value
+ * into the next — see `Plugin`'s own doc comment (`base.types.ts`). A
+ * plugin's own `collections`/`globals` (e.g. a form-builder plugin's
+ * `forms`/`form-submissions`) are registered exactly like hand-written
+ * ones below, since by the time `registerBaseConfig` runs, `config` already
+ * includes them.
  */
 export function baseConfig(config: BaseConfigProps): BaseConfigProps {
+	config = (config.plugins ?? []).reduce(
+		(current, plugin) => plugin(current),
+		config
+	)
+
 	registerBaseConfig(config.collections, config.globals)
 
 	const apiOrigin =

@@ -1,5 +1,6 @@
 import type {
 	CollectionConfig as BaseCollectionConfig,
+	CollectionHooks,
 	GlobalConfig as BaseGlobalConfig
 } from '../base.types'
 import type { CollectionConfig, GlobalConfig } from './types'
@@ -55,4 +56,27 @@ export function registerBaseConfig(
 			)
 		}
 	}
+}
+
+/**
+ * The bridge `content-route.ts` (server-only) reads Tier-1 hooks through —
+ * safe specifically *because* `CollectionHooks` must stay pure/binding-free
+ * (see that type's own doc comment): a server-only file reading something
+ * that's also reachable from the client bundle is fine, it's the reverse
+ * (client code reaching a binding) that's forbidden. Collection and global
+ * hooks share one flat map, keyed by slug — safe because
+ * `registerBaseConfig` above already enforces collection/global slugs stay
+ * disjoint. `createHandler()` calls this once, internally, and merges the
+ * result with whatever Tier-2 (binding-capable) `hooks` a consumer passed
+ * in directly — see that function's own doc comment.
+ */
+export function collectHooks(): Record<string, CollectionHooks> {
+	const hooks: Record<string, CollectionHooks> = {}
+	for (const collection of Object.values(collectionsBySlug)) {
+		if (collection.hooks) hooks[collection.slug] = collection.hooks
+	}
+	for (const global of Object.values(globalsBySlug)) {
+		if (global.hooks) hooks[global.slug] = global.hooks
+	}
+	return hooks
 }
