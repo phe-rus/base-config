@@ -1,4 +1,4 @@
-import { buttonVariants } from '@pherus/ui/button'
+import { buttonVariants } from '@base/ui/components/button'
 import {
 	Dialog,
 	DialogContent,
@@ -6,8 +6,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger
-} from '@pherus/ui/dialog'
-import { cn } from '@pherus/ui/lib/utils'
+} from '@base/ui/components/dialog'
+import { cn } from '@base/ui/lib/utils'
 import { ArrayField } from '@base/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
 import { blockRegistry } from '../blocks'

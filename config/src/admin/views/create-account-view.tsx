@@ -1,5 +1,5 @@
 import { AuthBanner } from './auth-banner'
-import { cn } from '@pherus/ui/lib/utils'
+import { cn } from '@base/ui/lib/utils'
 import { useAppForm } from '@base/ui/forms'
 import type { z } from 'zod'
 

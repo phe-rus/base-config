@@ -1,6 +1,5 @@
 import type { BasiccnContent } from '@base/ui/basiccn'
 import { z } from 'zod'
-import { pluginFieldTypes } from '../plugins/registry'
 import type { FieldConfig, TabConfig } from './types'
 
 /** The shape an `upload`-type field's value actually is — exported so a fixed composite (e.g. `metaSchema`'s SEO image) can reuse the exact same shape. */
@@ -87,8 +86,6 @@ function baseFieldSchema(
 			return resolvers.blocks ?? z.array(z.unknown())
 		case 'menu':
 			return resolvers.menu ?? z.array(z.unknown())
-		case 'plugin':
-			return pluginFieldTypes[field.pluginType]?.schema(field) ?? z.unknown()
 	}
 }
 

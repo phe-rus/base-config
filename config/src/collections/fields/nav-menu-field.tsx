@@ -1,5 +1,5 @@
-import { Button } from '@pherus/ui/button'
-import { cn } from '@pherus/ui/lib/utils'
+import { Button } from '@base/ui/components/button'
+import { cn } from '@base/ui/lib/utils'
 import { ArrayField } from '@base/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
 import { appearanceValues, collectionPath } from '../types'

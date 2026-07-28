@@ -5,6 +5,13 @@ import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import type { QueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { z } from 'zod'
+import type {
+	CreateDocumentInput,
+	DocumentRow as ServerDocumentRow,
+	GlobalRow as ServerGlobalRow,
+	UpdateDocumentInput,
+	WhereCondition
+} from './content-queries'
 
 export const statusValues = ['draft', 'published', 'unpublished'] as const
 export type DocumentStatus = (typeof statusValues)[number]
@@ -17,23 +24,244 @@ export type DocumentRow<TData> = {
 	updatedAt: string
 }
 
-/** The wire shape `GET/POST/PATCH /api/content/documents/*` actually returns/accepts — `title`/`slug` are real D1 columns there (see `www/db/schemas/contents.ts`), not part of `data`. */
-type ContentDocumentRow = {
-	id: string
-	collection: string
-	title: string | null
-	slug: string | null
-	status: 'draft' | 'published'
-	data: Record<string, unknown>
+/**
+ * The wire shape `GET/POST/PATCH /api/<collection>` actually returns — derived from the server's own `DocumentRow`
+ * (`content-queries.ts`, itself `typeof documents.$inferSelect`) rather
+ * than hand-redeclared field-by-field, so the two can't silently drift.
+ * Only real difference: `createdAt`/`updatedAt` are `Date` objects
+ * server-side (Drizzle's `timestamp_ms` mode) but cross the wire as ISO
+ * strings — JSON has no `Date` type, and Hono's `c.json()` serializes one
+ * to the other automatically.
+ */
+export type ContentDocumentRow = Omit<
+	ServerDocumentRow,
+	'createdAt' | 'updatedAt'
+> & {
 	createdAt: string
 	updatedAt: string
 }
 
-/** The wire shape `GET /api/content/globals*` returns — one row per global slug, no `title`/`status`/`createdAt` (see `www/db/schemas/contents.ts`'s `globals` table). */
-type ContentGlobalRow = {
+/** Same derivation as `ContentDocumentRow`, for `content-queries.ts`'s own `GlobalRow`. */
+export type ContentGlobalRow = Omit<ServerGlobalRow, 'updatedAt'> & {
+	updatedAt: string
+}
+
+/** Identical to the server's own `CreateDocumentInput`, minus `collection` — the client passes that as `ContentApiClient.createDocument`'s own first argument, not part of the body. */
+export type CreateDocumentBody = Omit<CreateDocumentInput, 'collection'>
+
+/** The server's own `UpdateDocumentInput` — no client-side differences at all; re-exported under this name for symmetry with `CreateDocumentBody` and discoverability from this file. */
+export type UpdateDocumentBody = UpdateDocumentInput
+
+/** What every `content-route.ts` response resolves to, whether it came back through `fetch`'s own `Response` or Hono's own `ClientResponse` wrapper — both satisfy this shape. */
+type JsonClientResponse = {
+	ok: boolean
+	status: number
+	json: () => Promise<unknown>
+}
+
+/** What `content-route.ts`'s `listDocuments`/`find` route now returns — see `content-queries.ts`'s own `PaginatedResult`. Re-declared here (not imported) because it's parameterized over `ContentDocumentRow`, the wire type, not the server's own `DocumentRow`. */
+export type ContentPaginatedResult<T> = {
+	docs: T[]
+	totalDocs: number
+	limit: number
+	page: number
+	totalPages: number
+	hasNextPage: boolean
+	hasPrevPage: boolean
+}
+
+export type FindOptions = {
+	collection: string
+	/** Top-level column filters only (`status`/`slug`) — see `WhereCondition`'s own doc comment in `content-queries.ts` for why arbitrary-field querying isn't supported. */
+	where?: WhereCondition
+	limit?: number
+	page?: number
+}
+export type FindByIdOptions = { collection: string; id: string }
+export type CreateOptions = { collection: string; data: CreateDocumentBody }
+export type UpdateOptions = {
+	collection: string
+	id: string
+	data: UpdateDocumentBody
+}
+export type DeleteOptions = { collection: string; id: string }
+export type FindGlobalOptions = { slug: string }
+export type UpdateGlobalOptions = {
 	slug: string
 	data: Record<string, unknown>
-	updatedAt: string
+}
+
+/**
+ * The exact shape `hc<TypeRouter>()`'s own client produces for
+ * `content-route.ts`'s routes, once a consumer has mounted it (e.g.
+ * `route.api`) — structural, not `typeof route.api` itself, since this
+ * package can't import a consumer's app-specific `TypeRouter`.
+ * `createContentApiClient()` below is what actually consumes this — a
+ * consumer only ever needs to pass their own mounted RPC sub-client in,
+ * not hand-write the wrapper functions themselves. Flat, not nested under
+ * `documents`/`content` — `content-route.ts` is mounted at the API's own
+ * root now (`/api/<collection>`, matching Payload's real REST shape, see
+ * that file's own doc comment), so Hono's generated client mirrors that:
+ * `route.api[':collection']`, not `route.api.content.documents[':collection']`.
+ */
+export type ContentRpcClient = Record<
+	':collection',
+	{
+		$get: (args: {
+			param: { collection: string }
+			query: {
+				where?: string
+				limit?: string | string[]
+				page?: string | string[]
+			}
+		}) => Promise<JsonClientResponse>
+		$post: (args: {
+			param: { collection: string }
+			json: CreateDocumentBody
+		}) => Promise<JsonClientResponse>
+	} & Record<
+		':id',
+		{
+			$get: (args: {
+				param: { collection: string; id: string }
+			}) => Promise<JsonClientResponse>
+			$patch: (args: {
+				param: { collection: string; id: string }
+				json: UpdateDocumentBody
+			}) => Promise<JsonClientResponse>
+			$delete: (args: {
+				param: { collection: string; id: string }
+			}) => Promise<JsonClientResponse>
+		}
+	>
+> & {
+	globals: {
+		$get: () => Promise<JsonClientResponse>
+	} & Record<
+		':slug',
+		{
+			$get: (args: { param: { slug: string } }) => Promise<JsonClientResponse>
+			$patch: (args: {
+				param: { slug: string }
+				json: Record<string, unknown>
+			}) => Promise<JsonClientResponse>
+		}
+	>
+}
+
+/**
+ * The exact slice of `/api/<collection>`/`/api/globals/*` this package calls — a plain,
+ * already-resolved async-function interface, not tied to Hono's own
+ * `hc<TypeRouter>()` client type directly (that's what `ContentRpcClient`
+ * is for). Named after Payload's own Local API (`payload.find`/
+ * `findByID`/`create`/`update`/`delete`/`findGlobal`/`updateGlobal`)
+ * deliberately — same operations, same names, backed by Hono RPC instead
+ * of a direct DB connection. A consumer builds a real implementation via
+ * `createContentApiClient(route.api)` (below) — one line, not a
+ * hand-written file re-implementing this package's own wrapper functions.
+ * `base` (see `content-client.ts`) is the ready-to-import singleton built
+ * on top of this — most application code should reach for that, not this
+ * directly; this is the injection seam `registerContentDataSource` needs.
+ */
+export type ContentApiClient = {
+	find: (
+		options: FindOptions
+	) => Promise<ContentPaginatedResult<ContentDocumentRow>>
+	findByID: (options: FindByIdOptions) => Promise<ContentDocumentRow>
+	create: (options: CreateOptions) => Promise<ContentDocumentRow>
+	update: (options: UpdateOptions) => Promise<ContentDocumentRow>
+	delete: (options: DeleteOptions) => Promise<void>
+	listGlobals: () => Promise<ContentGlobalRow[]>
+	findGlobal: (options: FindGlobalOptions) => Promise<ContentGlobalRow | null>
+	updateGlobal: (options: UpdateGlobalOptions) => Promise<ContentGlobalRow>
+}
+
+/**
+ * Every route this client calls can also fail `zValidator`'s own
+ * validation (a real, distinct response shape Hono's RPC typing correctly
+ * includes in the union) — `res.ok` is what actually distinguishes that
+ * from a real success response; the cast to `T` only happens once that's
+ * been checked, not assumed away.
+ */
+async function unwrapJson<T>(res: JsonClientResponse): Promise<T> {
+	const body = await res.json()
+	if (!res.ok) {
+		const message =
+			typeof body === 'object' && body && 'error' in body
+				? String((body as { error: unknown }).error)
+				: `Request failed (${res.status})`
+		throw new Error(message)
+	}
+	return body as T
+}
+
+/**
+ * Builds a real `ContentApiClient` from a consumer's own mounted Hono RPC
+ * sub-client (e.g. `route.api`, where `route = hc<TypeRouter>(...)`)
+ * — this is the whole point of `ContentRpcClient` existing: a consumer
+ * passes in one already-typed object, this package does the actual
+ * wiring, matching Payload's own "the library provides the operations,
+ * the consumer just calls them" Local API shape rather than making every
+ * consumer re-implement these wrapper functions by hand. Never uses
+ * `fetch` directly — every call goes through the injected RPC client, so
+ * it inherits Hono's real request/response typing end to end.
+ */
+export function createContentApiClient(
+	client: ContentRpcClient
+): ContentApiClient {
+	return {
+		find: async ({ collection, where, limit, page }) => {
+			const res = await client[':collection'].$get({
+				param: { collection },
+				query: {
+					where: where ? JSON.stringify(where) : undefined,
+					limit: limit !== undefined ? String(limit) : undefined,
+					page: page !== undefined ? String(page) : undefined
+				}
+			})
+			return unwrapJson(res)
+		},
+		findByID: async ({ collection, id }) => {
+			const res = await client[':collection'][':id'].$get({
+				param: { collection, id }
+			})
+			return unwrapJson(res)
+		},
+		create: async ({ collection, data }) => {
+			const res = await client[':collection'].$post({
+				param: { collection },
+				json: data
+			})
+			return unwrapJson(res)
+		},
+		update: async ({ collection, id, data }) => {
+			const res = await client[':collection'][':id'].$patch({
+				param: { collection, id },
+				json: data
+			})
+			return unwrapJson(res)
+		},
+		delete: async ({ collection, id }) => {
+			await client[':collection'][':id'].$delete({
+				param: { collection, id }
+			})
+		},
+		listGlobals: async () => {
+			const res = await client.globals.$get()
+			return unwrapJson(res)
+		},
+		findGlobal: async ({ slug }) => {
+			const res = await client.globals[':slug'].$get({ param: { slug } })
+			return unwrapJson(res)
+		},
+		updateGlobal: async ({ slug, data }) => {
+			const res = await client.globals[':slug'].$patch({
+				param: { slug },
+				json: data
+			})
+			return unwrapJson(res)
+		}
+	}
 }
 
 const baseFieldsSchema = z.object({ title: z.string(), slug: z.string() })
@@ -45,20 +273,25 @@ export function withBaseFields<TSchema extends z.ZodTypeAny>(
 
 export type ContentCollection = ReturnType<typeof createContentCollection>
 
-let contentQueryClient: QueryClient | undefined
+type ContentDataSource = {
+	queryClient: QueryClient
+	client: ContentApiClient
+}
+let contentDataSource: ContentDataSource | undefined
 
 /** Call once, client-side — `baseConfig()` does this unconditionally (unlike `registerUsersDataSource`, every consumer needs content persistence, not just ones with an `auth: true` collection). */
-export function registerContentDataSource(queryClient: QueryClient) {
-	contentQueryClient = queryClient
+export function registerContentDataSource(source: ContentDataSource) {
+	contentDataSource = source
 }
 
-function requireContentQueryClient(): QueryClient {
-	if (!contentQueryClient) {
+/** Exported for `content-client.ts`'s `base` singleton — everything else in this file keeps calling the un-exported form below directly. */
+export function requireContentDataSource(): ContentDataSource {
+	if (!contentDataSource) {
 		throw new Error(
 			'A content collection was rendered before registerContentDataSource() was called — see db/collections.ts.'
 		)
 	}
-	return contentQueryClient
+	return contentDataSource
 }
 
 /** `title`/`slug` live inside a regular collection's own `data` (per `withBaseFields`) on the client, but as real top-level D1 columns on the wire — every fetch/write crosses that seam once, here. */
@@ -87,14 +320,14 @@ function toDocumentRow(
  * The `localStorage`-free replacement for every non-`auth` collection —
  * same lazy, mutation-triggered-refetch policy as `createUsersCollection`
  * below (`staleTime: Infinity`, explicit `refetch()` after a mutation
- * resolves), backed by `/api/content/documents/:collection` instead of a
+ * resolves), backed by `/api/:collection` instead of a
  * server-backed auth endpoint. `onUpdate` diffs `original`/`modified` the
  * same way `createUsersCollection`'s own `onUpdate` does, so a save only
  * ever sends the fields that actually changed (see `content-db.ts`'s
  * `updateDocument`, which merges rather than replaces `data`).
  */
 function createContentCollection(slug: string) {
-	const queryClient = requireContentQueryClient()
+	const { queryClient, client } = requireContentDataSource()
 
 	return createCollection(
 		queryCollectionOptions<DocumentRow<Record<string, unknown>>>({
@@ -105,9 +338,8 @@ function createContentCollection(slug: string) {
 			refetchOnWindowFocus: false,
 			refetchOnReconnect: false,
 			queryFn: async () => {
-				const res = await fetch(`/api/content/documents/${slug}`)
-				const rows: ContentDocumentRow[] = await res.json()
-				return rows.map(toDocumentRow)
+				const { docs } = await client.find({ collection: slug })
+				return docs.map(toDocumentRow)
 			},
 			onInsert: async ({ transaction, collection }) => {
 				await Promise.all(
@@ -119,16 +351,15 @@ function createContentCollection(slug: string) {
 						} = splitDocumentFields(
 							mutation.modified.data as Record<string, unknown>
 						)
-						await fetch(`/api/content/documents/${slug}`, {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({
+						await client.create({
+							collection: slug,
+							data: {
 								id: mutation.modified.id,
 								title,
 								slug: docSlug,
-								status: mutation.modified.status,
+								status: mutation.modified.status as 'draft' | 'published',
 								data: rest
-							})
+							}
 						})
 					})
 				)
@@ -149,18 +380,18 @@ function createContentCollection(slug: string) {
 								fields[key] = modified.rest[key]
 							}
 						}
-						const body: Record<string, unknown> = {}
+						const body: UpdateDocumentBody = {}
 						if (modified.title !== original.title) body.title = modified.title
 						if (modified.slug !== original.slug) body.slug = modified.slug
 						if (mutation.modified.status !== mutation.original.status) {
-							body.status = mutation.modified.status
+							body.status = mutation.modified.status as 'draft' | 'published'
 						}
 						if (Object.keys(fields).length > 0) body.fields = fields
 						if (Object.keys(body).length === 0) return
-						await fetch(`/api/content/documents/${slug}/${mutation.key}`, {
-							method: 'PATCH',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify(body)
+						await client.update({
+							collection: slug,
+							id: mutation.key as string,
+							data: body
 						})
 					})
 				)
@@ -169,8 +400,9 @@ function createContentCollection(slug: string) {
 			onDelete: async ({ transaction, collection }) => {
 				await Promise.all(
 					transaction.mutations.map(async (mutation) => {
-						await fetch(`/api/content/documents/${slug}/${mutation.key}`, {
-							method: 'DELETE'
+						await client.delete({
+							collection: slug,
+							id: mutation.key as string
 						})
 					})
 				)
@@ -448,14 +680,13 @@ export const contentCollections: Record<CollectionSlug, ContentCollection> =
 
 /**
  * `localStorage`-free, same shape as `createContentCollection` above but
- * backed by `/api/content/globals*` — one row per global slug instead of
+ * backed by `/api/globals*` — one row per global slug instead of
  * per-collection-per-document. No `onDelete`: globals are never deleted,
- * only ever edited (see `www/db/schemas/contents.ts`'s `globals` table,
- * one row per slug, created lazily on first save via `useDocument`'s
- * `autoCreate`).
+ * only ever edited (see `content-schema.ts`'s `globals` table, one row per
+ * slug, created lazily on first save via `useDocument`'s `autoCreate`).
  */
 function createGlobalsCollection() {
-	const queryClient = requireContentQueryClient()
+	const { queryClient, client } = requireContentDataSource()
 
 	return createCollection(
 		queryCollectionOptions<DocumentRow<Record<string, unknown>>>({
@@ -466,8 +697,7 @@ function createGlobalsCollection() {
 			refetchOnWindowFocus: false,
 			refetchOnReconnect: false,
 			queryFn: async () => {
-				const res = await fetch('/api/content/globals')
-				const rows: ContentGlobalRow[] = await res.json()
+				const rows = await client.listGlobals()
 				return rows.map((row) => ({
 					id: row.slug,
 					data: row.data,
@@ -479,10 +709,9 @@ function createGlobalsCollection() {
 			onInsert: async ({ transaction, collection }) => {
 				await Promise.all(
 					transaction.mutations.map(async (mutation) =>
-						fetch(`/api/content/globals/${mutation.modified.id}`, {
-							method: 'PATCH',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify(mutation.modified.data)
+						client.updateGlobal({
+							slug: mutation.modified.id,
+							data: mutation.modified.data as Record<string, unknown>
 						})
 					)
 				)
@@ -500,10 +729,9 @@ function createGlobalsCollection() {
 							}
 						}
 						if (Object.keys(fields).length === 0) return
-						await fetch(`/api/content/globals/${mutation.key}`, {
-							method: 'PATCH',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify(fields)
+						await client.updateGlobal({
+							slug: mutation.key as string,
+							data: fields
 						})
 					})
 				)

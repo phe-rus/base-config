@@ -14,11 +14,32 @@ export type {
 	BaseConfigProps,
 	CollectionFieldsProps
 } from './base.types'
-export type { FieldConfig, PluginFieldConfig, TabConfig } from './fields/types'
-export { definePlugin } from './plugins/define'
+export type { FieldConfig, TabConfig } from './fields/types'
+export { createContentApiClient } from './db/collections'
 export type {
-	BasePlugin,
-	PendingPlugin,
-	PluginContext,
-	PluginFieldType
-} from './plugins/types'
+	ContentApiClient,
+	ContentDocumentRow,
+	ContentGlobalRow,
+	ContentPaginatedResult,
+	ContentRpcClient,
+	CreateDocumentBody,
+	CreateOptions,
+	DeleteOptions,
+	FindByIdOptions,
+	FindGlobalOptions,
+	FindOptions,
+	UpdateDocumentBody,
+	UpdateGlobalOptions,
+	UpdateOptions
+} from './db/collections'
+export { base } from './db/content-client'
+export type { WhereCondition } from './db/content-queries'
+export { createStorageApiClient } from './fields/storage-client'
+export type {
+	StorageApiClient,
+	StorageFile,
+	StorageListing,
+	StorageRpcClient
+} from './fields/storage-client'
+export { createBaseConfigRoute } from './api/route'
+export type { BaseConfigRouteBindings } from './api/route'

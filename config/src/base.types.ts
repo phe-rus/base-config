@@ -1,8 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { FC } from 'react'
 import type { z } from 'zod'
-import type { BetterAuthAdminClient } from './db/collections'
-import type { PendingPlugin } from './plugins/types'
+import type { BetterAuthAdminClient, ContentApiClient } from './db/collections'
+import type { StorageApiClient } from './fields/storage-client'
 
 // `@base/config`'s own root shape — independent of any one consumer's actual
 // values. A consuming app (e.g. `www/src/hooks/config/base.config.ts`)
@@ -37,14 +37,12 @@ export type BaseConfigProps = {
 	collections: CollectionConfig[]
 	globals: GlobalConfig[]
 	/**
-	 * Each entry is a *called* plugin factory (`myPlugin({...options})`, not
-	 * the bare `myPlugin` export) — `definePlugin()` returns a factory, not
-	 * a plugin instance directly, so `order`/cross-plugin communication can
-	 * work (see `plugins/types.ts`'s `PendingPlugin`). `baseConfig()`
-	 * resolves them via `registerPlugins()`.
+	 * Not yet read anywhere in this package — a real gap, not a documented
+	 * behavior. Content collections' actual offline behavior today rides
+	 * entirely on whatever `networkMode`/cache policy the consumer's own
+	 * `queryClient` (below) was constructed with (`www`'s is `'offlineFirst'`
+	 * — see `www/src/utils/query/context.ts`), not on this flag.
 	 */
-	plugins: PendingPlugin[]
-	/** Client-only localStorage collections, no D1 persistence yet — this just documents current reality. */
 	offlineFirst: boolean
 	/**
 	 * The consumer's own `QueryClient` (e.g. `www`'s `getContext()`) — a
@@ -53,6 +51,23 @@ export type BaseConfigProps = {
 	 * rather than each feature threading its own through separately.
 	 */
 	queryClient: QueryClient
+	/**
+	 * The real implementation of `ContentApiClient` (`db/collections.ts`) —
+	 * a consumer builds this using its own typed Hono RPC client (`hc<TypeRouter>()`),
+	 * so every call this package makes to `/api/<collection>`/`/api/globals/*` is type-checked
+	 * against the real route shapes at the point it's actually written (in
+	 * the consumer's own code), not a raw untyped `fetch()` inside this
+	 * package. `baseConfig()` calls `registerContentDataSource({queryClient, client: contentClient})`
+	 * with this, once, as a side effect.
+	 */
+	contentClient: ContentApiClient
+	/**
+	 * Same shape/reasoning as `contentClient`, for `/api/storage/*` —
+	 * `fields/storage-client.ts`'s `createStorageApiClient(route.api.storage)`.
+	 * `baseConfig()` calls `registerStorageDataSource(storageClient)` with
+	 * this, once, as a side effect.
+	 */
+	storageClient: StorageApiClient
 	/**
 	 * Wires the real, server-backed `users` collection (see
 	 * `CollectionConfig['auth']`) — omit if no collection has `auth: true`.

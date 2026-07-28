@@ -1,4 +1,4 @@
-import { Button } from '@pherus/ui/components/button'
+import { Button } from '@base/ui/components/button'
 import {
 	Drawer,
 	DrawerContent,
@@ -6,8 +6,8 @@ import {
 	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle
-} from '@pherus/ui/components/drawer'
-import { cn } from '@pherus/ui/lib/utils'
+} from '@base/ui/components/drawer'
+import { cn } from '@base/ui/lib/utils'
 import type { PropsWithChildren, ReactNode } from 'react'
 
 type WidgetDialogProps = PropsWithChildren<{

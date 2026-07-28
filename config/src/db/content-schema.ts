@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { defineRelationsPart, sql } from 'drizzle-orm'
 import {
 	index,
 	integer,
@@ -57,3 +57,15 @@ export const globals = sqliteTable('globals', {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull()
 })
+
+// No real relations between `documents`/`globals` (no foreign keys, nothing
+// to join) — this rc of drizzle-orm requires `relations` to be passed
+// explicitly regardless, so this is an intentionally empty part, not an
+// oversight. Lives here (not the consumer's `drizzle()` init call) for the
+// same reason `www/db/schemas/users.ts` exports its own `authRelations` —
+// the schema and its relations are one unit, and this file is what gets
+// copied wholesale into a consumer's own `db/schemas/content.ts`.
+export const contentRelations = defineRelationsPart(
+	{ documents, globals },
+	() => ({})
+)

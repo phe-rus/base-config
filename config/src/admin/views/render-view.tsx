@@ -5,16 +5,19 @@ import {
 	BreadcrumbList,
 	BreadcrumbPage,
 	BreadcrumbSeparator
-} from '@pherus/ui/components/breadcrumb'
-import { Button } from '@pherus/ui/components/button'
-import { cn } from '@pherus/ui/lib/utils'
+} from '@base/ui/components/breadcrumb'
+import { Button } from '@base/ui/components/button'
+import { cn } from '@base/ui/lib/utils'
 import { IconFolderFilled, IconMinus, IconPlus } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { Fragment, type PropsWithChildren, type ReactNode } from 'react'
 
 type RenderViewProps = PropsWithChildren<{ className?: string }>
 
-type RenderViewHeaderProps = PropsWithChildren<{ title: string }>
+type RenderViewHeaderProps = PropsWithChildren<{
+	title: string
+	actions?: () => ReactNode
+}>
 
 type RenderViewNotFoundProps = PropsWithChildren
 
@@ -90,17 +93,25 @@ export const RenderView: RenderViewComponent = ({
 	)
 }
 
-/** A plain title + arbitrary content block — e.g. `Dashboard`'s own welcome heading. */
-RenderView.Header = ({ title, children }: RenderViewHeaderProps) => {
+/** A plain title + arbitrary content block — e.g.
+ * `Dashboard`'s own welcome heading.
+ * */
+RenderView.Header = ({ title, actions, children }: RenderViewHeaderProps) => {
 	return (
-		<section>
-			<h1>{title}</h1>
+		<section className='flex flex-col'>
+			<div className='flex gap-2 items-center'>
+				<h1>{title}</h1>
+				{actions && actions()}
+			</div>
 			{children}
 		</section>
 	)
 }
 
-/** A single muted message in the tighter `gap-2` container — the "unknown slug"/"nothing found" fallback every dispatched view falls back to. */
+/** A single muted message in the tighter `gap-2`
+ * container — the "unknown slug"/"nothing found"
+ * fallback every dispatched view falls back to.
+ * */
 RenderView.NotFound = ({ children }: RenderViewNotFoundProps) => {
 	return (
 		<RenderView className='gap-2'>
@@ -109,7 +120,11 @@ RenderView.NotFound = ({ children }: RenderViewNotFoundProps) => {
 	)
 }
 
-/** A titled grid of link cards — `Dashboard`'s "Collections"/"Preferences" sections, generalized since both were the exact same markup mapped over different data. */
+/** A titled grid of link cards — `Dashboard`'s
+ * "Collections"/"Preferences" sections, generalized
+ *  since both were the exact same markup mapped over
+ * different data.
+ *  */
 RenderView.List = ({ title, items }: RenderViewListProps) => {
 	return (
 		<section className='flex flex-col gap-2'>
@@ -122,6 +137,7 @@ RenderView.List = ({ title, items }: RenderViewListProps) => {
 						className={cn(
 							'flex items-center bg-card/55 rounded-md hover:bg-card/65',
 							'relative p-3 col-span-1 border border-border/55',
+							'hover:shadow-xl shadow-primary/15',
 							item.colors && `${item.colors} border-dashed`
 						)}
 					>
@@ -140,7 +156,13 @@ RenderView.List = ({ title, items }: RenderViewListProps) => {
 	)
 }
 
-/** A path breadcrumb — root segment plus one clickable crumb per path segment, current segment shown as plain text. Currently only `Storage` uses this, but the shape (a navigable path, not anything storage-specific) is reusable by any future path-browsing view. */
+/** A path breadcrumb — root segment plus
+ * one clickable crumb per path segment,
+ * current segment shown as plain text. Currently
+ * only `Storage` uses this, but the shape (a navigable
+ * path, not anything storage-specific) is reusable by
+ * any future path-browsing view.
+ * */
 RenderView.Breadcrumb = ({
 	rootLabel,
 	path,
@@ -186,7 +208,10 @@ RenderView.Breadcrumb = ({
 	)
 }
 
-/** A folder row in Storage's grid — name (opens it) + a hover-revealed delete button. */
+/** A folder row in Storage's grid — name
+ * (opens it) + a hover-revealed delete
+ * button.
+ * */
 RenderView.FolderCard = ({
 	name,
 	onOpen,
@@ -220,7 +245,11 @@ RenderView.FolderCard = ({
 	)
 }
 
-/** A file row in Storage's grid — image preview (or a placeholder) linking out to the file, name/size, and a hover-revealed delete button. */
+/** A file row in Storage's grid — image
+ * preview (or a placeholder) linking out
+ * to the file, name/size, and a hover-revealed
+ * delete button.
+ *  */
 RenderView.FileCard = ({
 	name,
 	url,
@@ -234,7 +263,8 @@ RenderView.FileCard = ({
 			className={cn(
 				'group relative flex flex-col gap-1 rounded',
 				'overflow-hidden border border-border/85',
-				'border-dashed shadow-sm hover:shadow-2xl'
+				'border-dashed shadow hover:shadow-2xl',
+				'shadow-primary/15'
 			)}
 		>
 			<Button
@@ -256,7 +286,7 @@ RenderView.FileCard = ({
 					<img
 						src={url}
 						alt={name}
-						className='aspect-auto w-full rounded object-cover'
+						className='aspect-video w-full rounded object-cover'
 					/>
 				) : (
 					<div

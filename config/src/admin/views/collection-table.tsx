@@ -1,18 +1,18 @@
-import { createId } from '../../collections/id'
-import { AuthWidget } from '../widgets/auth-widget'
-import { RenderView } from './render-view'
-import type { CollectionConfig } from '../../collections/types'
-import type { ContentCollection, DocumentStatus } from '../../db/collections'
-import { Badge } from '@pherus/ui/components/badge'
-import { Button } from '@pherus/ui/components/button'
-import { Checkbox } from '@pherus/ui/components/checkbox'
-import { cn } from '@pherus/ui/lib/utils'
+import { Badge } from '@base/ui/components/badge'
+import { Button } from '@base/ui/components/button'
+import { Checkbox } from '@base/ui/components/checkbox'
+import { cn } from '@base/ui/lib/utils'
 import { DataTable } from '@base/ui/tables'
 import { IconMinus } from '@tabler/icons-react'
 import { useLiveQuery } from '@tanstack/react-db'
 import { Link } from '@tanstack/react-router'
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
+import { createId } from '../../collections/id'
+import type { CollectionConfig } from '../../collections/types'
+import type { ContentCollection, DocumentStatus } from '../../db/collections'
+import { AuthWidget } from '../widgets/auth-widget'
+import { RenderView } from './render-view'
 
 type CollectionTableProps = {
 	config: CollectionConfig
@@ -109,15 +109,18 @@ function CollectionTableLive({
 
 	return (
 		<RenderView>
-			<RenderView.Header title={config.label}>
-				{config.auth ? (
-					<AuthWidget collection={collection} onCreated={onOpen} />
-				) : (
-					<Button size='xs' variant='secondary' onClick={create}>
-						Create new
-					</Button>
-				)}
-			</RenderView.Header>
+			<RenderView.Header
+				title={config.label}
+				actions={() => {
+					return config.auth ? (
+						<AuthWidget collection={collection} onCreated={onOpen} />
+					) : (
+						<Button size='xs' variant='secondary' onClick={create}>
+							Create new
+						</Button>
+					)
+				}}
+			/>
 			{queryUtils?.isError && (
 				<p className='text-destructive text-xs'>
 					Failed to load: {String(queryUtils.lastError ?? 'unknown error')}

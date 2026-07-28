@@ -11,7 +11,7 @@ import {
 	ComboboxList,
 	ComboboxValue,
 	useComboboxAnchor
-} from '@pherus/ui/combobox'
+} from '@base/ui/components/combobox'
 import { FieldShell, useFieldState } from '@base/ui/forms'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useMemo, useState } from 'react'

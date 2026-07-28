@@ -7,8 +7,14 @@
 		".": "./src/index.ts",
 		"./*": "./src/*"
 	},
+	"bin": {
+		"base": "./src/cli.ts"
+	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
 	},
 	"dependencies": {
 		"@base/ui": "workspace:*",
@@ -22,7 +28,6 @@
 		"zod": "^4.4.3"
 	},
 	"peerDependencies": {
-		"@pherus/ui": "workspace:*",
 		"@tanstack/react-query": "^5.101.4",
 		"@tanstack/react-router": "latest",
 		"@tanstack/react-store": "^0.11.0",

@@ -8,8 +8,8 @@ import {
 	unwrap,
 	type ContentCollection
 } from '../../db/collections'
-import { Button } from '@pherus/ui/components/button'
-import { cn } from '@pherus/ui/lib/utils'
+import { Button } from '@base/ui/components/button'
+import { cn } from '@base/ui/lib/utils'
 import { IconLayoutSidebarInactive } from '@tabler/icons-react'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useMutation } from '@tanstack/react-query'

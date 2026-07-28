@@ -1,11 +1,11 @@
 import { createRealUser } from '../../db/collections'
 import type { ContentCollection } from '../../db/collections'
 import { WidgetDialog } from './widget-dialog'
-import { Button, buttonVariants } from '@pherus/ui/components/button'
-import { DrawerTrigger } from '@pherus/ui/components/drawer'
-import { Input } from '@pherus/ui/components/input'
-import { Label } from '@pherus/ui/components/label'
-import { cn } from '@pherus/ui/lib/utils'
+import { Button, buttonVariants } from '@base/ui/components/button'
+import { DrawerTrigger } from '@base/ui/components/drawer'
+import { Input } from '@base/ui/components/input'
+import { Label } from '@base/ui/components/label'
+import { cn } from '@base/ui/lib/utils'
 import { useState } from 'react'
 
 type AuthWidgetProps = {

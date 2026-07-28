@@ -1,4 +1,4 @@
-import { cn } from '@pherus/ui/lib/utils'
+import { cn } from '@base/ui/lib/utils'
 import { format } from 'date-fns'
 import type { ReactNode } from 'react'
 

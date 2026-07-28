@@ -3,14 +3,13 @@ import {
 	TabsContent,
 	TabsList,
 	TabsTrigger
-} from '@pherus/ui/components/tabs'
+} from '@base/ui/components/tabs'
 import type { FC } from 'react'
 import type { CollectionFieldsProps } from '../base.types'
 import {
 	StorageWidget,
 	type StorageWidgetTriggerProps
 } from '../admin/widgets/storage-widget'
-import { pluginFieldTypes } from '../plugins/registry'
 import { withTabPrefix } from './schema'
 import type { FieldConfig, TabConfig } from './types'
 import { uploadFile } from './upload'
@@ -130,17 +129,6 @@ function renderField(
 						excludeId={id}
 					/>
 				)}
-			</form.AppField>
-		)
-	}
-
-	if (field.type === 'plugin') {
-		const pluginField = pluginFieldTypes[field.pluginType]
-		if (!pluginField) return null
-		const PluginRender = pluginField.render
-		return (
-			<form.AppField key={name} name={name}>
-				{() => <PluginRender field={field} />}
 			</form.AppField>
 		)
 	}

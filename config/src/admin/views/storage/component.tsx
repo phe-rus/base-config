@@ -1,8 +1,7 @@
-import { buttonVariants } from '@pherus/ui/components/button'
-import { cn } from '@pherus/ui/lib/utils'
+import { buttonVariants } from '@base/ui/components/button'
+import { cn } from '@base/ui/lib/utils'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { uploadFile } from '../../../fields/upload'
 import {
 	deleteStorageFile,
 	deleteStorageFolder,
@@ -10,6 +9,7 @@ import {
 	pathSegmentsOf,
 	type StorageListing
 } from '../../../fields/storage-client'
+import { uploadFile } from '../../../fields/upload'
 import { RenderView } from '../render-view'
 
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|svg|avif)$/i
@@ -96,23 +96,28 @@ export function Storage() {
 
 	return (
 		<RenderView>
-			<RenderView.Header title='Storage'>
-				<label
-					className={cn(
-						buttonVariants({ size: 'xs', variant: 'secondary' }),
-						'cursor-pointer'
-					)}
-				>
-					{uploading ? 'Uploading…' : 'Upload'}
-					<input
-						type='file'
-						multiple
-						className='hidden'
-						disabled={uploading}
-						onChange={(e) => handleUpload(e.target.files)}
-					/>
-				</label>
-			</RenderView.Header>
+			<RenderView.Header
+				title='Storage'
+				actions={() => {
+					return (
+						<label
+							className={cn(
+								buttonVariants({ size: 'xs', variant: 'secondary' }),
+								'cursor-pointer'
+							)}
+						>
+							{uploading ? 'Uploading…' : 'Upload'}
+							<input
+								type='file'
+								multiple
+								className='hidden'
+								disabled={uploading}
+								onChange={(e) => handleUpload(e.target.files)}
+							/>
+						</label>
+					)
+				}}
+			/>
 
 			<RenderView.Breadcrumb
 				rootLabel='Storage'

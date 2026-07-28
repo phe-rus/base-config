@@ -1,6 +1,6 @@
-import { Button } from '@pherus/ui/components/button'
-import { Input } from '@pherus/ui/components/input'
-import { cn } from '@pherus/ui/lib/utils'
+import { Button } from '@base/ui/components/button'
+import { Input } from '@base/ui/components/input'
+import { cn } from '@base/ui/lib/utils'
 import { IconFile, IconMinus, IconUpload } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import {

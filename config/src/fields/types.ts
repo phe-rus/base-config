@@ -148,27 +148,6 @@ export type MenuFieldConfig = BaseFieldConfig & {
 	startAsMegaMenu?: boolean
 }
 
-/**
- * A plugin-contributed field type — the escape hatch that lets a plugin add
- * a field type without `FieldConfig` needing to know about it ahead of time.
- * `FieldConfig` is a closed discriminated union (deliberately, for the type
- * safety every other variant here gets); the alternative to this — widening
- * it dynamically via TS module augmentation, the way Payload's own plugin
- * types work — is a much bigger lift and wasn't taken on here. `pluginType`
- * is resolved at runtime against `BasePlugin['fieldTypes']` (see
- * `plugins/registry.ts`'s `pluginFieldTypes`); if no registered plugin
- * contributed that `pluginType`, this field silently renders nothing and
- * schemas as `z.unknown()` — the same "unknown composite renders null"
- * trade-off every other composite field type here already makes.
- */
-export type PluginFieldConfig = BaseFieldConfig & {
-	type: 'plugin'
-	/** Must match a `PluginFieldType['type']` some registered plugin contributed. */
-	pluginType: string
-	/** Extra props specific to this plugin field type — passed through untouched via `field.props`, not spread onto `BaseFieldConfig`, so a plugin field's own props never collide with the fields every field type already has (`label`, `required`, ...). */
-	props?: Record<string, unknown>
-}
-
 export type FieldConfig<
 	TCollectionSlug extends string = string,
 	TBlockSlug extends string = string
@@ -189,7 +168,6 @@ export type FieldConfig<
 	| RelationsFieldConfig<TCollectionSlug>
 	| MetaFieldConfig
 	| MenuFieldConfig
-	| PluginFieldConfig
 
 export type TabConfig<
 	TCollectionSlug extends string = string,

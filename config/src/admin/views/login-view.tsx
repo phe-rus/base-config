@@ -1,7 +1,7 @@
-import { AuthBanner } from './auth-banner'
-import { cn } from '@pherus/ui/lib/utils'
 import { useAppForm } from '@base/ui/forms'
+import { cn } from '@base/ui/lib/utils'
 import type { z } from 'zod'
+import { AuthBanner } from './auth-banner'
 
 export type LoginFormValues = {
 	credentials: string
@@ -48,11 +48,8 @@ export function LoginView({
 			onChange: schema as any
 		},
 		onSubmit: async ({ value }) => {
-			try {
-				await onSubmit(value)
-			} finally {
-				form.reset()
-			}
+			await onSubmit(value)
+			form.reset()
 		}
 	})
 

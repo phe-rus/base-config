@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { collectionsBySlug, globalsBySlug } from '../../../collections/registry'
-import { pluginAdminSlots } from '../../../plugins/registry'
 import { useAdminConfig } from '../../functions/context'
 import { RenderView } from '../render-view'
 
@@ -43,20 +42,12 @@ export function Dashboard() {
 				<p className='md:max-w-sm'>Manage everything from one place.</p>
 			</RenderView.Header>
 
-			{pluginAdminSlots.beforeDashboard.map((Slot, index) => (
-				<Slot key={index} />
-			))}
-
 			{sections.map((section) => (
 				<RenderView.List
 					key={section.title}
 					title={section.title}
 					items={section.items}
 				/>
-			))}
-
-			{pluginAdminSlots.afterDashboard.map((Slot, index) => (
-				<Slot key={index} />
 			))}
 		</RenderView>
 	)

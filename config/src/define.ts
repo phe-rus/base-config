@@ -13,7 +13,7 @@ import {
 	registerContentDataSource,
 	registerUsersDataSource
 } from './db/collections'
-import { registerPlugins } from './plugins/registry'
+import { registerStorageDataSource } from './fields/storage-client'
 import type {
 	CollectionConfig,
 	CollectionSlug,
@@ -197,18 +197,20 @@ export function defineGlobal(definition: GlobalDefinition): GlobalConfig {
  * config, so `hooks/config/base.config.ts` collapses to one
  * `export default baseConfig({...})` statement instead of a separate
  * `registerBaseConfig(...)` call after the fact. Same reasoning for
- * `auth` — see `BaseConfigProps['auth']`, and for `plugins` — see
- * `registerPlugins()`.
+ * `auth` — see `BaseConfigProps['auth']`.
  */
 export function baseConfig(config: BaseConfigProps): BaseConfigProps {
 	registerBaseConfig(config.collections, config.globals)
-	registerContentDataSource(config.queryClient)
+	registerContentDataSource({
+		queryClient: config.queryClient,
+		client: config.contentClient
+	})
+	registerStorageDataSource(config.storageClient)
 	if (config.auth) {
 		registerUsersDataSource({
 			queryClient: config.queryClient,
 			authClient: config.auth
 		})
 	}
-	registerPlugins(config.plugins)
 	return config
 }
