@@ -43,3 +43,5 @@ export type {
 } from './fields/storage-client'
 export { createBaseConfigRoute } from './api/route'
 export type { BaseConfigRouteBindings } from './api/route'
+export { createHandler } from './api/create-handler'
+export type { AuthServerLike, CreateHandlerOptions } from './api/create-handler'

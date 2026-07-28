@@ -1,9 +1,13 @@
 import { slugify } from '../../collections/slug'
 import type { CollectionConfig } from '../../collections/types'
-import { withBaseFields, type ContentCollection } from '../../db/collections'
+import {
+	draftCollections,
+	publishKeywordPool,
+	withBaseFields,
+	type ContentCollection
+} from '../../db/collections'
 import { useDocument } from '../../db/use-document'
 import { DocumentHeader } from './document-header'
-import { RenderView } from './render-view'
 import { Button } from '@base/ui/components/button'
 import { t } from '@base/ui/components/sonner'
 import { cn } from '@base/ui/lib/utils'
@@ -19,21 +23,26 @@ type CollectionFormProps = {
 }
 
 /**
- * Shared by every explicit save action ("Commit & push", "Save", "Publish")
- * — awaits the real write's `isPersisted` promise and toasts success/error,
+ * Shared by every explicit publish action ("Commit & push", "Publish") —
+ * awaits the real write's `isPersisted` promise and toasts success/error,
  * so a network failure surfaces to the admin instead of silently vanishing.
+ * This is the only place `useDocument`'s `publish()` ever gets called from
+ * — editing itself never touches the network (see that hook's own doc
+ * comment). Also flushes the local keyword-pool draft live right after —
+ * see `publishKeywordPool()`'s own doc comment for why a document's publish
+ * is what carries any newly-typed keywords live, not a separate step.
  */
-async function runSave(
-	save: (
+async function runPublish(
+	publish: (
 		statusOverride?: 'draft' | 'published'
 	) => { isPersisted: { promise: Promise<unknown> } } | undefined,
 	statusOverride?: 'draft' | 'published'
 ) {
 	try {
-		await save(statusOverride)?.isPersisted.promise
+		await publish(statusOverride)?.isPersisted.promise
+		await publishKeywordPool()
 		t.success('Success', {
-			description:
-				statusOverride === 'published' ? 'Published.' : 'Changes saved.'
+			description: statusOverride === 'published' ? 'Published.' : 'Saved.'
 		})
 	} catch (error) {
 		t.error(error instanceof Error ? error.name : 'Error', {
@@ -62,15 +71,26 @@ export function CollectionForm({
 }
 
 function CollectionFormLive({ config, collection, id }: CollectionFormProps) {
-	const { data } = useLiveQuery(collection)
+	// No existence check here anymore — a missing remote row isn't "not
+	// found," it's a not-yet-published local draft (see `useDocument`'s own
+	// doc comment, which calls `useLiveQuery` itself and re-renders once the
+	// real row appears after the first `publish()`).
+	//
+	// `DocumentEditor` (and the `useAppForm` call inside it, via
+	// `useDocument`) must not mount until BOTH collections have actually
+	// finished their first read — `useAppForm` snapshots its `defaultValues`
+	// once, at that first render, and never re-reads them later. Mounting
+	// before either query resolves would snapshot empty/default field
+	// values, which then never get replaced once the real data arrives —
+	// this was the actual cause of a Base UI "uncontrolled → controlled"
+	// warning (a field rendering with `value: undefined`, only for a later
+	// render to hand it a real value) and of a document silently appearing
+	// empty even though it has real remote data.
+	const draftCollection = draftCollections[config.slug]
+	const { isReady: remoteReady } = useLiveQuery(collection)
+	const { isReady: draftReady } = useLiveQuery(draftCollection)
 
-	if (!data.some((row) => row.id === id)) {
-		return (
-			<RenderView.NotFound>
-				Nothing found for "{id}" — it may have been deleted.
-			</RenderView.NotFound>
-		)
-	}
+	if (!remoteReady || !draftReady) return null
 
 	return (
 		<DocumentEditor key={id} config={config} collection={collection} id={id} />
@@ -80,17 +100,16 @@ function CollectionFormLive({ config, collection, id }: CollectionFormProps) {
 function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 	const schema = withBaseFields(config.schema)
 	const useAsTitle = config.admin?.useAsTitle
-	const { form, row, save, isDirty } = useDocument({
+	const { form, row, publish, isDirty } = useDocument({
 		collection,
+		draftCollection: draftCollections[config.slug],
 		id,
 		schema,
 		defaultValues: () =>
 			({ title: '', slug: '', ...config.defaultValues() }) as BaseData &
 				Record<string, unknown>
 	})
-	const slugTouched = useRef(!!(row?.data as BaseData | undefined)?.slug)
-
-	if (!row) return null
+	const slugTouched = useRef(!!(row.data as BaseData | undefined)?.slug)
 
 	return (
 		<form
@@ -144,8 +163,8 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 							size='xs'
 							variant='secondary'
 							disabled={!isDirty}
-							title={isDirty ? undefined : 'No changes to save'}
-							onClick={() => runSave(save)}
+							title={isDirty ? undefined : 'No changes to push'}
+							onClick={() => runPublish(publish)}
 						>
 							Commit & push
 						</Button>
@@ -166,18 +185,12 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 							)}
 							<Button
 								size='xs'
-								variant='secondary'
 								disabled={!isDirty}
-								title={isDirty ? undefined : 'No changes to save'}
-								onClick={() => runSave(save)}
+								title={isDirty ? undefined : 'No changes to publish'}
+								onClick={() => runPublish(publish, 'published')}
 							>
-								Save
+								Publish
 							</Button>
-							{row.status !== 'published' && (
-								<Button size='xs' onClick={() => runSave(save, 'published')}>
-									Publish
-								</Button>
-							)}
 						</>
 					)
 				}

@@ -37,3 +37,6 @@ export function createBaseConfigRoute(bindings: BaseConfigRouteBindings) {
 		.route('/storage', createStorageRoute(bindings.bucket))
 		.route('/', createContentRoute(bindings.db))
 }
+
+/** The type `createHandler()` (`api/create-handler.ts`) and `baseConfig()`'s own internal `hc<BaseConfigRouteType>()` client both key off — the one Hono app type this package's client-side RPC building needs, now that a consumer no longer builds and injects its own `hc<TypeRouter>()` client (see `create-handler.ts`'s own doc comment). */
+export type BaseConfigRouteType = ReturnType<typeof createBaseConfigRoute>

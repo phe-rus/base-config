@@ -5,3 +5,5 @@
 export { createIgnite } from './ignite'
 export type { IgniteOptions } from './ignite'
 export { Handler } from './handler'
+export { createHandler } from './create-handler'
+export type { AuthServerLike, CreateHandlerOptions } from './create-handler'

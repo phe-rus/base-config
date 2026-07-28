@@ -1,5 +1,7 @@
 import type { FC } from 'react'
+import { hc } from 'hono/client'
 import { z } from 'zod'
+import type { BaseConfigRouteType } from './api/route'
 import { blocksSchema } from './collections/blocks'
 import type { BlockSlug } from './collections/blocks'
 import { BlocksField } from './collections/fields/blocks-field'
@@ -10,10 +12,14 @@ import { RelationshipField } from './collections/fields/relationship-field'
 import { registerBaseConfig } from './collections/registry'
 import { labelFromSlug } from './collections/slug'
 import {
+	createContentApiClient,
 	registerContentDataSource,
 	registerUsersDataSource
 } from './db/collections'
-import { registerStorageDataSource } from './fields/storage-client'
+import {
+	createStorageApiClient,
+	registerStorageDataSource
+} from './fields/storage-client'
 import type {
 	CollectionConfig,
 	CollectionSlug,
@@ -198,14 +204,35 @@ export function defineGlobal(definition: GlobalDefinition): GlobalConfig {
  * `export default baseConfig({...})` statement instead of a separate
  * `registerBaseConfig(...)` call after the fact. Same reasoning for
  * `auth` — see `BaseConfigProps['auth']`.
+ *
+ * **Builds this package's own `/api/*` RPC client internally** — a
+ * consumer used to hand-build a typed `hc<TypeRouter>()` client
+ * (`www/src/lib/route.ts`) against their *own* app's route type and pass
+ * the result in as `contentClient`/`storageClient`; now that every route
+ * this client ever calls is 100% library-owned (`createHandler()`/
+ * `createBaseConfigRoute()` — no consumer-specific routes mixed in), this
+ * package can type that client against its own `BaseConfigRouteType`
+ * directly, needing only an origin. In an actual browser,
+ * `window.location.origin` is always correct (same-origin, no custom-domain/
+ * dev-port drift); `config.hostDomain` is the SSR-only fallback, read
+ * exclusively when there's no `window` to ask (see its own doc comment,
+ * `base.types.ts`).
  */
 export function baseConfig(config: BaseConfigProps): BaseConfigProps {
 	registerBaseConfig(config.collections, config.globals)
+
+	const apiOrigin =
+		typeof window !== 'undefined' ? window.location.origin : config.hostDomain
+	const client = hc<BaseConfigRouteType>(`${apiOrigin}/api`, {
+		init: { credentials: 'include' }
+	})
+
 	registerContentDataSource({
 		queryClient: config.queryClient,
-		client: config.contentClient
+		client: createContentApiClient(client)
 	})
-	registerStorageDataSource(config.storageClient)
+	registerStorageDataSource(createStorageApiClient(client.storage))
+
 	if (config.auth) {
 		registerUsersDataSource({
 			queryClient: config.queryClient,

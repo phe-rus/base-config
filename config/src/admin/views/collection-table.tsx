@@ -94,17 +94,12 @@ function CollectionTableLive({
 	const dataColumns = config.columns ?? DEFAULT_COLUMNS
 	const filterKey = config.filterKey ?? dataColumns[0]?.key
 
+	// Purely navigational — no `collection.insert()` here. Generates a fresh
+	// id and opens the editor for it; the document only becomes real once
+	// the admin explicitly saves it (`useDocument`'s own doc comment covers
+	// why — this used to insert a real blank row immediately on click).
 	const create = () => {
-		const id = createId()
-		const now = new Date().toISOString()
-		collection.insert({
-			id,
-			data: { title: '', slug: '', ...config.defaultValues() },
-			status: 'draft',
-			createdAt: now,
-			updatedAt: now
-		})
-		onOpen(id)
+		onOpen(createId())
 	}
 
 	return (

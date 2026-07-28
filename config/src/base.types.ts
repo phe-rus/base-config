@@ -1,8 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { FC } from 'react'
 import type { z } from 'zod'
-import type { BetterAuthAdminClient, ContentApiClient } from './db/collections'
-import type { StorageApiClient } from './fields/storage-client'
+import type { BetterAuthAdminClient } from './db/collections'
 
 // `@base/config`'s own root shape — independent of any one consumer's actual
 // values. A consuming app (e.g. `www/src/hooks/config/base.config.ts`)
@@ -32,6 +31,16 @@ export type AdminSettings = {
  * already satisfies these structurally, since that union extends `string`.
  */
 export type BaseConfigProps = {
+	/**
+	 * The server-rendered/non-browser fallback origin for this package's
+	 * internal `/api/*` RPC client (`define.ts`'s `baseConfig()` builds a
+	 * real `hc<BaseConfigRouteType>()` client itself now — a consumer no
+	 * longer builds or injects one, see `contentClient`/`storageClient`'s
+	 * removal below). In an actual browser, `window.location.origin` is used
+	 * instead — same-origin, always correct regardless of custom domains or
+	 * dev-server ports — and this value is only ever read during SSR, where
+	 * there's no `window` to ask.
+	 */
 	hostDomain: string
 	config: AdminSettings
 	collections: CollectionConfig[]
@@ -51,23 +60,6 @@ export type BaseConfigProps = {
 	 * rather than each feature threading its own through separately.
 	 */
 	queryClient: QueryClient
-	/**
-	 * The real implementation of `ContentApiClient` (`db/collections.ts`) —
-	 * a consumer builds this using its own typed Hono RPC client (`hc<TypeRouter>()`),
-	 * so every call this package makes to `/api/<collection>`/`/api/globals/*` is type-checked
-	 * against the real route shapes at the point it's actually written (in
-	 * the consumer's own code), not a raw untyped `fetch()` inside this
-	 * package. `baseConfig()` calls `registerContentDataSource({queryClient, client: contentClient})`
-	 * with this, once, as a side effect.
-	 */
-	contentClient: ContentApiClient
-	/**
-	 * Same shape/reasoning as `contentClient`, for `/api/storage/*` —
-	 * `fields/storage-client.ts`'s `createStorageApiClient(route.api.storage)`.
-	 * `baseConfig()` calls `registerStorageDataSource(storageClient)` with
-	 * this, once, as a side effect.
-	 */
-	storageClient: StorageApiClient
 	/**
 	 * Wires the real, server-backed `users` collection (see
 	 * `CollectionConfig['auth']`) — omit if no collection has `auth: true`.

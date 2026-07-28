@@ -1,9 +1,13 @@
 import { collectionsBySlug } from '../collections/registry'
 import type { CollectionSlug } from '../collections/types'
-import { createCollection, useLiveQuery } from '@tanstack/react-db'
+import {
+	createCollection,
+	localStorageCollectionOptions,
+	useLiveQuery
+} from '@tanstack/react-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import type { QueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { z } from 'zod'
 import type {
 	CreateDocumentInput,
@@ -25,10 +29,10 @@ export type DocumentRow<TData> = {
 }
 
 /**
- * The wire shape `GET/POST/PATCH /api/<collection>` actually returns — derived from the server's own `DocumentRow`
- * (`content-queries.ts`, itself `typeof documents.$inferSelect`) rather
- * than hand-redeclared field-by-field, so the two can't silently drift.
- * Only real difference: `createdAt`/`updatedAt` are `Date` objects
+ * The wire shape `GET/POST/PATCH /api/<collection>` actually returns —
+ * derived from the server's own `DocumentRow` (`content-queries.ts`)
+ * rather than hand-redeclared field-by-field, so the two can't silently
+ * drift. Only real difference: `createdAt`/`updatedAt` are `Date` objects
  * server-side (Drizzle's `timestamp_ms` mode) but cross the wire as ISO
  * strings — JSON has no `Date` type, and Hono's `c.json()` serializes one
  * to the other automatically.
@@ -41,13 +45,20 @@ export type ContentDocumentRow = Omit<
 	updatedAt: string
 }
 
-/** Same derivation as `ContentDocumentRow`, for `content-queries.ts`'s own `GlobalRow`. */
+/**
+ * A global's own table has no `slug` column at all (it's identified by
+ * *which table* it is, not a row field — see `content-schema.ts`) —
+ * `content-route.ts` injects `slug` itself when serializing a response, so
+ * this type adds it back rather than deriving it from the server's own
+ * `GlobalRow`, which correctly doesn't have it.
+ */
 export type ContentGlobalRow = Omit<ServerGlobalRow, 'updatedAt'> & {
+	slug: string
 	updatedAt: string
 }
 
-/** Identical to the server's own `CreateDocumentInput`, minus `collection` — the client passes that as `ContentApiClient.createDocument`'s own first argument, not part of the body. */
-export type CreateDocumentBody = Omit<CreateDocumentInput, 'collection'>
+/** Identical to the server's own `CreateDocumentInput`. */
+export type CreateDocumentBody = CreateDocumentInput
 
 /** The server's own `UpdateDocumentInput` — no client-side differences at all; re-exported under this name for symmetry with `CreateDocumentBody` and discoverability from this file. */
 export type UpdateDocumentBody = UpdateDocumentInput
@@ -317,14 +328,18 @@ function toDocumentRow(
 }
 
 /**
- * The `localStorage`-free replacement for every non-`auth` collection —
- * same lazy, mutation-triggered-refetch policy as `createUsersCollection`
- * below (`staleTime: Infinity`, explicit `refetch()` after a mutation
- * resolves), backed by `/api/:collection` instead of a
- * server-backed auth endpoint. `onUpdate` diffs `original`/`modified` the
- * same way `createUsersCollection`'s own `onUpdate` does, so a save only
- * ever sends the fields that actually changed (see `content-db.ts`'s
- * `updateDocument`, which merges rather than replaces `data`).
+ * The real, `/api/<collection>`-backed side of a collection — what
+ * `publish()` (`db/use-document.ts`) writes to, never what an admin edits
+ * directly (that's `draftCollections` below, `localStorage`-backed). Loads
+ * once (`staleTime: Infinity`, no refetch on window focus/reconnect); after
+ * a mutation resolves, the mutation's own response (already the
+ * authoritative row) is written straight into this collection's cache via
+ * `collection.utils.writeInsert`/`writeUpdate`/`writeDelete` — no follow-up
+ * `refetch()` GET, which is exactly what produced the "too many requests"
+ * bug this replaced (a full list re-fetch after every single write). `onUpdate`
+ * diffs `original`/`modified` so a write only ever sends the fields that
+ * actually changed (see `content-queries.ts`'s `updateDocument`, which
+ * merges rather than replaces `data`).
  */
 function createContentCollection(slug: string) {
 	const { queryClient, client } = requireContentDataSource()
@@ -351,7 +366,7 @@ function createContentCollection(slug: string) {
 						} = splitDocumentFields(
 							mutation.modified.data as Record<string, unknown>
 						)
-						await client.create({
+						const created = await client.create({
 							collection: slug,
 							data: {
 								id: mutation.modified.id,
@@ -361,9 +376,9 @@ function createContentCollection(slug: string) {
 								data: rest
 							}
 						})
+						collection.utils.writeInsert(toDocumentRow(created))
 					})
 				)
-				await collection.utils.refetch()
 			},
 			onUpdate: async ({ transaction, collection }) => {
 				await Promise.all(
@@ -388,14 +403,14 @@ function createContentCollection(slug: string) {
 						}
 						if (Object.keys(fields).length > 0) body.fields = fields
 						if (Object.keys(body).length === 0) return
-						await client.update({
+						const updated = await client.update({
 							collection: slug,
 							id: mutation.key as string,
 							data: body
 						})
+						collection.utils.writeUpdate(toDocumentRow(updated))
 					})
 				)
-				await collection.utils.refetch()
 			},
 			onDelete: async ({ transaction, collection }) => {
 				await Promise.all(
@@ -406,7 +421,9 @@ function createContentCollection(slug: string) {
 						})
 					})
 				)
-				await collection.utils.refetch()
+				collection.utils.writeDelete(
+					transaction.mutations.map((mutation) => mutation.key as string)
+				)
 			}
 		})
 	)
@@ -608,9 +625,9 @@ function createUsersCollection() {
 					transaction.mutations.map(async (mutation) => {
 						const original = mutation.original.data as Record<string, unknown>
 						const modified = mutation.modified.data as Record<string, unknown>
-						// Only send fields that actually changed — `flush()` (see
+						// Only send fields that actually changed — `publish()` (see
 						// `db/use-document.ts`) always replaces the whole `data`
-						// object, so without this every save would resend every
+						// object, so without this every publish would resend every
 						// field, including ones the admin never touched. That
 						// matters here specifically: a validation quirk on one
 						// untouched field (e.g. `username`) would otherwise block
@@ -639,9 +656,14 @@ function createUsersCollection() {
 								data: changed
 							})
 						)
+						// better-auth's `updateUser` response isn't typed to this
+						// package's `RealUserRow` shape (see `BetterAuthAdminClient`
+						// above), so the already-known local optimistic value
+						// (`mutation.modified`) is written back instead of the
+						// server's own response — same effect, no cast needed.
+						collection.utils.writeUpdate(mutation.modified)
 					})
 				)
-				await collection.utils.refetch()
 			},
 			onDelete: async ({ transaction, collection }) => {
 				await Promise.all(
@@ -653,7 +675,9 @@ function createUsersCollection() {
 						)
 					})
 				)
-				await collection.utils.refetch()
+				collection.utils.writeDelete(
+					transaction.mutations.map((mutation) => mutation.key as string)
+				)
 			}
 		})
 	) as unknown as ContentCollection
@@ -678,12 +702,69 @@ export const contentCollections: Record<CollectionSlug, ContentCollection> =
 		get: (_target, slug: string) => getContentCollection(slug)
 	})
 
+export type DraftCollection = ReturnType<typeof createDraftCollection>
+
 /**
- * `localStorage`-free, same shape as `createContentCollection` above but
- * backed by `/api/globals*` — one row per global slug instead of
- * per-collection-per-document. No `onDelete`: globals are never deleted,
- * only ever edited (see `content-schema.ts`'s `globals` table, one row per
- * slug, created lazily on first save via `useDocument`'s `autoCreate`).
+ * The actual local-first layer — a real, per-collection `localStorage`
+ * collection (`localStorageCollectionOptions`, from `@tanstack/db` via
+ * `@tanstack/react-db`'s re-export), with no `onInsert`/`onUpdate`/
+ * `onDelete` at all. Every mutation against one of these is a pure
+ * `localStorage` write: no network call, ever, for either a brand-new
+ * document or an edit to an existing one. `db/use-document.ts` is the only
+ * thing that reads/writes these directly — `publish()` there is what
+ * eventually copies a draft's current data into the matching
+ * `contentCollections` entry above, the one and only point any of this
+ * reaches the real `/api/<collection>` backend. Doesn't need
+ * `registerContentDataSource()` (or any registration at all) to exist, so
+ * unlike `contentCollections` this doesn't need a circular-import-safe lazy
+ * Proxy for *that* reason — the per-slug cache below is purely to avoid
+ * constructing the same collection twice.
+ */
+function createDraftCollection(slug: string) {
+	return createCollection(
+		localStorageCollectionOptions<DocumentRow<Record<string, unknown>>>({
+			storageKey: `base-config:draft:${slug}`,
+			getKey: (item) => item.id
+		})
+	)
+}
+
+const draftCollectionCache = new Map<string, DraftCollection>()
+
+function getDraftCollection(slug: string): DraftCollection {
+	let collection = draftCollectionCache.get(slug)
+	if (!collection) {
+		collection = createDraftCollection(slug)
+		draftCollectionCache.set(slug, collection)
+	}
+	return collection
+}
+
+export const draftCollections: Record<CollectionSlug, DraftCollection> =
+	new Proxy({} as Record<CollectionSlug, DraftCollection>, {
+		get: (_target, slug: string) => getDraftCollection(slug)
+	})
+
+function toGlobalDocumentRow(
+	row: ContentGlobalRow
+): DocumentRow<Record<string, unknown>> {
+	return {
+		id: row.slug,
+		data: row.data,
+		status: 'published' as const,
+		createdAt: row.updatedAt,
+		updatedAt: row.updatedAt
+	}
+}
+
+/**
+ * The real, `/api/globals*`-backed side of a global — same relationship to
+ * `draftGlobalsCollection` below that `createContentCollection` has to
+ * `draftCollections` (see that function's own doc comment). One row per
+ * global slug instead of per-collection-per-document. No `onDelete`:
+ * globals are never deleted, only ever edited (see `content-schema.ts`'s
+ * `globals` table, one row per slug, created lazily on first publish via
+ * `useDocument`'s draft-seeding effect).
  */
 function createGlobalsCollection() {
 	const { queryClient, client } = requireContentDataSource()
@@ -698,24 +779,18 @@ function createGlobalsCollection() {
 			refetchOnReconnect: false,
 			queryFn: async () => {
 				const rows = await client.listGlobals()
-				return rows.map((row) => ({
-					id: row.slug,
-					data: row.data,
-					status: 'published' as const,
-					createdAt: row.updatedAt,
-					updatedAt: row.updatedAt
-				}))
+				return rows.map(toGlobalDocumentRow)
 			},
 			onInsert: async ({ transaction, collection }) => {
 				await Promise.all(
-					transaction.mutations.map(async (mutation) =>
-						client.updateGlobal({
+					transaction.mutations.map(async (mutation) => {
+						const updated = await client.updateGlobal({
 							slug: mutation.modified.id,
 							data: mutation.modified.data as Record<string, unknown>
 						})
-					)
+						collection.utils.writeInsert(toGlobalDocumentRow(updated))
+					})
 				)
-				await collection.utils.refetch()
 			},
 			onUpdate: async ({ transaction, collection }) => {
 				await Promise.all(
@@ -729,13 +804,13 @@ function createGlobalsCollection() {
 							}
 						}
 						if (Object.keys(fields).length === 0) return
-						await client.updateGlobal({
+						const updated = await client.updateGlobal({
 							slug: mutation.key as string,
 							data: fields
 						})
+						collection.utils.writeUpdate(toGlobalDocumentRow(updated))
 					})
 				)
-				await collection.utils.refetch()
 			}
 		})
 	)
@@ -768,11 +843,38 @@ export const globalsCollection: ContentCollection = createLazyCollection(
 	createGlobalsCollection
 )
 
+/**
+ * The `localStorage`-backed draft counterpart to `globalsCollection` above
+ * — one row per global slug, same as the remote side, but with no mutation
+ * handlers at all, so every edit is a pure local write (see
+ * `draftCollections`' own doc comment for the full rationale). Unlike
+ * `globalsCollection`, this doesn't need `createLazyCollection()` — it has
+ * no dependency on `registerContentDataSource()` having run yet, so it's
+ * safe to construct eagerly at module-eval time (and, per
+ * `localStorageCollectionOptions`'s own documented fallback, safe under SSR
+ * too — it just no-ops to an in-memory store there).
+ */
+export const draftGlobalsCollection: DraftCollection = createCollection(
+	localStorageCollectionOptions<DocumentRow<Record<string, unknown>>>({
+		storageKey: 'base-config:draft:globals',
+		getKey: (item) => item.id
+	})
+)
+
 // --- Keywords: not a separate collection — the shared, site-wide keyword
-// pool *is* the `keywords` global's own document in `globalsCollection` (see
-// `hooks/config/globals/keywords.ts`), so it's both auto-populated from every
-// `KeywordsInput.onCreate` below *and* directly editable at
-// `/admin/globals/keywords`, with no second, disconnected copy of the data. ---
+// pool *is* the `keywords` global's own document (`draftGlobalsCollection`/
+// `globalsCollection`, id `'keywords'`; see `hooks/config/globals/keywords.ts`),
+// so it's both auto-populated from every `KeywordsInput.onCreate` below *and*
+// directly editable at `/admin/keywords`, with no second, disconnected copy
+// of the data. Local-first like every other edit: `registerKeyword` only
+// ever writes to the *draft* — typing a new keyword on some unrelated
+// document's `meta`/`relations` field must never fire a real
+// `/api/globals/keywords` write on every keystroke. `publishKeywordPool()`
+// is the one place that draft ever reaches the real backend, called
+// alongside a normal document publish (see `collection-form.tsx`'s
+// `runPublish`) — "a page using a new keyword publishes, the keyword pool
+// publishes with it," rather than needing its own separate manual publish
+// step on `/admin/keywords`. ---
 
 const KEYWORDS_GLOBAL_ID = 'keywords'
 
@@ -791,16 +893,46 @@ const EMPTY_KEYWORDS: string[] = []
 
 /**
  * All globally known keywords, live, flattened to plain strings — pass
- * straight to a `KeywordsInput`'s `suggestions` prop. Filters out anything
- * that isn't a real, non-empty label — a row an admin just clicked "Add" on
- * but hasn't typed into yet has no `label` at all (the array field's default
- * add button pushes a bare `{}`), and shouldn't crash or show up as a blank
- * suggestion.
+ * straight to a `KeywordsInput`'s `suggestions` prop. Reads the *draft* pool
+ * (seeded from whatever's already published, the first time any admin
+ * screen touches keywords in this browser — mirrors `useDocument`'s own
+ * draft-seeding effect, just scoped to this one global instead of a whole
+ * hook) so a keyword typed moments ago on another open document shows up as
+ * a suggestion immediately, without waiting for a publish. Filters out
+ * anything that isn't a real, non-empty label — a row an admin just clicked
+ * "Add" on but hasn't typed into yet has no `label` at all (the array
+ * field's default add button pushes a bare `{}`), and shouldn't crash or
+ * show up as a blank suggestion.
  */
 export function useGlobalKeywordSuggestions(): string[] {
-	const { data } = useLiveQuery(globalsCollection)
-	const row = data.find((item) => item.id === KEYWORDS_GLOBAL_ID)
-	const keywordRows = (row?.data as KeywordsGlobalData | undefined)?.keywords
+	const { data: remoteData, isLoading: remoteLoading } =
+		useLiveQuery(globalsCollection)
+	const { data: draftData } = useLiveQuery(draftGlobalsCollection)
+
+	const remoteRow = remoteData.find((item) => item.id === KEYWORDS_GLOBAL_ID)
+	const draftRow = draftData.find((item) => item.id === KEYWORDS_GLOBAL_ID)
+
+	useEffect(() => {
+		if (remoteLoading || draftGlobalsCollection.get(KEYWORDS_GLOBAL_ID)) {
+			return
+		}
+		if (!remoteRow) return
+		draftGlobalsCollection.insert({
+			id: KEYWORDS_GLOBAL_ID,
+			data: remoteRow.data,
+			status: remoteRow.status,
+			createdAt: remoteRow.createdAt,
+			updatedAt: remoteRow.updatedAt
+		})
+		// Only re-seeds once, when the real pool first becomes available —
+		// re-running on every `remoteRow` change would clobber local,
+		// not-yet-published keyword edits with stale published data.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [remoteLoading])
+
+	const keywordRows = (
+		(draftRow ?? remoteRow)?.data as KeywordsGlobalData | undefined
+	)?.keywords
 
 	return useMemo(() => {
 		if (!Array.isArray(keywordRows)) return EMPTY_KEYWORDS
@@ -814,32 +946,67 @@ export function useGlobalKeywordSuggestions(): string[] {
 	}, [keywordRows])
 }
 
-/** Adds a keyword to the shared pool if it isn't already there (case-insensitive) — call from `KeywordsInput`'s `onCreate` wherever it's used, so new keywords typed on any document become suggestions everywhere else *and* show up as a row in the `keywords` global's own editor. */
+/** Adds a keyword to the shared pool if it isn't already there (case-insensitive) — call from `KeywordsInput`'s `onCreate` wherever it's used, so new keywords typed on any document become suggestions everywhere else *and* show up as a row in the `keywords` global's own editor. A pure `localStorage` write, same as any other draft edit — see this section's own doc comment for why. */
 export function registerKeyword(value: string) {
 	const trimmed = value.trim()
 	if (!trimmed) return
 
-	const existing = globalsCollection.get(KEYWORDS_GLOBAL_ID)
-	if (!existing) {
-		const now = new Date().toISOString()
-		globalsCollection.insert({
-			id: KEYWORDS_GLOBAL_ID,
-			data: { keywords: [{ label: trimmed }] },
-			status: 'published',
-			createdAt: now,
-			updatedAt: now
+	const draftRow = draftGlobalsCollection.get(KEYWORDS_GLOBAL_ID)
+	const remoteRow = globalsCollection.get(KEYWORDS_GLOBAL_ID)
+	const currentKeywords =
+		((draftRow ?? remoteRow)?.data as KeywordsGlobalData | undefined)
+			?.keywords ?? []
+	const alreadyExists = currentKeywords.some(
+		(keyword) => keyword?.label?.toLowerCase() === trimmed.toLowerCase()
+	)
+	if (alreadyExists) return
+
+	const nextKeywords = [...currentKeywords, { label: trimmed }]
+
+	if (draftRow) {
+		draftGlobalsCollection.update(KEYWORDS_GLOBAL_ID, (draft) => {
+			;(draft.data as KeywordsGlobalData).keywords = nextKeywords
 		})
 		return
 	}
 
-	const currentKeywords = (existing.data as KeywordsGlobalData).keywords ?? []
-	const alreadyExists = currentKeywords.some(
-		(keyword) => keyword?.label?.toLowerCase() === trimmed.toLowerCase()
-	)
-	if (!alreadyExists) {
-		globalsCollection.update(KEYWORDS_GLOBAL_ID, (draft) => {
-			const draftData = draft.data as KeywordsGlobalData
-			draftData.keywords = [...(draftData.keywords ?? []), { label: trimmed }]
-		})
+	const now = new Date().toISOString()
+	draftGlobalsCollection.insert({
+		id: KEYWORDS_GLOBAL_ID,
+		data: { keywords: nextKeywords },
+		status: remoteRow?.status ?? 'published',
+		createdAt: remoteRow?.createdAt ?? now,
+		updatedAt: now
+	})
+}
+
+/**
+ * Pushes the local keyword-pool draft live if it actually differs from
+ * what's currently published — no-ops otherwise. Called from
+ * `collection-form.tsx`'s `runPublish`, right after a document's own
+ * publish succeeds, so newly-typed keywords go live *with* whatever
+ * document introduced them rather than needing a separate trip to
+ * `/admin/keywords` (see this section's own doc comment). Safe to call
+ * unconditionally, including for collections that don't touch keywords at
+ * all (`users`) — it only ever writes when the draft and remote pools
+ * actually disagree.
+ */
+export async function publishKeywordPool(): Promise<void> {
+	const draft = draftGlobalsCollection.get(KEYWORDS_GLOBAL_ID)
+	if (!draft) return
+
+	const remote = globalsCollection.get(KEYWORDS_GLOBAL_ID)
+	if (remote && JSON.stringify(remote.data) === JSON.stringify(draft.data)) {
+		return
 	}
+
+	if (!remote) {
+		await globalsCollection.insert({ ...draft }).isPersisted.promise
+		return
+	}
+
+	await globalsCollection.update(KEYWORDS_GLOBAL_ID, (row) => {
+		row.data = draft.data
+		row.updatedAt = new Date().toISOString()
+	}).isPersisted.promise
 }

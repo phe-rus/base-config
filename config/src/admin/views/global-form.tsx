@@ -1,9 +1,10 @@
 import type { GlobalConfig, GlobalSlug } from '../../collections/types'
-import { globalsCollection } from '../../db/collections'
+import { draftGlobalsCollection, globalsCollection } from '../../db/collections'
 import { useDocument } from '../../db/use-document'
 import { DocumentHeader } from './document-header'
 import { Button } from '@base/ui/components/button'
 import { t } from '@base/ui/components/sonner'
+import { useLiveQuery } from '@tanstack/react-db'
 import { useEffect, useState } from 'react'
 
 type GlobalFormProps = {
@@ -17,19 +18,40 @@ export function GlobalForm({ config, id }: GlobalFormProps) {
 
 	if (!mounted) return null
 
+	return <GlobalFormLive config={config} id={id} />
+}
+
+/**
+ * Same reasoning as `CollectionForm`'s own `CollectionFormLive` gate: don't
+ * mount `GlobalEditor` (and the `useAppForm` call inside it, via
+ * `useDocument`) until both the remote and local-draft queries have
+ * actually resolved — `useAppForm` only snapshots its `defaultValues` once,
+ * at first render, so mounting too early would freeze fields at
+ * empty/default values that then never get replaced, and can flip a field
+ * from an uncontrolled `undefined` to a real value on a later render (a
+ * real Base UI warning this fixes).
+ */
+function GlobalFormLive({ config, id }: GlobalFormProps) {
+	const { isReady: remoteReady } = useLiveQuery(globalsCollection)
+	const { isReady: draftReady } = useLiveQuery(draftGlobalsCollection)
+
+	if (!remoteReady || !draftReady) return null
+
 	return <GlobalEditor key={id} config={config} id={id} />
 }
 
 function GlobalEditor({ config, id }: GlobalFormProps) {
-	const { form, row, save, isDirty } = useDocument({
+	// Globals have no draft/published status distinction — `publish()` is
+	// still the one and only action that ever reaches the real
+	// `/api/globals/<slug>` backend, edits themselves stay purely local
+	// (see `useDocument`'s own doc comment).
+	const { form, row, publish, isDirty } = useDocument({
 		collection: globalsCollection,
+		draftCollection: draftGlobalsCollection,
 		id,
 		schema: config.schema,
-		defaultValues: config.defaultValues,
-		autoCreate: true
+		defaultValues: config.defaultValues
 	})
-
-	if (!row) return null
 
 	return (
 		<form
@@ -46,11 +68,11 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 						size='xs'
 						variant='secondary'
 						disabled={!isDirty}
-						title={isDirty ? undefined : 'No changes to save'}
+						title={isDirty ? undefined : 'No changes to publish'}
 						onClick={async () => {
 							try {
-								await save()?.isPersisted.promise
-								t.success('Success', { description: 'Changes saved.' })
+								await publish()?.isPersisted.promise
+								t.success('Success', { description: 'Published.' })
 							} catch (error) {
 								t.error(error instanceof Error ? error.name : 'Error', {
 									description:
@@ -59,7 +81,7 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 							}
 						}}
 					>
-						Save
+						Publish
 					</Button>
 				}
 			/>
