@@ -1,9 +1,15 @@
 import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger
+} from '@base/ui/components/collapsible'
+import {
 	Tabs,
 	TabsContent,
 	TabsList,
 	TabsTrigger
 } from '@base/ui/components/tabs'
+import { IconChevronDown } from '@tabler/icons-react'
 import type { FC } from 'react'
 import type { CollectionFieldsProps } from '../base.types'
 import {
@@ -53,6 +59,15 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 	}>
 }
 
+/** A stable React key for a container field (`row`/`collapsible`/`group`/`tabs`/`ui`) — none of these have a `name` to key off, so `prefix` + the field's own position stands in instead. Safe as an index key specifically because `fields`/`tabs` arrays are hand-authored config, never a runtime-reorderable list (unlike `ArrayField`'s own dynamic items). */
+function containerKey(prefix: string | undefined, index: number): string {
+	return prefix ? `${prefix}.__field_${index}` : `__field_${index}`
+}
+
+function dotJoin(prefix: string | undefined, name: string): string {
+	return prefix ? `${prefix}.${name}` : name
+}
+
 function renderField(
 	field: FieldConfig<any, any>,
 	form: any,
@@ -66,8 +81,136 @@ function renderField(
 	 * e.g. `pages/<id>/<prefix>/<filename>` — so two different documents'
 	 * uploads never collide on filename.
 	 */
-	uploadFolder?: string
+	uploadFolder?: string,
+	/** This field's own position in its parent `fields`/`tabs` array — only consumed by the container branches below, for `containerKey`. */
+	index = 0
 ) {
+	// Container types (`row`/`collapsible`/`group`/`tabs`-as-field/`ui`) have
+	// no `name` of their own — they fan out into their own `fields`/`tabs`
+	// (or, for `ui`, render a bare component) rather than binding one
+	// `form.AppField` path. Handled before `const name = ...` below so
+	// `field.name` is never accessed on one of these.
+	if (field.type === 'row') {
+		return (
+			<div key={containerKey(prefix, index)} className='flex flex-row gap-3'>
+				{field.fields.map((childField, childIndex) => (
+					<div key={containerKey(prefix, childIndex)} className='flex-1'>
+						{renderField(
+							childField,
+							form,
+							prefix,
+							id,
+							renderers,
+							uploadFolder,
+							childIndex
+						)}
+					</div>
+				))}
+			</div>
+		)
+	}
+
+	if (field.type === 'collapsible') {
+		return (
+			<Collapsible
+				key={containerKey(prefix, index)}
+				defaultOpen={!field.initCollapsed}
+				className='flex flex-col gap-3 rounded-md border p-4'
+			>
+				<CollapsibleTrigger className='flex items-center justify-between text-sm font-medium'>
+					{field.label ?? 'Details'}
+					<IconChevronDown className='size-4' />
+				</CollapsibleTrigger>
+				<CollapsibleContent className='flex flex-col gap-3'>
+					{field.fields.map((childField, childIndex) =>
+						renderField(
+							childField,
+							form,
+							prefix,
+							id,
+							renderers,
+							uploadFolder,
+							childIndex
+						)
+					)}
+				</CollapsibleContent>
+			</Collapsible>
+		)
+	}
+
+	if (field.type === 'group') {
+		const nextPrefix = field.name ? dotJoin(prefix, field.name) : prefix
+		return (
+			<fieldset
+				key={containerKey(prefix, index)}
+				className='flex flex-col gap-3 rounded-md border p-4'
+			>
+				{field.label ? (
+					<legend className='text-sm font-medium px-1'>{field.label}</legend>
+				) : null}
+				{field.description ? (
+					<p className='text-sm text-muted-foreground'>{field.description}</p>
+				) : null}
+				{field.fields.map((childField, childIndex) =>
+					renderField(
+						childField,
+						form,
+						nextPrefix,
+						id,
+						renderers,
+						uploadFolder,
+						childIndex
+					)
+				)}
+			</fieldset>
+		)
+	}
+
+	if (field.type === 'tabs') {
+		return (
+			<Tabs
+				key={containerKey(prefix, index)}
+				defaultValue={field.tabs[0]?.id}
+				className='mb-3'
+			>
+				<TabsList variant='line' className='gap-3 px-0 mb-3'>
+					{field.tabs.map((subtab) => (
+						<TabsTrigger key={subtab.id} value={subtab.id} className='px-0'>
+							{subtab.label}
+						</TabsTrigger>
+					))}
+				</TabsList>
+				{field.tabs.map((subtab) => {
+					const nextPrefix = subtab.name ? dotJoin(prefix, subtab.name) : prefix
+					return (
+						<TabsContent
+							key={subtab.id}
+							value={subtab.id}
+							className='flex flex-col gap-5'
+						>
+							{subtab.fields.map((childField, childIndex) =>
+								renderField(
+									childField,
+									form,
+									nextPrefix,
+									id,
+									renderers,
+									uploadFolder,
+									childIndex
+								)
+							)}
+						</TabsContent>
+					)
+				})}
+			</Tabs>
+		)
+	}
+
+	if (field.type === 'ui') {
+		const { Component } = field
+		return <Component key={containerKey(prefix, index)} />
+	}
+
 	const name = prefix ? `${prefix}.${field.name}` : field.name
 
 	// `meta`/`relations` (as currently implemented) hardcode their own
@@ -140,14 +283,15 @@ function renderField(
 					<f.ArrayField label={field.label} description={field.description}>
 						{({ path }: { path: string }) => (
 							<div className='flex flex-col gap-3'>
-								{field.fields.map((childField) =>
+								{field.fields.map((childField, childIndex) =>
 									renderField(
 										childField,
 										form,
 										path,
 										id,
 										renderers,
-										uploadFolder
+										uploadFolder,
+										childIndex
 									)
 								)}
 							</div>
@@ -300,8 +444,16 @@ export function createFlatFieldsRenderer<
 	return function GeneratedFlatFields({ form, id }: CollectionFieldsProps) {
 		return (
 			<>
-				{fields.map((field) =>
-					renderField(field, form, undefined, id, renderers, uploadFolder)
+				{fields.map((field, index) =>
+					renderField(
+						field,
+						form,
+						undefined,
+						id,
+						renderers,
+						uploadFolder,
+						index
+					)
 				)}
 			</>
 		)
@@ -311,9 +463,15 @@ export function createFlatFieldsRenderer<
 /**
  * Turns a declarative `TabConfig[]` into a real `Fields` component — the
  * same `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` chrome every collection
- * uses, dispatching each field by type. Each field's `name` is written
- * relative to its own tab (see `withTabPrefix`) — `tab: 'post'` with a field
- * named `'content'` resolves to the real path `post.content`.
+ * uses, dispatching each field by type. A direct leaf field's `name` is
+ * written relative to its own tab (see `withTabPrefix`) — `tab: 'post'`
+ * with a field named `'content'` resolves to the real path `post.content`.
+ * A container field (`row`/`collapsible`/`group`/`tabs`-as-field/`ui`) is
+ * rendered with the tab's own plain prefix instead (`tab.flat ? undefined :
+ * tab.tab`) — it has no `name` for `withTabPrefix`'s shorthand to apply to,
+ * see `flattenTabFields`'s own doc comment (`fields/schema.ts`) for why
+ * this deliberately doesn't try to extend that shorthand through a
+ * container.
  */
 export function createFieldsRenderer<
 	TCollectionSlug extends string = string,
@@ -341,19 +499,37 @@ export function createFieldsRenderer<
 						value={tab.tab}
 						className='flex flex-col gap-5'
 					>
-						{tab.fields.map((field) =>
-							renderField(
-								{
-									...field,
-									name: withTabPrefix(tab.tab, field.name, tab.flat)
-								},
-								form,
-								undefined,
-								id,
-								renderers,
-								uploadFolder
-							)
-						)}
+						{tab.fields.map((field, index) => {
+							switch (field.type) {
+								case 'row':
+								case 'collapsible':
+								case 'group':
+								case 'tabs':
+								case 'ui':
+									return renderField(
+										field,
+										form,
+										tab.flat ? undefined : tab.tab,
+										id,
+										renderers,
+										uploadFolder,
+										index
+									)
+								default:
+									return renderField(
+										{
+											...field,
+											name: withTabPrefix(tab.tab, field.name, tab.flat)
+										},
+										form,
+										undefined,
+										id,
+										renderers,
+										uploadFolder,
+										index
+									)
+							}
+						})}
 					</TabsContent>
 				))}
 			</Tabs>

@@ -31,4 +31,14 @@ export type BlockConfig = {
 	schema: z.ZodTypeAny
 	defaultValue: Record<string, unknown>
 	Fields: FC<BlockFieldsProps>
+	/**
+	 * The public-facing markup for this block — optional, alongside the
+	 * always-required admin-only `Fields`. A block with no `Render` is
+	 * simply skipped by `BlockRenderer` (`./block-renderer.tsx`), so a
+	 * block's public half can ship incrementally, one block at a time,
+	 * without breaking the ones that don't have one yet. Takes the block's
+	 * own raw stored value (`{blockType, ...}`, whatever `schema` describes)
+	 * — never `form`/`path`, since there's no form on a public page.
+	 */
+	Render?: FC<{ data: Record<string, unknown> }>
 }

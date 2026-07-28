@@ -2,6 +2,9 @@ import { z } from 'zod'
 import { blocksBySlug } from './registry'
 
 export { blocksBySlug, registerBlocks } from './registry'
+export { BlockRenderer } from './block-renderer'
+export type { BlockData } from './block-renderer'
+export { RelatedPostsGroupRender } from './related-posts'
 
 /**
  * Built lazily, on every call, from the *current* `blocksBySlug` registry —

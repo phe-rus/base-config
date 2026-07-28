@@ -1,5 +1,7 @@
 import type { BlockConfig, BlockFieldsProps } from '@base/config'
-import { getContentCollection } from '@base/config'
+import { base, getContentCollection } from '@base/config'
+import { Button } from '@base/ui/components/button'
+import { Checkbox } from '@base/ui/components/checkbox'
 import {
 	Combobox,
 	ComboboxContent,
@@ -8,10 +10,14 @@ import {
 	ComboboxItem,
 	ComboboxList
 } from '@base/ui/components/combobox'
+import { Input } from '@base/ui/components/input'
+import { Textarea } from '@base/ui/components/textarea'
 import { FieldShell, useFieldState } from '@base/ui/forms'
+import { useQuery } from '@tanstack/react-query'
 import { useLiveQuery } from '@tanstack/react-db'
-import { useMemo } from 'react'
+import { type FormEvent, useMemo, useState } from 'react'
 import { z } from 'zod'
+import type { FormData, FormFieldRow } from './forms-collection'
 
 const formReferenceSchema = z.object({
 	id: z.string(),
@@ -96,11 +102,9 @@ function FormReferencePicker({ options }: { options: Option[] }) {
 }
 
 /**
- * Embeds a `forms` document into a page's own `blocks` field — the
- * plugin's own public-facing piece. Only picks *which* form to show; the
- * actual rendering (fields, submit handling against
- * `POST /api/forms/:id/submit`) is a public-page concern — this admin
- * field just records the reference.
+ * Embeds a `forms` document into a page's own `blocks` field — only picks
+ * *which* form to show; the actual public rendering is `FormBlockRender`
+ * below.
  */
 function FormBlockFields({ form, path }: BlockFieldsProps) {
 	const options = useFormOptions()
@@ -112,6 +116,148 @@ function FormBlockFields({ form, path }: BlockFieldsProps) {
 	)
 }
 
+type SubmitStatus = 'idle' | 'submitting' | 'submitted' | 'error'
+type Confirmation = {
+	type: 'message' | 'redirect'
+	message?: string
+	url?: string
+}
+
+/**
+ * The plugin's own public-facing piece — a plain, uncontrolled-by-`useAppForm`
+ * HTML form (there's no admin form context on a public page, unlike every
+ * other field/block in this system), built from the referenced `forms`
+ * document's own `fields` config and POSTing straight to
+ * `formBuilderEndpoints`' own `POST /api/forms/:id/submit` (see
+ * `endpoints.ts`) — plain `fetch`, not a typed RPC client, since that
+ * endpoint is a Tier-2 `EndpointFactory` addition, never part of the
+ * static `BaseConfigRouteType` a generated client could type against.
+ */
+function FormBlockRender({ data }: { data: Record<string, unknown> }) {
+	const reference = data.form as
+		| { id: string; slug: string; title: string }
+		| undefined
+	const { data: formDoc } = useQuery({
+		...base.findByID({ collection: 'forms', id: reference?.id ?? '' }),
+		enabled: Boolean(reference?.id)
+	})
+	const [values, setValues] = useState<Record<string, unknown>>({})
+	const [status, setStatus] = useState<SubmitStatus>('idle')
+	const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+	const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+	if (!reference) return null
+
+	const fields = ((formDoc?.data as FormData | undefined)?.fields ??
+		[]) as FormFieldRow[]
+
+	function setValue(name: string, value: unknown) {
+		setValues((current) => ({ ...current, [name]: value }))
+	}
+
+	async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		if (!reference) return
+		setStatus('submitting')
+		setErrorMessage(null)
+		try {
+			const res = await fetch(`/api/forms/${reference.id}/submit`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(values)
+			})
+			const body = (await res.json()) as {
+				error?: string
+				confirmation?: Confirmation
+			}
+			if (!res.ok) {
+				setStatus('error')
+				setErrorMessage(body.error ?? 'Something went wrong.')
+				return
+			}
+			if (body.confirmation?.type === 'redirect' && body.confirmation.url) {
+				window.location.href = body.confirmation.url
+				return
+			}
+			setConfirmation(body.confirmation ?? null)
+			setStatus('submitted')
+		} catch {
+			setStatus('error')
+			setErrorMessage('Something went wrong.')
+		}
+	}
+
+	if (status === 'submitted' && confirmation?.type === 'message') {
+		return <p>{confirmation.message}</p>
+	}
+
+	if (!formDoc) return null
+
+	return (
+		<form onSubmit={handleSubmit} className='flex max-w-md flex-col gap-4'>
+			{fields.map((field) => (
+				<div key={field.name} className='flex flex-col gap-1.5'>
+					<label htmlFor={field.name} className='text-sm font-medium'>
+						{field.label}
+						{field.required ? ' *' : ''}
+					</label>
+					{field.type === 'textarea' ? (
+						<Textarea
+							id={field.name}
+							required={field.required}
+							value={(values[field.name] as string) ?? ''}
+							onChange={(event) => setValue(field.name, event.target.value)}
+						/>
+					) : field.type === 'checkbox' ? (
+						<Checkbox
+							id={field.name}
+							checked={Boolean(values[field.name])}
+							onCheckedChange={(checked) =>
+								setValue(field.name, checked === true)
+							}
+						/>
+					) : field.type === 'select' ? (
+						<select
+							id={field.name}
+							required={field.required}
+							className='h-7 rounded-md border border-input bg-input/20 px-2 text-sm'
+							value={(values[field.name] as string) ?? ''}
+							onChange={(event) => setValue(field.name, event.target.value)}
+						>
+							<option value='' disabled>
+								Select…
+							</option>
+							{(field.options ?? '')
+								.split(',')
+								.map((option) => option.trim())
+								.filter(Boolean)
+								.map((option) => (
+									<option key={option} value={option}>
+										{option}
+									</option>
+								))}
+						</select>
+					) : (
+						<Input
+							id={field.name}
+							type={field.type === 'email' ? 'email' : 'text'}
+							required={field.required}
+							value={(values[field.name] as string) ?? ''}
+							onChange={(event) => setValue(field.name, event.target.value)}
+						/>
+					)}
+				</div>
+			))}
+			{errorMessage ? (
+				<p className='text-sm text-destructive'>{errorMessage}</p>
+			) : null}
+			<Button type='submit' disabled={status === 'submitting'}>
+				{status === 'submitting' ? 'Sending…' : 'Submit'}
+			</Button>
+		</form>
+	)
+}
+
 export const formBlock: BlockConfig = {
 	slug: 'form',
 	label: 'Form',
@@ -119,5 +265,6 @@ export const formBlock: BlockConfig = {
 	defaultValue: {
 		form: undefined
 	},
-	Fields: FormBlockFields
+	Fields: FormBlockFields,
+	Render: FormBlockRender
 }

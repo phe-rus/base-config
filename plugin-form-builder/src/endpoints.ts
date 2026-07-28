@@ -24,22 +24,25 @@ function interpolate(template: string, data: Record<string, unknown>): string {
  * (`@base/config`'s own `db/content-route.ts`), not a function a consumer
  * calls directly. `plugin.ts` registers this itself, into
  * `config.endpointFactories`, the moment `formBuilderPlugin()` runs — so
- * `createHandler()` picks it up automatically (invoked with whatever real
- * `db`/`sendEmail` the consumer's own server entry handed it) and a
- * consumer never imports this file at all. One real endpoint:
- * `POST /api/forms/:id/submit`, unauthenticated by design (matching
- * Payload's own default for its equivalent `/api/form-submissions` route)
- * — a public visitor has no session to check. Validates submitted data
- * against the referenced form's own `fields` config (required-field
- * presence only — real per-type validation, e.g. a genuine email-format
- * check, isn't attempted here), stores a `form-submissions` row (see that
- * collection's own doc comment for why it's never publicly readable), then
- * fires every configured email (best-effort — one failing email doesn't
- * fail the submission itself, it's logged and swallowed) before returning
- * the form's own confirmation config (a message to show, or a URL to
- * redirect to).
+ * `createHandler()` picks it up automatically (invoked with just `{db}`,
+ * the one generic binding every factory gets) and a consumer never imports
+ * this file at all. `handleEmail` is *not* part of that generic bindings
+ * shape — it's read from `getFormBuilderOptions()` below instead, this
+ * plugin's own registered contract (see `plugin.ts`'s own doc comment for
+ * why). One real endpoint: `POST /api/forms/:id/submit`, unauthenticated
+ * by design (matching Payload's own default for its equivalent
+ * `/api/form-submissions` route) — a public visitor has no session to
+ * check. Validates submitted data against the referenced form's own
+ * `fields` config (required-field presence only — real per-type validation,
+ * e.g. a genuine email-format check, isn't attempted here), stores a
+ * `form-submissions` row (see that collection's own doc comment for why
+ * it's never publicly readable), then hands off every configured email to
+ * `handleEmail` (best-effort — one failing call doesn't fail the
+ * submission itself, it's logged and swallowed) before returning the
+ * form's own confirmation config (a message to show, or a URL to redirect
+ * to).
  */
-export const formBuilderEndpoints: EndpointFactory = ({ db, sendEmail }) => {
+export const formBuilderEndpoints: EndpointFactory = ({ db }) => {
 	return [
 		{
 			collection: 'forms',
@@ -92,7 +95,8 @@ export const formBuilderEndpoints: EndpointFactory = ({ db, sendEmail }) => {
 					}
 				})
 
-				if (sendEmail && formData.emails?.length) {
+				const { handleEmail, beforeEmail } = getFormBuilderOptions()
+				if (handleEmail && formData.emails?.length) {
 					const interpolated = formData.emails.map((email) => ({
 						to: interpolate(email.to, submissionData),
 						from: interpolate(email.from, submissionData),
@@ -101,17 +105,16 @@ export const formBuilderEndpoints: EndpointFactory = ({ db, sendEmail }) => {
 					}))
 					// `beforeEmail` (configured once, via `formBuilderPlugin({beforeEmail})`
 					// in `base.config.ts` — see `plugin.ts`'s own doc comment) gets the
-					// last word on what actually gets sent.
-					const { beforeEmail } = getFormBuilderOptions()
-					const emailsToSend = beforeEmail
+					// last word on what actually gets handed to `handleEmail`.
+					const emailsToHandle = beforeEmail
 						? beforeEmail(interpolated, { doc: row })
 						: interpolated
 
 					await Promise.all(
-						emailsToSend.map((email) =>
-							sendEmail(email).catch((error) => {
+						emailsToHandle.map((email) =>
+							handleEmail(email).catch((error) => {
 								console.error(
-									'formBuilderEndpoints: failed to send an email for a form submission',
+									'formBuilderEndpoints: handleEmail threw for a form submission',
 									error
 								)
 							})

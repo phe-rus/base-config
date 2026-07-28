@@ -1,3 +1,4 @@
+import { buttonVariants } from '@base/ui/components/button'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
@@ -32,6 +33,29 @@ function CtaBlockFields({ form, path }: BlockFieldsProps) {
 	)
 }
 
+function CtaBlockRender({ data }: { data: Record<string, unknown> }) {
+	const heading = typeof data.heading === 'string' ? data.heading : undefined
+	const text = typeof data.text === 'string' ? data.text : undefined
+	const buttonLabel =
+		typeof data.buttonLabel === 'string' ? data.buttonLabel : undefined
+	const buttonLink =
+		typeof data.buttonLink === 'string' ? data.buttonLink : undefined
+
+	if (!heading && !text && !(buttonLabel && buttonLink)) return null
+
+	return (
+		<section className='flex flex-col items-center gap-4 py-12 text-center'>
+			{heading ? <h2>{heading}</h2> : null}
+			{text ? <p className='text-muted-foreground max-w-xl'>{text}</p> : null}
+			{buttonLabel && buttonLink ? (
+				<a href={buttonLink} className={buttonVariants()}>
+					{buttonLabel}
+				</a>
+			) : null}
+		</section>
+	)
+}
+
 export const ctaBlock: BlockConfig = {
 	slug: 'cta',
 	label: 'Call to action',
@@ -42,5 +66,6 @@ export const ctaBlock: BlockConfig = {
 		buttonLabel: undefined,
 		buttonLink: undefined
 	},
-	Fields: CtaBlockFields
+	Fields: CtaBlockFields,
+	Render: CtaBlockRender
 }

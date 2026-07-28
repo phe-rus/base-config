@@ -1,3 +1,4 @@
+import type { FC } from 'react'
 import type { SelectOption } from '@base/ui/forms'
 
 // The declarative field-authoring vocabulary — `@base/config`'s own core.
@@ -148,6 +149,112 @@ export type MenuFieldConfig = BaseFieldConfig & {
 	startAsMegaMenu?: boolean
 }
 
+/**
+ * Payload's own Row (https://payloadcms.com/docs/fields/row) — pure visual
+ * arrangement, no data nesting at all: every field inside `fields` is still
+ * a flat sibling of whatever contains this `row`, just laid out
+ * horizontally. Deliberately doesn't extend `BaseFieldConfig` — there's no
+ * `name` (nothing to key data under), no `defaultValue`/`required`
+ * (nothing to validate directly); the fields inside carry their own.
+ */
+export type RowFieldConfig<
+	TCollectionSlug extends string = string,
+	TBlockSlug extends string = string
+> = {
+	type: 'row'
+	fields: FieldConfig<TCollectionSlug, TBlockSlug>[]
+}
+
+/**
+ * Payload's own Collapsible (https://payloadcms.com/docs/fields/collapsible)
+ * — same "no data nesting" contract as `row`, just admin-UI chrome (a
+ * collapsible section instead of a horizontal layout). `label` is this
+ * section's own header text, not a field label.
+ */
+export type CollapsibleFieldConfig<
+	TCollectionSlug extends string = string,
+	TBlockSlug extends string = string
+> = {
+	type: 'collapsible'
+	label?: string
+	/** Starts collapsed instead of expanded — admin-UI-only, no data implication. */
+	initCollapsed?: boolean
+	fields: FieldConfig<TCollectionSlug, TBlockSlug>[]
+}
+
+/**
+ * Payload's own Group (https://payloadcms.com/docs/fields/group) — `name`
+ * is deliberately optional, matching Payload's real behavior exactly: give
+ * it a `name` to nest every field inside `fields` under that real key in
+ * the data (e.g. `name: 'seo'` + an inner field `name: 'title'` → real path
+ * `seo.title`); omit `name` for a purely visual grouping (a bordered
+ * section with its own label/description) where the inner fields stay flat
+ * siblings of whatever contains this `group` — same as `row`/`collapsible`
+ * in that case, just with a heading and border instead of a different
+ * layout.
+ */
+export type GroupFieldConfig<
+	TCollectionSlug extends string = string,
+	TBlockSlug extends string = string
+> = {
+	type: 'group'
+	name?: string
+	label?: string
+	description?: string
+	fields: FieldConfig<TCollectionSlug, TBlockSlug>[]
+}
+
+/**
+ * One sub-tab of a `tabs`-type field — mirrors `TabConfig`'s own
+ * `tab`/`label`/`fields` shape (this is the field-level equivalent, nested
+ * inside a document instead of describing the document's own top-level
+ * tab chrome). `id` is a stable identifier for this sub-tab's own UI
+ * (matches `TabConfig['tab']`'s role) — never part of the data path
+ * itself, that's `name`'s job, same optional-nest-vs-flat rule
+ * `GroupFieldConfig['name']` has.
+ */
+export type TabsFieldSubTab<
+	TCollectionSlug extends string = string,
+	TBlockSlug extends string = string
+> = {
+	id: string
+	label: string
+	name?: string
+	fields: FieldConfig<TCollectionSlug, TBlockSlug>[]
+}
+
+/**
+ * Payload's own field-level Tabs (https://payloadcms.com/docs/fields/tabs)
+ * — a *second* tabs concept, distinct from this package's own top-level
+ * `TabConfig`/`tab:` (a collection/global's own outermost tab chrome, see
+ * `admin/views/render-view.tsx`'s `Tabs` usage in `renderer.tsx`'s
+ * `createFieldsRenderer`). This one nests *inside* a document's own
+ * fields — e.g. one tab within a `content` tab holding its own sub-tabs.
+ * Scoped to a single level for this pass (a sub-tab's own `fields` can
+ * still use `row`/`collapsible`/`group` freely, just not a second nested
+ * `tabs`-as-field) — not a hard technical limit, just not attempted yet.
+ */
+export type TabsFieldConfig<
+	TCollectionSlug extends string = string,
+	TBlockSlug extends string = string
+> = {
+	type: 'tabs'
+	tabs: TabsFieldSubTab<TCollectionSlug, TBlockSlug>[]
+}
+
+/**
+ * Payload's own UI field (https://payloadcms.com/docs/fields/ui) — a blank
+ * slot for a custom admin-only component, contributing nothing to
+ * schema/defaultValues at all (skipped entirely by both). Typed loosely
+ * (`FC<any>`), matching `GlobalDefinition`'s own `component: FC<any>`
+ * trade-off — a custom component here is never handed `form`/`id` the way
+ * a real field's renderer is.
+ */
+export type UIFieldConfig = {
+	type: 'ui'
+	Component: FC<any>
+}
+
 export type FieldConfig<
 	TCollectionSlug extends string = string,
 	TBlockSlug extends string = string
@@ -168,6 +275,24 @@ export type FieldConfig<
 	| RelationsFieldConfig<TCollectionSlug>
 	| MetaFieldConfig
 	| MenuFieldConfig
+	| RowFieldConfig<TCollectionSlug, TBlockSlug>
+	| CollapsibleFieldConfig<TCollectionSlug, TBlockSlug>
+	| GroupFieldConfig<TCollectionSlug, TBlockSlug>
+	| TabsFieldConfig<TCollectionSlug, TBlockSlug>
+	| UIFieldConfig
+
+/** `row`/`collapsible`/`group`/`tabs`/`ui` — the field types that either fan out into their own `fields`/`tabs` (never contributing a single schema/defaultValue path themselves) or contribute nothing at all (`ui`). Shared by `fields/schema.ts` (to resolve them away before building a schema) and `fields/renderer.tsx` (to dispatch them to their own layout chrome instead of the generic `form.AppField` wrapper) so the two lists can't drift apart. */
+const CONTAINER_FIELD_TYPES = new Set([
+	'row',
+	'collapsible',
+	'group',
+	'tabs',
+	'ui'
+])
+
+export function isContainerFieldType(type: string): boolean {
+	return CONTAINER_FIELD_TYPES.has(type)
+}
 
 export type TabConfig<
 	TCollectionSlug extends string = string,

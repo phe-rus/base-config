@@ -18,8 +18,12 @@ export type {
 	Plugin
 } from './base.types'
 export type { FieldConfig, TabConfig } from './fields/types'
-export { registerBlocks } from './collections/blocks'
-export type { BlockConfig, BlockFieldsProps } from './collections/blocks'
+export { BlockRenderer, registerBlocks } from './collections/blocks'
+export type {
+	BlockConfig,
+	BlockData,
+	BlockFieldsProps
+} from './collections/blocks'
 export { createContentApiClient, getContentCollection } from './db/collections'
 export type {
 	ContentApiClient,
@@ -70,7 +74,6 @@ export type { AuthServerLike, CreateHandlerOptions } from './api/create-handler'
 export type {
 	ContentEndpoint,
 	EndpointFactory,
-	EndpointFactoryBindings,
-	SendEmailFn
+	EndpointFactoryBindings
 } from './db/content-route'
 export { collectHooks } from './collections/registry'

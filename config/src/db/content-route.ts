@@ -58,48 +58,45 @@ export type ContentEndpoint = {
 }
 
 /**
- * A general-purpose email-sending capability — not form-builder-specific,
- * even though `@base/plugin-form-builder` is its first real consumer. A
- * plain callback rather than Cloudflare's real `send_email` binding
- * directly, same reasoning `R2BucketLike`/`KVNamespaceLike` already follow
- * (no `@cloudflare/workers-types` dependency for one ambient type), taken
- * one step further here since actually sending mail needs more than one
- * binding call (MIME construction, etc.) — the consumer's own
- * `www/src/api/index.ts` implements this however it wants, closing over
- * `env.EMAIL` internally, and hands the result to `createHandler({sendEmail})`
- * once, generically.
+ * What an `EndpointFactory` is handed — deliberately just `db`, the one
+ * binding every conceivable endpoint factory needs (content persistence).
+ * **Not a place for capability-specific bindings** (email, payments,
+ * anything else a *particular* plugin might want) — those are each
+ * plugin's own contract, configured directly on that plugin's own
+ * dedicated hook (e.g. `@base/plugin-form-builder`'s own
+ * `onFormBuilderEmail()`, see that package's own `plugin.ts`), never
+ * threaded generically through `createHandler()`. Keeping this narrow is
+ * what lets `createHandler()`'s own signature stay stable as more plugins
+ * with completely different needs (Stripe keys, a queue binding, whatever)
+ * get added later — none of them should ever need a new `createHandler()`
+ * param.
  */
-export type SendEmailFn = (email: {
-	to: string
-	from: string
-	subject: string
-	html: string
-}) => Promise<void>
-
-/** What an `EndpointFactory` is handed — every real binding `createHandler()` itself already has, so a plugin's factory never needs its own separate wiring step. */
 export type EndpointFactoryBindings = {
 	db: ContentDatabase
-	sendEmail?: SendEmailFn
 }
 
 /**
  * **The mechanism that makes "plugins only configured in `base.config.ts`"
  * real**, not just true for isomorphic collections/blocks/hooks. A plugin
  * (e.g. `formBuilderPlugin()`) can't hand `createHandler()` real
- * `ContentEndpoint`s directly — building one needs `db`/`sendEmail`, real
- * bindings the plugin's own isomorphic `Plugin` function (running inside
- * `baseConfig()`, evaluated in the browser too) can never have. What it
- * *can* safely include in its returned config is this: a plain function
- * reference that *knows how* to build its endpoints once it's later handed
- * bindings — the function itself touches no binding just by existing in
- * the client bundle, only by being *called*, and it's only ever called
- * from `createHandler()` (server-only). `baseConfig()` registers every
+ * `ContentEndpoint`s directly — building one needs `db` (and whatever
+ * capability-specific things the plugin itself was separately configured
+ * with, e.g. its own dedicated email hook — see `EndpointFactoryBindings`'
+ * own doc comment for why those stay out of this generic bindings shape),
+ * real bindings the plugin's own isomorphic `Plugin` function (running
+ * inside `baseConfig()`, evaluated in the browser too) can never have.
+ * What it *can* safely include in its returned config is this: a plain
+ * function reference that *knows how* to build its endpoints once it's
+ * later handed
+ * `db` — the function itself touches no binding just by existing in the
+ * client bundle, only by being *called*, and it's only ever called from
+ * `createHandler()` (server-only). `baseConfig()` registers every
  * `BaseConfigProps['endpointFactories']` entry (`collections/registry.ts`'s
  * `registerEndpointFactories()`); `createHandler()` calls
- * `collectEndpointFactories()`, invokes each with the real bindings it
- * already has in scope, and merges the result with its own Tier-2
- * `endpoints` param — so a consumer's server entry only ever passes
- * generic bindings (`db`, `sendEmail`, …), never anything plugin-specific.
+ * `collectEndpointFactories()`, invokes each with `{db}`, and merges the
+ * result with its own Tier-2 `endpoints` param — so a consumer's server
+ * entry only ever passes `createHandler()` truly generic bindings, never
+ * anything plugin-specific.
  */
 export type EndpointFactory = (
 	bindings: EndpointFactoryBindings

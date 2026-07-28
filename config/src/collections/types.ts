@@ -114,3 +114,33 @@ export function collectionPath(
 	const prefix = config.path?.replace(/^\/+|\/+$/g, '')
 	return prefix ? `/${prefix}/${slug}` : `/${slug}`
 }
+
+/**
+ * The inverse of `collectionPath()` — given a public request's path
+ * segments (already split on `/`, no empty/leading/trailing segments) and
+ * every registered collection, resolves which collection/document a public
+ * URL should render, or `null` if nothing matches. A root-level collection
+ * (no `path`, e.g. `pages`) claims exactly one segment (`/<slug>`); a
+ * collection with `path: 'post'` claims exactly two (`/post/<slug>`).
+ * `auth: true` collections (`users`) are never publicly resolvable —
+ * real accounts have no public document to render. Used by
+ * `www/src/routes/(web)/$.tsx`'s loader.
+ */
+export function resolvePublicPath(
+	collections: Record<string, CollectionConfig>,
+	segments: string[]
+): { collection: CollectionConfig; slug: string } | null {
+	if (segments.length === 0 || segments.length > 2) return null
+	for (const collection of Object.values(collections)) {
+		if (collection.auth) continue
+		const prefix = collection.path?.replace(/^\/+|\/+$/g, '')
+		if (prefix) {
+			if (segments.length === 2 && segments[0] === prefix) {
+				return { collection, slug: segments[1] }
+			}
+		} else if (segments.length === 1) {
+			return { collection, slug: segments[0] }
+		}
+	}
+	return null
+}
