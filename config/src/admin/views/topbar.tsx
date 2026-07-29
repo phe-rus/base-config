@@ -4,10 +4,12 @@ import { collectionsBySlug, globalsBySlug } from '../../collections/registry'
 import type { CollectionSlug } from '../../collections/types'
 import {
 	contentCollections,
+	draftCollections,
 	getAuthClient,
 	unwrap,
 	type BetterAuthAdminClient,
-	type ContentCollection
+	type ContentCollection,
+	type DraftCollection
 } from '../../db/collections'
 import { Button } from '@base/ui/components/button'
 import { cn } from '@base/ui/lib/utils'
@@ -31,6 +33,7 @@ type BreadcrumbSegment = {
 
 type ItemSegment = {
 	collection: ContentCollection
+	draftCollection: DraftCollection
 	itemId: string
 	href: string
 }
@@ -74,6 +77,7 @@ function useBreadcrumbBase(
 		collectionConfig && slug && itemId
 			? {
 					collection: contentCollections[slug as CollectionSlug],
+					draftCollection: draftCollections[slug as CollectionSlug],
 					itemId,
 					href: `/${adminPath}/${slug}/${itemId}`
 				}
@@ -83,7 +87,12 @@ function useBreadcrumbBase(
 }
 
 /** Mounted-gated: `useLiveQuery` only ever runs client-side, after hydration — never during SSR, which is what was crashing (`useSyncExternalStore` needs a `getServerSnapshot` this library doesn't provide). */
-function ItemBreadcrumb({ collection, itemId, href }: ItemSegment) {
+function ItemBreadcrumb({
+	collection,
+	draftCollection,
+	itemId,
+	href
+}: ItemSegment) {
 	const [mounted, setMounted] = useState(false)
 	useEffect(() => setMounted(true), [])
 
@@ -93,6 +102,7 @@ function ItemBreadcrumb({ collection, itemId, href }: ItemSegment) {
 			{mounted ? (
 				<ItemBreadcrumbLive
 					collection={collection}
+					draftCollection={draftCollection}
 					itemId={itemId}
 					href={href}
 				/>
@@ -103,11 +113,36 @@ function ItemBreadcrumb({ collection, itemId, href }: ItemSegment) {
 	)
 }
 
-function ItemBreadcrumbLive({ collection, itemId, href }: ItemSegment) {
+/**
+ * A document's own local draft (`useDocument`'s write-through target — see
+ * `db/use-document.ts`) is what actually reflects what the admin is typing
+ * right now; the remote collection only ever catches up once "Publish"/
+ * "Commit & push" is clicked. Reading the remote collection alone (as this
+ * used to) meant a never-yet-published document — or a published one with
+ * unsaved local edits on top — showed a breadcrumb stuck on "untitled"
+ * forever, the same remote-only gap `CollectionTable`'s list view had.
+ * Prefers the draft's `slug` and falls back to the remote row's, matching
+ * `useDocument`'s own `initialValue` precedence.
+ */
+function ItemBreadcrumbLive({
+	collection,
+	draftCollection,
+	itemId,
+	href
+}: ItemSegment) {
 	const { data } = useLiveQuery(collection)
-	const slug = (
+	const { data: draftData } = useLiveQuery(draftCollection)
+
+	const remoteSlug = (
 		data.find((row) => row.id === itemId)?.data as { slug?: string } | undefined
 	)?.slug
+	const draftSlug = (
+		draftData.find((row) => row.id === itemId)?.data as
+			| { slug?: string }
+			| undefined
+	)?.slug
+
+	const slug = draftSlug || remoteSlug
 
 	return (
 		// `href` is a resolved literal path, not a typed route pattern
@@ -158,7 +193,7 @@ export const Topbar: FC<TopbarProps> = ({ children, config }) => {
 			return unwrap(await authClient.signOut())
 		},
 		onSuccess: () => {
-			navigate({ to: '/', replace: true, reloadDocument: true })
+			navigate({ to: '/admin/login', replace: true, reloadDocument: true })
 		}
 	})
 

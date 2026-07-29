@@ -457,15 +457,25 @@ export type RealUserRow = {
 	role?: string | string[] | null
 	banned?: boolean | null
 	username?: string | null
+	/** Set by better-auth's own `twoFactor()` plugin — real, per-user, DB-backed. Not destructured out in `toUserDocumentRow()` below, so it flows through into a document's own `data` via `...rest` like any other field the admin's `users` collection wants to show (see `www/src/config/collections/users.ts`). */
+	twoFactorEnabled?: boolean | null
 	createdAt: string | Date
 	updatedAt: string | Date
 }
 
+/** One `{data, error}`-shaped better-auth client response — every real client action returns this instead of rejecting (see `unwrap()` below). */
+type AuthClientResult<T> = Promise<{ data: T | null; error: unknown }>
+
 /**
  * The exact slice of `authClient.*`/`authClient.admin.*` this package calls
- * — structural on purpose, so any `authClient` with the `adminClient()`
- * plugin registered satisfies it without this package importing
- * `better-auth`'s own types.
+ * — structural on purpose, so any `authClient` with the matching plugins
+ * registered satisfies it without this package importing `better-auth`'s
+ * own types. `passkey`/`twoFactor` are deliberately optional — their
+ * presence is a safe, real runtime feature-detection (`createAuthClient({plugins})`
+ * only puts these keys on the client object when the corresponding client
+ * plugin was actually included), used by the admin auth screens
+ * (`login-view.tsx`/`create-account-view.tsx`) to conditionally render
+ * passkey/2FA UI rather than assuming every consumer has them configured.
  */
 export type BetterAuthAdminClient = {
 	/** Core client method (not part of `adminClient()`) — used by `Topbar`'s sign-out button. */
@@ -485,6 +495,50 @@ export type BetterAuthAdminClient = {
 			user: { name?: string | null; role?: string | string[] | null }
 		} | null
 		isPending: boolean
+	}
+	/** Core client methods (email+password and username+password are "the same thing, different terminology" — a `LoginView` merges both into one `credentials` field and picks which of these to call based on whether it looks like an email, same design the app already had). `social` is optional — only called when a consumer's own `socialProviders` list names a provider. */
+	signIn: {
+		email: (opts: {
+			email: string
+			password: string
+			rememberMe?: boolean
+		}) => AuthClientResult<{ user: RealUserRow; token?: string | null }>
+		username: (opts: {
+			username: string
+			password: string
+			rememberMe?: boolean
+		}) => AuthClientResult<{ user: RealUserRow; token?: string | null }>
+		social?: (opts: { provider: string }) => AuthClientResult<unknown>
+		/** From `@better-auth/passkey`'s own client plugin — sign in with an already-registered passkey, no password at all. */
+		passkey?: (opts?: {
+			autoFill?: boolean
+		}) => AuthClientResult<{ user: RealUserRow }>
+	}
+	signUp: {
+		email: (opts: {
+			email: string
+			password: string
+			name: string
+			username?: string
+			displayUsername?: string
+		}) => AuthClientResult<{ user: RealUserRow }>
+	}
+	/** From `username()`'s own client plugin — the debounced availability check `CreateAccountView` calls per keystroke. */
+	isUsernameAvailable: (opts: {
+		username: string
+	}) => AuthClientResult<{ available: boolean }>
+	/** Core `emailAndPassword` client methods — `ForgotPasswordView`/`ResetPasswordView`'s own real logic. The server endpoint is `/request-password-reset` (confirmed against the installed better-auth's own route source, not guessed) — `requestPasswordReset`, not `forgetPassword`. `redirectTo` is what determines the path the emailed reset link ultimately lands on (see `www/src/api/auth/auth.ts`'s own `sendResetPassword` callback). */
+	requestPasswordReset: (opts: {
+		email: string
+		redirectTo?: string
+	}) => AuthClientResult<unknown>
+	resetPassword: (opts: {
+		newPassword: string
+		token: string
+	}) => AuthClientResult<unknown>
+	/** From `twoFactor()`'s own client plugin — optional, feature-detected. Only the one method the login flow's OTP challenge step calls. */
+	twoFactor?: {
+		verifyTotp: (opts: { code: string }) => AuthClientResult<unknown>
 	}
 	admin: {
 		listUsers: (opts: {

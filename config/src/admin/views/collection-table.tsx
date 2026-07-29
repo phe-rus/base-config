@@ -10,7 +10,11 @@ import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { createId } from '../../collections/id'
 import type { CollectionConfig } from '../../collections/types'
-import type { ContentCollection, DocumentStatus } from '../../db/collections'
+import {
+	draftCollections,
+	type ContentCollection,
+	type DocumentStatus
+} from '../../db/collections'
 import { AuthWidget } from '../widgets/auth-widget'
 import { RenderView } from './render-view'
 
@@ -69,6 +73,15 @@ function CollectionTableLive({
 }: CollectionTableProps) {
 	const { data } = useLiveQuery(collection)
 
+	// `auth: true` collections (`users`) are real, server-backed accounts —
+	// they never go through the local-first draft mechanism at all (no
+	// `useDocument`, no `draftCollections` entry), so there's nothing to
+	// merge in for them. `useLiveQuery` can't be called conditionally
+	// (rules of hooks), so this always subscribes to the draft collection,
+	// just never used below when `config.auth` is true.
+	const draftCollection = draftCollections[config.slug]
+	const { data: draftData } = useLiveQuery(draftCollection)
+
 	// `auth: true` collections are backed by `queryCollectionOptions`, which
 	// surfaces query failures via `collection.utils` rather than throwing —
 	// a failed `listUsers()` call would otherwise render as a silent, empty
@@ -84,7 +97,21 @@ function CollectionTableLive({
 			).utils
 		: undefined
 
-	const rows: TableRow[] = data.map((row) => ({
+	const remoteIds = new Set(data.map((row) => row.id))
+
+	// A document drafted locally but never published has no row in the real
+	// collection at all — without this, it simply never appears anywhere
+	// once you navigate away from it, which is what made local-first editing
+	// feel like it was silently forcing a publish. Only added when its `id`
+	// has no remote counterpart; a row that exists in both keeps showing the
+	// *remote* data below (what's actually live), not a possibly-newer local
+	// edit, so the list doesn't visually shift under someone mid-edit in
+	// another tab.
+	const draftOnlyRows = config.auth
+		? []
+		: draftData.filter((row) => !remoteIds.has(row.id))
+
+	const rows: TableRow[] = [...data, ...draftOnlyRows].map((row) => ({
 		...(row.data as Record<string, unknown>),
 		id: row.id,
 		status: row.status,
@@ -218,7 +245,17 @@ function CollectionTableLive({
 								size='icon-xs'
 								variant='destructive'
 								className='rounded-full'
-								onClick={() => collection.delete(row.original.id)}
+								onClick={() => {
+									// A draft-only row (never published) has nothing to
+									// delete remotely — deleting it just removes the local
+									// draft instead, the same one-click cleanup a real row
+									// already gets.
+									if (remoteIds.has(row.original.id)) {
+										collection.delete(row.original.id)
+									} else {
+										draftCollection.delete(row.original.id)
+									}
+								}}
 							>
 								<IconMinus />
 							</Button>

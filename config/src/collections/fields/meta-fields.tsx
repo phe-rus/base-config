@@ -8,6 +8,8 @@ import {
 	useGlobalKeywordSuggestions
 } from '../../db/collections'
 import { useSelector } from '@tanstack/react-store'
+import { collectionsBySlug } from '../registry'
+import { collectionPath } from '../types'
 import type { CollectionFieldsProps } from '../types'
 
 export function MetaFields({
@@ -15,7 +17,7 @@ export function MetaFields({
 	uploadFolder,
 	id
 }: Pick<CollectionFieldsProps, 'form'> & {
-	/** The owning collection's own `slug` — the share image lands under `meta/<uploadFolder>/<id>` rather than every collection's (and every document's) SEO image colliding in one flat `metadata.image` folder. */
+	/** The owning collection's own `slug` — the share image lands under `meta/<uploadFolder>/<id>` rather than every collection's (and every document's) SEO image colliding in one flat `metadata.image` folder. Doubles as the lookup key into `collectionsBySlug` below, so the preview shows the document's real public path (`collectionPath()`'s own `/<path>/<slug>` shape, e.g. `/post/<slug>`) instead of a bare `/<slug>`. */
 	uploadFolder?: string
 	/** The document's own id — see `uploadFolder` above. */
 	id?: string
@@ -23,6 +25,18 @@ export function MetaFields({
 	const store = useSelector(form.store, (s: any) => s.values)
 	const keywordSuggestions = useGlobalKeywordSuggestions()
 	const metaUploadPrefix = ['meta', uploadFolder, id].filter(Boolean).join('/')
+	// Widened to a plain-`string`-keyed lookup — same trade-off `Topbar` already
+	// makes (`admin/views/topbar.tsx`) — `uploadFolder` is a plain `string`
+	// here (any registered collection's own slug), not the narrower
+	// `CollectionConfig['slug']` union `collectionsBySlug` is declared against.
+	const collectionConfig = uploadFolder
+		? (
+				collectionsBySlug as Record<string, (typeof collectionsBySlug)['pages']>
+			)[uploadFolder]
+		: undefined
+	const previewPath = collectionConfig
+		? collectionPath(collectionConfig, store?.slug ?? '')
+		: `/${store?.slug ?? ''}`
 
 	return (
 		<div className='flex flex-col gap-5'>
@@ -85,7 +99,7 @@ export function MetaFields({
 					/>
 				)}
 				<div className='flex flex-col ml-5'>
-					<span>{`/${store?.slug}`}</span>
+					<span>{previewPath}</span>
 					<h2>{store.metadata?.title}</h2>
 					<p>{store.metadata?.description}</p>
 					<span className='mt-2'>{store.metadata?.keywords?.join(', ')}</span>

@@ -1,7 +1,11 @@
 import { AuthBanner } from './auth-banner'
 import { cn } from '@base/ui/lib/utils'
+import { t } from '@base/ui/components/sonner'
 import { useAppForm } from '@base/ui/forms'
-import type { z } from 'zod'
+import { useMutation } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { z } from 'zod'
+import { getAuthClient, unwrap } from '../../db/collections'
 
 export type CreateAccountFormValues = {
 	name: string
@@ -15,43 +19,103 @@ type CreateAccountViewProps = {
 	title?: string
 	/** e.g. a consumer's own `config.adminIcon` (`AdminSettings`) — omit for no icon. */
 	icon?: string
-	/** Loosely typed on purpose — see `LoginView`'s own `schema` doc comment. */
-	schema: z.ZodTypeAny
-	defaultValues: CreateAccountFormValues
-	onSubmit: (value: CreateAccountFormValues) => Promise<unknown>
-	/** Async username-availability check — debounced by this component (300ms), same as the original page had. */
-	onCheckUsername: (username: string) => Promise<boolean>
 	loginHref?: string
 	termsHref?: string
 	privacyHref?: string
+	/** See `LoginView`'s own doc comment for why this is a plain, consumer-declared list rather than something feature-detected. */
+	socialProviders?: string[]
+}
+
+const createSchema = z.object({
+	username: z
+		.string()
+		.min(3, 'Username must be at least 3 characters long')
+		.max(28, 'Username must be at most 20 characters long')
+		.regex(
+			/^[a-z0-9_]+$/,
+			'Username can only contain lowercase letters, numbers, and underscores'
+		),
+	name: z.string().min(3, 'Name is required'),
+	email: z.email(),
+	password: z
+		.string()
+		.min(8, 'Password must be at least 8 characters long')
+		.max(128, 'Password must be at most 128 characters long')
+		.regex(/.*[A-Z]/, 'Password must contain at least one uppercase letter')
+		.regex(/.*[a-z]/, 'Password must contain at least one lowercase letter')
+		.regex(/.*[0-9]/, 'Password must contain at least one number')
+		.regex(
+			/.*[!@#$%^&*(),.?":{}|<>]/,
+			'Password must contain at least one special character'
+		),
+	repassword: z.string()
+})
+
+const signSchema = createSchema.refine(
+	(data) => data.password === data.repassword,
+	{ message: 'Passwords do not match', path: ['repassword'] }
+)
+
+const defaultValues: CreateAccountFormValues = {
+	email: '',
+	password: '',
+	repassword: '',
+	name: '',
+	username: ''
+}
+
+function providerLabel(provider: string): string {
+	return provider[0].toUpperCase() + provider.slice(1)
 }
 
 /**
- * The `CreateAccountFormValues`/`onSubmit`/`onCheckUsername` boundary keeps
- * this fully decoupled from better-auth specifics — see `LoginView`'s own
- * doc comment for the same reasoning. Mounted directly as a route's
- * `component` (see `www/src/routes/(auth)/auth/create-account.tsx`).
+ * Owns its own sign-up logic end to end — calls `authClient.signUp.email`/
+ * `authClient.isUsernameAvailable` directly, same boundary `LoginView`
+ * already draws (see that component's own doc comment).
  */
 export function CreateAccountView({
 	title = 'Create account',
 	icon,
-	schema,
-	defaultValues,
-	onSubmit,
-	onCheckUsername,
-	loginHref = '/auth',
+	loginHref = '/admin/login',
 	termsHref = '/terms',
-	privacyHref = '/privacy'
+	privacyHref = '/privacy',
+	socialProviders = []
 }: CreateAccountViewProps) {
+	const authClient = getAuthClient()
+	const navigate = useNavigate()
+
+	const signUp = useMutation({
+		mutationFn: async (value: CreateAccountFormValues) => {
+			if (!authClient) {
+				throw new Error(
+					'CreateAccountView was rendered but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
+				)
+			}
+			return unwrap(
+				await authClient.signUp.email({
+					email: value.email,
+					password: value.password,
+					name: value.name,
+					username: value.username,
+					displayUsername: value.name
+				})
+			)
+		},
+		onSuccess: () => {
+			t.success('Success', { description: 'Account created successfully' })
+			navigate({ to: '/admin/login', replace: true })
+		},
+		onError: (error) => {
+			t.error(error.name ?? 'Error', { description: error.message })
+		}
+	})
+
 	const form = useAppForm({
 		defaultValues,
-		validators: {
-			onSubmit: schema as any,
-			onChange: schema as any
-		},
+		validators: { onSubmit: signSchema, onChange: signSchema },
 		onSubmit: async ({ value }) => {
 			try {
-				await onSubmit(value)
+				await signUp.mutateAsync(value)
 			} finally {
 				form.reset()
 			}
@@ -97,8 +161,11 @@ export function CreateAccountView({
 						validators={{
 							onChangeAsync: async ({ value }: { value: string }) => {
 								if (value.length < 3) return undefined
-								const isAvailable = await onCheckUsername(value)
-								return isAvailable ? undefined : 'Username taken'
+								if (!authClient) return undefined
+								const result = await authClient.isUsernameAvailable({
+									username: value
+								})
+								return result.data?.available ? undefined : 'Username taken'
 							}
 						}}
 					>
@@ -149,6 +216,21 @@ export function CreateAccountView({
 					<form.AppForm>
 						<form.Scribe label='Create account' />
 					</form.AppForm>
+
+					{socialProviders.length > 0 ? (
+						<div className='flex flex-col gap-2'>
+							{socialProviders.map((provider) => (
+								<button
+									key={provider}
+									type='button'
+									onClick={() => authClient?.signIn.social?.({ provider })}
+									className='rounded-md border py-1.5 text-sm'
+								>
+									Continue with {providerLabel(provider)}
+								</button>
+							))}
+						</div>
+					) : null}
 
 					<p className='text-center text-sm'>
 						Already have an account? <a href={loginHref}>Login here</a>, By

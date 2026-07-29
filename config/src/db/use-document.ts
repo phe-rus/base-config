@@ -167,5 +167,13 @@ export function useDocument<TData extends Record<string, unknown>>({
 			updatedAt: draftRow?.updatedAt ?? new Date().toISOString()
 		} as const)
 
-	return { form, row, publish, isDirty }
+	// Whether anything has ever actually been published for this id — lets a
+	// caller distinguish "brand-new, never-published draft" (nothing to fall
+	// back to if local changes are discarded) from "published elsewhere, but
+	// this browser has local, unpublished edits on top of it" (discarding
+	// those edits means reverting to `remoteRow.data`, not deleting anything).
+	// `isDirty` alone can't tell these apart — it's `true` in both cases.
+	const hasRemoteRow = Boolean(remoteRow)
+
+	return { form, row, publish, isDirty, hasRemoteRow }
 }

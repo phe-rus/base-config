@@ -7,11 +7,13 @@ import {
 	type ContentCollection
 } from '../../db/collections'
 import { useDocument } from '../../db/use-document'
+import { useAdminConfig } from '../functions/context'
 import { DocumentHeader } from './document-header'
 import { Button } from '@base/ui/components/button'
 import { t } from '@base/ui/components/sonner'
 import { cn } from '@base/ui/lib/utils'
 import { useLiveQuery } from '@tanstack/react-db'
+import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
 type BaseData = { title: string; slug: string }
@@ -100,7 +102,7 @@ function CollectionFormLive({ config, collection, id }: CollectionFormProps) {
 function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 	const schema = withBaseFields(config.schema)
 	const useAsTitle = config.admin?.useAsTitle
-	const { form, row, publish, isDirty } = useDocument({
+	const { form, row, publish, isDirty, hasRemoteRow } = useDocument({
 		collection,
 		draftCollection: draftCollections[config.slug],
 		id,
@@ -110,6 +112,35 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 				Record<string, unknown>
 	})
 	const slugTouched = useRef(!!(row.data as BaseData | undefined)?.slug)
+	const { adminPath } = useAdminConfig()
+	const navigate = useNavigate()
+
+	// No remote row at all: nothing was ever published, so there's nothing
+	// to revert *to* — the only sensible action is deleting the local draft
+	// and leaving. A remote row exists but this browser's draft differs:
+	// revert the draft back to what's actually live. `useAppForm` snapshots
+	// `defaultValues` once at mount and never re-reads them, so resetting
+	// the draft's own `localStorage` data alone wouldn't update the
+	// already-rendered fields — `reloadDocument: true` forces a clean
+	// remount that re-seeds from the now-reverted draft, same pattern
+	// sign-in/sign-out already use elsewhere for exactly this class of
+	// "state changed out from under the router" problem.
+	const discardDraft = () => {
+		if (!hasRemoteRow) {
+			draftCollections[config.slug].delete(id)
+			navigate({ to: `/${adminPath}/${config.slug}` as any, replace: true })
+			return
+		}
+		draftCollections[config.slug].update(id, (draft) => {
+			draft.data = row.data
+			draft.updatedAt = new Date().toISOString()
+		})
+		navigate({
+			to: `/${adminPath}/${config.slug}/${id}` as any,
+			replace: true,
+			reloadDocument: true
+		})
+	}
 
 	return (
 		<form
@@ -159,17 +190,29 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 				updatedAt={row.updatedAt}
 				actions={
 					config.auth ? (
-						<Button
-							size='xs'
-							variant='secondary'
-							disabled={!isDirty}
-							title={isDirty ? undefined : 'No changes to push'}
-							onClick={() => runPublish(publish)}
-						>
-							Commit & push
-						</Button>
+						<>
+							{isDirty && (
+								<Button size='xs' variant='outline' onClick={discardDraft}>
+									{hasRemoteRow ? 'Revert changes' : 'Discard draft'}
+								</Button>
+							)}
+							<Button
+								size='xs'
+								variant='secondary'
+								disabled={!isDirty}
+								title={isDirty ? undefined : 'No changes to push'}
+								onClick={() => runPublish(publish)}
+							>
+								Commit & push
+							</Button>
+						</>
 					) : (
 						<>
+							{isDirty && (
+								<Button size='xs' variant='outline' onClick={discardDraft}>
+									{hasRemoteRow ? 'Revert changes' : 'Discard draft'}
+								</Button>
+							)}
 							{row.status === 'published' && (
 								<Button
 									size='xs'
