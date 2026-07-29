@@ -3,9 +3,13 @@ import { contentCollections } from '../../db/collections'
 import { useAdminConfig } from '../functions/context'
 import { CollectionForm } from './collection-form'
 import { CollectionTable } from './collection-table'
+import { CreateAccountView } from './create-account-view'
 import { useRouteView } from './context'
+import { ForgotPasswordView } from './forgot-password-view'
 import { GlobalForm } from './global-form'
+import { LoginView } from './login-view'
 import { RenderView } from './render-view'
+import { ResetPasswordView } from './reset-password-view'
 
 /**
  * The single dispatcher mounted at the `$collection/$` splat route —
@@ -19,6 +23,11 @@ export function Entry() {
 	const config = useAdminConfig()
 	const navigate = useNavigate()
 	const view = useRouteView()
+
+	if (view.mode === 'login') return <LoginView />
+	if (view.mode === 'create-account') return <CreateAccountView />
+	if (view.mode === 'forgot-password') return <ForgotPasswordView />
+	if (view.mode === 'reset-password') return <ResetPasswordView />
 
 	if (view.mode === 'not-found') {
 		return (

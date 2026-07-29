@@ -7,6 +7,15 @@ export type RouteViewState =
 	| { mode: 'global'; globalConfig: GlobalConfig }
 	| { mode: 'custom'; globalConfig: GlobalConfig }
 	| { mode: 'not-found'; slug: string }
+	// No session at all — `login`/`create-account`/`forgot-password`/
+	// `reset-password` are reserved `$collection` values `provider.tsx`'s
+	// `resolveRouteView` resolves to one of these *before* ever looking
+	// slug up against `collectionsBySlug`/`globalsBySlug`, same dispatcher
+	// as every real collection/global, no separate route files.
+	| { mode: 'login' }
+	| { mode: 'create-account' }
+	| { mode: 'forgot-password' }
+	| { mode: 'reset-password' }
 
 export const RouteViewContext = createContext<RouteViewState | null>(null)
 

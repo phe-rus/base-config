@@ -17,7 +17,7 @@ import { IconLayoutSidebarInactive } from '@tabler/icons-react'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useEffect, useState, type FC, type PropsWithChildren } from 'react'
+import { useEffect, useState, type PropsWithChildren } from 'react'
 
 // Collections and globals share one flat URL structure — `/admin/<slug>`,
 // `/admin/<slug>/<id>` only ever applying to a real collection document
@@ -173,7 +173,86 @@ type TopbarProps = PropsWithChildren<{
 	config: AdminSettings
 }>
 
-export const Topbar: FC<TopbarProps> = ({ children, config }) => {
+/**
+ * `useSession()` (a real hook) is only ever called from this subtree once
+ * `authClient` is known to exist — same shape `SessionGreeting` above
+ * already established, applied one level up. Owns the two things that
+ * decide whether the admin chrome renders at all: no session → render
+ * `children` bare (the reserved-`$collection` auth screens, resolved by
+ * `provider.tsx`, render themselves with no chrome around them); session
+ * but wrong role → redirect to `/`, the one piece of the old loader-based
+ * guard (`(admin)/route.tsx` used to call `adminLoader()`) that's still
+ * real gating, just moved here since a `loader` can't call a hook and
+ * `useSession()` — not router `context`, which nothing in this app ever
+ * actually populates — is this codebase's real, working session source
+ * (see `SessionGreeting`'s own doc comment).
+ */
+function TopbarGated({
+	authClient,
+	config,
+	children
+}: PropsWithChildren<{
+	authClient: BetterAuthAdminClient
+	config: AdminSettings
+}>) {
+	const { data: session, isPending } = authClient.useSession()
+	const navigate = useNavigate()
+
+	useEffect(() => {
+		if (session && session.user.role !== 'admin') {
+			navigate({
+				to: '/',
+				replace: true,
+				search: { msg: 'You are not authorized to access this page' } as any
+			})
+		}
+	}, [session, navigate])
+
+	if (isPending || !session) return <>{children}</>
+
+	return (
+		<TopbarChrome authClient={authClient} config={config}>
+			{children}
+		</TopbarChrome>
+	)
+}
+
+/**
+ * `AdminConfigContext` is provided here, above both the chrome and the
+ * bare-`children` branches — it's plain app config (`adminPath`/`adminIcon`/
+ * `socialProviders`), not chrome, and `useAdminConfig()` is called
+ * unconditionally by things that render either way (e.g. `Entry`'s own
+ * `navigate` fallback, still needed when it dispatches to a reserved
+ * auth-screen mode with no session).
+ */
+export function Topbar({ children, config }: TopbarProps) {
+	const authClient = getAuthClient()
+	return (
+		<AdminConfigContext.Provider value={config}>
+			{authClient ? (
+				<TopbarGated authClient={authClient} config={config}>
+					{children}
+				</TopbarGated>
+			) : (
+				// No `auth` passed to `baseConfig()` at all — nothing to gate
+				// against, same as this feature not existing; render the
+				// chrome unconditionally, same as before this feature existed.
+				<TopbarChrome authClient={undefined} config={config}>
+					{children}
+				</TopbarChrome>
+			)}
+		</AdminConfigContext.Provider>
+	)
+}
+
+function TopbarChrome({
+	children,
+	config,
+	authClient
+}: PropsWithChildren<{
+	config: AdminSettings
+	authClient: BetterAuthAdminClient | undefined
+}>) {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname
 	})
@@ -182,7 +261,6 @@ export const Topbar: FC<TopbarProps> = ({ children, config }) => {
 		config.adminPath
 	)
 	const navigate = useNavigate()
-	const authClient = getAuthClient()
 	const { mutate: handleSignOut, isPending: signingOut } = useMutation({
 		mutationFn: async () => {
 			if (!authClient) {
@@ -198,7 +276,7 @@ export const Topbar: FC<TopbarProps> = ({ children, config }) => {
 	})
 
 	return (
-		<AdminConfigContext.Provider value={config}>
+		<>
 			<header id='topbar' className='sticky top-0 z-35 truncate bg-background'>
 				<section className='px-5 flex items-center justify-between h-9'>
 					<div className='flex items-center gap-5'>
@@ -254,6 +332,6 @@ export const Topbar: FC<TopbarProps> = ({ children, config }) => {
 				</section>
 			</header>
 			{children}
-		</AdminConfigContext.Provider>
+		</>
 	)
 }
