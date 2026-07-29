@@ -1,7 +1,6 @@
 import type { BasiccnContent } from '@base/ui/basiccn'
 import { Preview } from '@base/ui/basiccn/preview'
-import { InputGroup, InputGroupTextarea } from '@base/ui/components/input-group'
-import { FieldShell, useFieldState } from '@base/ui/forms'
+import { defaultCodeEditorLanguages } from '@base/ui/components/code-editor'
 import { IconCode } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
@@ -14,14 +13,6 @@ export const codeBlockSchema = z.object({
 	language: z.enum(codeLanguages).optional(),
 	code: z.string().optional()
 })
-
-const languageOptions = [
-	{ label: 'TypeScript', value: 'ts' },
-	{ label: 'TSX', value: 'tsx' },
-	{ label: 'JavaScript', value: 'js' },
-	{ label: 'JSX', value: 'jsx' },
-	{ label: 'JSON', value: 'json' }
-]
 
 /** `lowlight`'s own `common` bundle (`utils/extensions.ts`) only registers `typescript`/`javascript`/`json` by name — no separate `tsx`/`jsx` grammar exists, so both map onto their non-JSX sibling (still a real, readable highlight, just not JSX-attribute-aware). */
 const lowlightLanguageOf: Record<CodeLanguage, string> = {
@@ -50,60 +41,41 @@ function looksLikeJson(value: string): boolean {
 	}
 }
 
+/**
+ * The `code` field's `language` is nested inside the `language` field's
+ * own `form.AppField` render callback (rather than read via some separate
+ * reactive-subscription API) so the editor's corner toggle always reflects
+ * the sibling field's *current* value — the exact same nested-`form.AppField`
+ * pattern `nav-menu-field.tsx` already uses (`f.state.value === 'custom' ?
+ * <form.AppField name={...}>...`), not a new mechanism. The language
+ * select itself lives inline in `f.Code`'s own corner (`languages`/
+ * `onLanguageChange`, see `@base/ui/forms`' `Code` field) — no separate
+ * visible field for it anymore.
+ */
 function CodeBlockFields({ form, path }: BlockFieldsProps) {
 	return (
-		<div className='flex flex-col gap-3'>
-			<form.AppField name={`${path}.language`}>
-				{(f: any) => (
-					<f.Select
-						label='Language'
-						defaultValue='ts'
-						options={languageOptions}
-					/>
-				)}
-			</form.AppField>
-			<form.AppField name={`${path}.code`}>
-				{() => <CodeBlockCodeField form={form} path={path} />}
-			</form.AppField>
-		</div>
-	)
-}
-
-/**
- * A field-shaped like `@base/ui/forms`' own `Code` (same `InputGroup`/
- * `InputGroupTextarea` primitives, same monospace styling), not reused
- * directly — `Code` exposes no `onChange` of its own to hook the JSON
- * auto-detect into, and adding one would widen a shared component just
- * for this one caller. `useFieldState()` is the same exported hook `Code`
- * itself calls internally (`@base/ui/forms`), so this is genuinely the
- * same field-binding mechanism, just with one extra side effect on change.
- */
-function CodeBlockCodeField({ form, path }: BlockFieldsProps) {
-	const { field, name, value, isInvalid, handleBlur, handleChange } =
-		useFieldState<string>()
-
-	return (
-		<FieldShell label='Code' field={field} isInvalid={isInvalid}>
-			<InputGroup>
-				<InputGroupTextarea
-					id={name}
-					name={name}
-					value={value ?? ''}
-					placeholder='Paste or write code…'
-					rows={10}
-					spellCheck={false}
-					aria-invalid={isInvalid}
-					className='font-mono text-sm whitespace-pre'
-					onBlur={handleBlur}
-					onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-						handleChange(e.target.value)
-						if (looksLikeJson(e.target.value)) {
-							form.setFieldValue(`${path}.language`, 'json')
-						}
-					}}
-				/>
-			</InputGroup>
-		</FieldShell>
+		<form.AppField name={`${path}.language`}>
+			{(languageField: any) => (
+				<form.AppField name={`${path}.code`}>
+					{(f: any) => (
+						<f.Code
+							label='Code'
+							placeholder='Paste or write code…'
+							language={languageField.state.value ?? 'ts'}
+							languages={defaultCodeEditorLanguages}
+							onLanguageChange={(next: CodeLanguage) => {
+								form.setFieldValue(`${path}.language`, next)
+							}}
+							onValueChange={(next: string) => {
+								if (looksLikeJson(next)) {
+									form.setFieldValue(`${path}.language`, 'json')
+								}
+							}}
+						/>
+					)}
+				</form.AppField>
+			)}
+		</form.AppField>
 	)
 }
 

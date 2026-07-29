@@ -90,7 +90,7 @@ export const ArrayField = ({
 			field={field}
 			isInvalid={isInvalid}
 		>
-			<section className='flex flex-col gap-4'>
+			<section className='flex flex-col gap-1'>
 				{renderAdd ? (
 					renderAdd(handleAddItem)
 				) : (
@@ -174,7 +174,10 @@ export const ArrayField = ({
 										}
 									/>
 									<CollapsibleContent
-										className={cn('flex flex-col gap-3 py-3 pl-0')}
+										className={cn(
+											'flex flex-col gap-3 py-3 px-3',
+											'border-x border-b border-dashed'
+										)}
 									>
 										{children({ path: itemPath, index, value: item })}
 									</CollapsibleContent>

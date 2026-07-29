@@ -1,4 +1,4 @@
-import { InputGroup, InputGroupTextarea } from '../../../components/input-group'
+import { CodeEditor } from '../../../components/code-editor'
 import { cn } from '../../../lib/utils'
 import { useEffect, useState } from 'react'
 import { FieldShell } from '../shared/field-shell'
@@ -7,17 +7,22 @@ import { useFieldState } from '../shared/use-field-state'
 
 type JSONFieldProps = BaseFieldProps & {
 	placeholder?: string
-	rows?: number
+	height?: string
 	className?: string
 }
 
 /**
  * The field's own value is the *parsed* JSON (`unknown`, matching
- * Payload's own JSON field), but the textarea edits a string — so this
- * keeps its own local `text` state, separate from the committed value,
- * and only calls `handleChange` on blur with genuinely valid JSON. Typing
- * something momentarily invalid never corrupts the real field value; it
- * just shows a parse error until the text is valid again.
+ * Payload's own JSON field — the real difference from `Code`, which
+ * always saves a plain string, see that field's own doc comment), but the
+ * editor edits text — so this keeps its own local `text` state, separate
+ * from the committed value, and only calls `handleChange` on blur with
+ * genuinely valid JSON. Typing something momentarily invalid never
+ * corrupts the real field value; it just shows a parse error until the
+ * text is valid again. Shares `CodeEditor` (`components/code-editor.tsx`)
+ * with `Code` — same real editor, just fixed to the `json` language and
+ * with no language toggle at all (JSON is the only thing this field is
+ * ever for).
  */
 export const JSON = ({
 	label,
@@ -26,7 +31,7 @@ export const JSON = ({
 	required,
 	disabled,
 	className,
-	rows = 10
+	height
 }: JSONFieldProps) => {
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
 		useFieldState<unknown>()
@@ -68,22 +73,18 @@ export const JSON = ({
 			isInvalid={isInvalid || Boolean(parseError)}
 			className={cn(className)}
 		>
-			<InputGroup>
-				<InputGroupTextarea
-					id={name}
-					name={name}
-					value={text}
-					placeholder={placeholder}
-					rows={rows}
-					onBlur={commit}
-					onChange={(e) => setText(e.target.value)}
-					aria-invalid={isInvalid || Boolean(parseError)}
-					required={required}
-					disabled={disabled}
-					spellCheck={false}
-					className='font-mono text-sm whitespace-pre'
-				/>
-			</InputGroup>
+			<CodeEditor
+				id={name}
+				value={text}
+				placeholder={placeholder}
+				height={height}
+				editable={!disabled}
+				language='json'
+				languages={[]}
+				aria-invalid={isInvalid || Boolean(parseError)}
+				onChange={setText}
+				onBlur={commit}
+			/>
 		</FieldShell>
 	)
 }
