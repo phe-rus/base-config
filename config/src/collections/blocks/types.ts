@@ -7,13 +7,24 @@ export type BlockSlug =
 	| 'cta'
 	| 'banner'
 	| 'grid'
-	| 'columns'
+	| 'code'
 	| 'relatedPosts'
 
 export type BlockFieldsProps = {
 	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */
 	form: any
 	path: string
+	/**
+	 * The owning collection/global's own `slug` and the current document's
+	 * own `id` — together, what a block's own `f.Upload` field needs to
+	 * build a real, collision-free storage prefix (see `fields/renderer.tsx`'s
+	 * generic `case 'upload'` for the exact pattern every block wiring one
+	 * up should match). Threaded down from `renderField`'s own `meta`-case
+	 * precedent (`renderer.tsx`) through `BlocksField` — optional because
+	 * most blocks never touch storage at all and can ignore both.
+	 */
+	uploadFolder?: string
+	id?: string
 }
 
 export type BlockConfig = {

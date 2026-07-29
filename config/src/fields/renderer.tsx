@@ -43,6 +43,8 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 		name: string
 		label?: string
 		description?: string
+		uploadFolder?: string
+		id?: string
 	}>
 	relationship?: FC<{
 		label?: string
@@ -239,6 +241,8 @@ function renderField(
 				name={name}
 				label={field.label}
 				description={field.description}
+				uploadFolder={uploadFolder}
+				id={id}
 			/>
 		) : null
 	}

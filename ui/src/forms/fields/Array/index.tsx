@@ -1,3 +1,5 @@
+import { IconGripVertical, IconPlus, IconX } from '@tabler/icons-react'
+import { useState } from 'react'
 import { Button, buttonVariants } from '../../../components/button'
 import {
 	Collapsible,
@@ -5,8 +7,6 @@ import {
 	CollapsibleTrigger
 } from '../../../components/collapsible'
 import { cn } from '../../../lib/utils'
-import { IconGripVertical, IconPlus, IconX } from '@tabler/icons-react'
-import { useState } from 'react'
 import { FieldShell } from '../shared/field-shell'
 import type { BaseFieldProps } from '../shared/types'
 import { useFieldState } from '../shared/use-field-state'
@@ -105,7 +105,7 @@ export const ArrayField = ({
 						Add items
 					</div>
 				)}
-				<div className='flex flex-col gap-1 ml-6'>
+				<div className='flex flex-col gap-1 ml-2'>
 					{list.map((item, index) => {
 						const itemPath = `${name}[${index}]`
 						const label = getItemLabel
@@ -126,13 +126,12 @@ export const ArrayField = ({
 								)}
 							>
 								<Collapsible>
-									{/* 2. Set nativeButton={false} because trigger contains nested action buttons */}
 									<CollapsibleTrigger
 										nativeButton={false}
 										className={cn(
-											'flex items-center gap-3 rounded-md',
-											'border bg-input/35 border-dashed cursor-pointer',
-											'w-full px-2 py-1 justify-between'
+											'flex items-center gap-3 rounded-md cursor-pointer',
+											'w-full px-1 py-1 justify-between border border-dashed',
+											'bg-input/35'
 										)}
 										render={
 											<div className='flex items-center justify-between'>
@@ -146,17 +145,13 @@ export const ArrayField = ({
 														className={cn(
 															buttonVariants({
 																variant: 'secondary',
-																size: 'icon-sm',
+																size: 'icon-xs',
 																className: 'w-fit cursor-grab'
 															})
 														)}
 													>
 														<IconGripVertical />
 													</button>
-													<h3>
-														{index < 10 ? '0' : ''}
-														{index + 1}
-													</h3>
 													<span className='text-sm'>{label}</span>
 												</div>
 												<button
@@ -164,7 +159,7 @@ export const ArrayField = ({
 													className={cn(
 														buttonVariants({
 															variant: 'destructive',
-															size: 'icon-sm'
+															size: 'icon-xs'
 														})
 													)}
 													onClick={(e) => {
@@ -179,10 +174,7 @@ export const ArrayField = ({
 										}
 									/>
 									<CollapsibleContent
-										className={cn(
-											'flex flex-col p-5 border-x border-b',
-											'rounded-b border-dashed -mt-1'
-										)}
+										className={cn('flex flex-col gap-3 py-3 pl-0')}
 									>
 										{children({ path: itemPath, index, value: item })}
 									</CollapsibleContent>

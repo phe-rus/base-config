@@ -1,5 +1,5 @@
 import { bannerBlock } from './banner'
-import { columnsBlock } from './columns'
+import { codeBlock } from './code'
 import { ctaBlock } from './cta'
 import { gridBlock } from './grid'
 import { mediaBlock } from './media'
@@ -16,7 +16,9 @@ import type { BlockConfig } from './types'
  * *into* instead. Seeded with this package's own 7 built-in blocks eagerly
  * (unlike `collectionsBySlug`, which starts empty — these aren't optional,
  * a consumer gets them "for free" with zero registration, same as before
- * this file existed); `registerBlocks()` merges more in on top.
+ * this file existed); `registerBlocks()` merges more in on top. `columns`
+ * used to be an eighth entry here — deleted, its role absorbed by `grid`
+ * (see that block's own doc comment).
  */
 export const blocksBySlug: Record<string, BlockConfig> = {
 	richtext: richTextBlock,
@@ -24,7 +26,7 @@ export const blocksBySlug: Record<string, BlockConfig> = {
 	cta: ctaBlock,
 	banner: bannerBlock,
 	grid: gridBlock,
-	columns: columnsBlock,
+	code: codeBlock,
 	relatedPosts: relatedPostsBlock
 }
 

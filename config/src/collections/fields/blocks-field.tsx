@@ -19,8 +19,11 @@ type BlocksFieldProps = {
 	name: string
 	label?: string
 	description?: string
-	/** Block slugs to omit from the "Add block" menu — used to cap `columns` at one level of nesting. */
+	/** Block slugs to omit from the "Add block" menu — used by `grid.tsx` to cap itself at one level of nesting. */
 	exclude?: string[]
+	/** See `BlockFieldsProps`' own doc comment (`../blocks/types.ts`) — passed straight through to every block's own `Fields`. */
+	uploadFolder?: string
+	id?: string
 }
 
 export function BlocksField({
@@ -28,7 +31,9 @@ export function BlocksField({
 	name,
 	label,
 	description,
-	exclude = []
+	exclude = [],
+	uploadFolder,
+	id
 }: BlocksFieldProps) {
 	const slugs = Object.keys(blocksBySlug).filter(
 		(slug) => !exclude.includes(slug)
@@ -40,8 +45,8 @@ export function BlocksField({
 				<ArrayField
 					label={label}
 					description={description}
-					getItemLabel={(item) =>
-						blocksBySlug[item?.blockType as string]?.label ?? 'Unknown block'
+					getItemLabel={(item, index) =>
+						`${blocksBySlug[item?.blockType as string]?.label ?? 'Unknown block'} ${index + 1}`
 					}
 					renderAdd={(add) => (
 						<>
@@ -109,7 +114,14 @@ export function BlocksField({
 								</p>
 							)
 						}
-						return <block.Fields form={form} path={path} />
+						return (
+							<block.Fields
+								form={form}
+								path={path}
+								uploadFolder={uploadFolder}
+								id={id}
+							/>
+						)
 					}}
 				</ArrayField>
 			)}
