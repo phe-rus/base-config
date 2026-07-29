@@ -1,13 +1,13 @@
-import { slugify } from '../../collections/slug'
-import type { CollectionConfig } from '../../collections/types'
+import { slugify } from '../../../collections/slug'
+import type { CollectionConfig } from '../../../collections/types'
 import {
 	draftCollections,
 	publishKeywordPool,
 	withBaseFields,
 	type ContentCollection
-} from '../../db/collections'
-import { useDocument } from '../../db/use-document'
-import { useAdminConfig } from '../functions/context'
+} from '../../../db/collections'
+import { useDocument } from '../../../db/use-document'
+import { useAdminConfig } from '../../functions/context'
 import { DocumentHeader } from './document-header'
 import { Button } from '@base/ui/components/button'
 import { t } from '@base/ui/components/sonner'

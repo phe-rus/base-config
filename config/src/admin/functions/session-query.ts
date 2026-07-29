@@ -1,4 +1,5 @@
-import { queryOptions } from '@tanstack/react-query'
+import { queryOptions, useQuery } from '@tanstack/react-query'
+import { getAuthClient } from '../../db/collections'
 
 /**
  * The tuned `queryOptions()` wrapper behind a consumer's own session query —
@@ -39,4 +40,52 @@ export function createSessionQueryOptions<TSession>(
 			refetchOnWindowFocus: false,
 			refetchOnReconnect: false
 		})
+}
+
+type AdminSessionData = { user: { role?: string | string[] | null } } | null
+
+/**
+ * The one shared session read every admin-side gate uses — `Topbar`
+ * (chrome/role redirect), `ProviderView.Context` (the reserved-`$collection`
+ * auth-screen dispatch), `Dashboard` (the bare `/admin` index, a separate
+ * route from the `$collection/$` catch-all). Built on `createSessionQueryOptions()`
+ * above, but pointed at `authClient.getSession()` (better-auth's own
+ * promise-based client method — never `fetch`) instead of a consumer's
+ * `createServerFn()`, so this needs no consumer wiring at all. Every caller
+ * gets the exact same TanStack Query cache entry (`queryKey: ['base-config',
+ * 'session']`) — real deduplication, not just three independent
+ * subscriptions to better-auth's own reactive store, which is what produced
+ * genuine duplicate `/api/auth/get-session` traffic before this existed.
+ * No manual invalidation on sign-in/sign-out: both already navigate with
+ * `reloadDocument: true`, which throws away this cache along with
+ * everything else.
+ *
+ * `hasSession` is the one boolean every caller actually branches on —
+ * `true` when a real session exists, but *also* `true` when `baseConfig()`
+ * was never given an `auth` client at all (nothing to gate against, same as
+ * this feature not existing — matches every other `getAuthClient()`-gated
+ * surface in this package).
+ */
+export function useAdminSession(): {
+	data: AdminSessionData
+	isPending: boolean
+	hasSession: boolean
+} {
+	const authClient = getAuthClient()
+	const query = useQuery({
+		...createSessionQueryOptions(async () => {
+			const result = await authClient?.getSession()
+			return (result?.data ?? null) as AdminSessionData
+		})(),
+		enabled: Boolean(authClient)
+	})
+
+	if (!authClient) {
+		return { data: null, isPending: false, hasSession: true }
+	}
+	return {
+		data: query.data ?? null,
+		isPending: query.isPending,
+		hasSession: !query.isPending && Boolean(query.data)
+	}
 }

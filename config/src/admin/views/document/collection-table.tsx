@@ -8,15 +8,15 @@ import { useLiveQuery } from '@tanstack/react-db'
 import { Link } from '@tanstack/react-router'
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
-import { createId } from '../../collections/id'
-import type { CollectionConfig } from '../../collections/types'
+import { createId } from '../../../collections/id'
+import type { CollectionConfig } from '../../../collections/types'
 import {
 	draftCollections,
 	type ContentCollection,
 	type DocumentStatus
-} from '../../db/collections'
-import { AuthWidget } from '../widgets/auth-widget'
-import { RenderView } from './render-view'
+} from '../../../db/collections'
+import { AuthWidget } from '../../widgets/auth-widget'
+import { RenderView } from '../render-view'
 
 type CollectionTableProps = {
 	config: CollectionConfig

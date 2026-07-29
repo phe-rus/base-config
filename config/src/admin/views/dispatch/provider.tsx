@@ -1,8 +1,8 @@
 import { useParams } from '@tanstack/react-router'
 import type { PropsWithChildren, ReactNode } from 'react'
-import { collectionsBySlug, globalsBySlug } from '../../collections/registry'
-import type { CollectionSlug, GlobalSlug } from '../../collections/types'
-import { getAuthClient, type BetterAuthAdminClient } from '../../db/collections'
+import { collectionsBySlug, globalsBySlug } from '../../../collections/registry'
+import type { CollectionSlug, GlobalSlug } from '../../../collections/types'
+import { useAdminSession } from '../../functions/session-query'
 import { RouteViewContext } from './context'
 import type { RouteViewState } from './context'
 
@@ -77,12 +77,15 @@ function resolveRouteView(
  * a single time per navigation, providing the result via `useRouteView()`
  * (`context.tsx`) — `entry.tsx` is then a pure dispatcher with no lookup
  * logic of its own. Mounted once, at the `$collection` layout route
- * (`route.tsx`), above the `$` splat route it wraps.
+ * (`route.tsx`), above the `$` splat route it wraps. `hasSession` comes
+ * from `useAdminSession()` (`admin/functions/session-query.ts`) — the one
+ * shared, deduplicated session read every admin gate uses, not an
+ * independent `authClient.useSession()` subscription (see that hook's own
+ * doc comment for why: three separate subscriptions produced real
+ * duplicate `/api/auth/get-session` traffic).
  */
-function ProviderViewContextResolved({
-	hasSession,
-	children
-}: PropsWithChildren<{ hasSession: boolean }>) {
+function ProviderViewContext({ children }: ProviderViewContextProps) {
+	const { hasSession } = useAdminSession()
 	const { collection, _splat } = useParams({ strict: false }) as {
 		collection: CollectionSlug | GlobalSlug
 		_splat?: string
@@ -94,43 +97,6 @@ function ProviderViewContextResolved({
 		<RouteViewContext.Provider value={state}>
 			{children}
 		</RouteViewContext.Provider>
-	)
-}
-
-/**
- * `useSession()` (a real hook) is only ever called from this subtree once
- * `authClient` is known to exist — same "never conditionally *call* a hook,
- * only conditionally *mount* the component that calls it" shape
- * `topbar.tsx`'s own `SessionGreeting` already established for the exact
- * same `authClient | undefined` problem.
- */
-function ProviderViewContextGated({
-	authClient,
-	children
-}: PropsWithChildren<{ authClient: BetterAuthAdminClient }>) {
-	const { data: session } = authClient.useSession()
-	return (
-		<ProviderViewContextResolved hasSession={Boolean(session)}>
-			{children}
-		</ProviderViewContextResolved>
-	)
-}
-
-function ProviderViewContext({ children }: ProviderViewContextProps) {
-	const authClient = getAuthClient()
-	// No `auth` passed to `baseConfig()` at all — nothing to gate against,
-	// same as this feature not existing.
-	if (!authClient) {
-		return (
-			<ProviderViewContextResolved hasSession>
-				{children}
-			</ProviderViewContextResolved>
-		)
-	}
-	return (
-		<ProviderViewContextGated authClient={authClient}>
-			{children}
-		</ProviderViewContextGated>
 	)
 }
 

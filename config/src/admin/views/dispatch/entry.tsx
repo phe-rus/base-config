@@ -1,15 +1,15 @@
 import { useNavigate } from '@tanstack/react-router'
-import { contentCollections } from '../../db/collections'
-import { useAdminConfig } from '../functions/context'
-import { CollectionForm } from './collection-form'
-import { CollectionTable } from './collection-table'
-import { CreateAccountView } from './create-account-view'
+import { contentCollections } from '../../../db/collections'
+import { useAdminConfig } from '../../functions/context'
+import {
+	CreateAccountView,
+	ForgotPasswordView,
+	LoginView,
+	ResetPasswordView
+} from '../auth'
+import { CollectionForm, CollectionTable, GlobalForm } from '../document'
+import { RenderView } from '../render-view'
 import { useRouteView } from './context'
-import { ForgotPasswordView } from './forgot-password-view'
-import { GlobalForm } from './global-form'
-import { LoginView } from './login-view'
-import { RenderView } from './render-view'
-import { ResetPasswordView } from './reset-password-view'
 
 /**
  * The single dispatcher mounted at the `$collection/$` splat route —

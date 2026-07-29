@@ -1,6 +1,9 @@
-import type { GlobalConfig, GlobalSlug } from '../../collections/types'
-import { draftGlobalsCollection, globalsCollection } from '../../db/collections'
-import { useDocument } from '../../db/use-document'
+import type { GlobalConfig, GlobalSlug } from '../../../collections/types'
+import {
+	draftGlobalsCollection,
+	globalsCollection
+} from '../../../db/collections'
+import { useDocument } from '../../../db/use-document'
 import { DocumentHeader } from './document-header'
 import { Button } from '@base/ui/components/button'
 import { t } from '@base/ui/components/sonner'

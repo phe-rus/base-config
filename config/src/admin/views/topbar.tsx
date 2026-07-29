@@ -1,5 +1,6 @@
 import type { AdminSettings } from '../../base.types'
 import { AdminConfigContext } from '../functions/context'
+import { useAdminSession } from '../functions/session-query'
 import { collectionsBySlug, globalsBySlug } from '../../collections/registry'
 import type { CollectionSlug } from '../../collections/types'
 import {
@@ -174,28 +175,26 @@ type TopbarProps = PropsWithChildren<{
 }>
 
 /**
- * `useSession()` (a real hook) is only ever called from this subtree once
- * `authClient` is known to exist — same shape `SessionGreeting` above
- * already established, applied one level up. Owns the two things that
- * decide whether the admin chrome renders at all: no session → render
- * `children` bare (the reserved-`$collection` auth screens, resolved by
- * `provider.tsx`, render themselves with no chrome around them); session
- * but wrong role → redirect to `/`, the one piece of the old loader-based
- * guard (`(admin)/route.tsx` used to call `adminLoader()`) that's still
- * real gating, just moved here since a `loader` can't call a hook and
- * `useSession()` — not router `context`, which nothing in this app ever
- * actually populates — is this codebase's real, working session source
- * (see `SessionGreeting`'s own doc comment).
+ * `useAdminSession()` (`admin/functions/session-query.ts`) is the one
+ * shared, deduplicated session read every admin gate uses — see its own
+ * doc comment for why this replaced a raw `authClient.useSession()` call
+ * here (real, confirmed duplicate `/api/auth/get-session` traffic once
+ * `ProviderView.Context`/`Dashboard` each independently subscribed too).
+ * `AdminConfigContext` is provided above both branches — it's plain app
+ * config (`adminPath`/`adminIcon`/`socialProviders`), not chrome, and
+ * `useAdminConfig()` is called unconditionally by things that render either
+ * way (e.g. `Entry`'s own `navigate` fallback, still needed when it
+ * dispatches to a reserved auth-screen mode with no session). No chrome at
+ * all while `hasSession` is false — the reserved-`$collection` auth
+ * screens (resolved by `provider.tsx`) render themselves, unwrapped. A
+ * session that exists but has the wrong `role` still gets a real redirect
+ * to `/` — the one piece of the old loader-based guard
+ * (`(admin)/route.tsx` used to call `adminLoader()`) that's still real
+ * gating, just moved here since a `loader` can't call a hook.
  */
-function TopbarGated({
-	authClient,
-	config,
-	children
-}: PropsWithChildren<{
-	authClient: BetterAuthAdminClient
-	config: AdminSettings
-}>) {
-	const { data: session, isPending } = authClient.useSession()
+export function Topbar({ children, config }: TopbarProps) {
+	const authClient = getAuthClient()
+	const { data: session, hasSession } = useAdminSession()
 	const navigate = useNavigate()
 
 	useEffect(() => {
@@ -208,38 +207,14 @@ function TopbarGated({
 		}
 	}, [session, navigate])
 
-	if (isPending || !session) return <>{children}</>
-
-	return (
-		<TopbarChrome authClient={authClient} config={config}>
-			{children}
-		</TopbarChrome>
-	)
-}
-
-/**
- * `AdminConfigContext` is provided here, above both the chrome and the
- * bare-`children` branches — it's plain app config (`adminPath`/`adminIcon`/
- * `socialProviders`), not chrome, and `useAdminConfig()` is called
- * unconditionally by things that render either way (e.g. `Entry`'s own
- * `navigate` fallback, still needed when it dispatches to a reserved
- * auth-screen mode with no session).
- */
-export function Topbar({ children, config }: TopbarProps) {
-	const authClient = getAuthClient()
 	return (
 		<AdminConfigContext.Provider value={config}>
-			{authClient ? (
-				<TopbarGated authClient={authClient} config={config}>
-					{children}
-				</TopbarGated>
-			) : (
-				// No `auth` passed to `baseConfig()` at all — nothing to gate
-				// against, same as this feature not existing; render the
-				// chrome unconditionally, same as before this feature existed.
-				<TopbarChrome authClient={undefined} config={config}>
+			{hasSession ? (
+				<TopbarChrome authClient={authClient} config={config}>
 					{children}
 				</TopbarChrome>
+			) : (
+				<>{children}</>
 			)}
 		</AdminConfigContext.Provider>
 	)

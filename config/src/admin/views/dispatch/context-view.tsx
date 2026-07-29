@@ -1,6 +1,6 @@
-import { Dashboard } from './dashboard/component'
+import { Dashboard } from '../dashboard/component'
 import { Entry } from './entry'
-import { Storage } from './storage/component'
+import { Storage } from '../storage/component'
 
 /**
  * Every route-mounted admin view (one a consumer wires directly as a

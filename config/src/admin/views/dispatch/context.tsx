@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { CollectionConfig, GlobalConfig } from '../../collections/types'
+import type { CollectionConfig, GlobalConfig } from '../../../collections/types'
 
 export type RouteViewState =
 	| { mode: 'list'; collectionConfig: CollectionConfig }

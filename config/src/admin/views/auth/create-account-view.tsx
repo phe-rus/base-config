@@ -5,8 +5,8 @@ import { useAppForm } from '@base/ui/forms'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { getAuthClient, unwrap } from '../../db/collections'
-import { getAdminConfig } from '../functions/config-registry'
+import { getAuthClient, unwrap } from '../../../db/collections'
+import { getAdminConfig } from '../../functions/config-registry'
 
 export type CreateAccountFormValues = {
 	name: string

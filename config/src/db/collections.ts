@@ -496,6 +496,19 @@ export type BetterAuthAdminClient = {
 		} | null
 		isPending: boolean
 	}
+	/**
+	 * The promise-based sibling of `useSession` above — better-auth's own
+	 * client method (not `fetch`), used by `useAdminSession()`
+	 * (`admin/functions/session-query.ts`) specifically so multiple admin
+	 * surfaces (`Topbar`, `ProviderView.Context`, `Dashboard`) can share ONE
+	 * TanStack Query cache entry instead of each independently subscribing
+	 * to the reactive `useSession()` store — confirmed this mattered in
+	 * practice: three separate `useSession()` calls produced real duplicate
+	 * `/api/auth/get-session` requests.
+	 */
+	getSession: () => AuthClientResult<{
+		user: { role?: string | string[] | null }
+	}>
 	/** Core client methods (email+password and username+password are "the same thing, different terminology" — a `LoginView` merges both into one `credentials` field and picks which of these to call based on whether it looks like an email, same design the app already had). `social` is optional — only called when a consumer's own `socialProviders` list names a provider. */
 	signIn: {
 		email: (opts: {

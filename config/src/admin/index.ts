@@ -1,13 +1,17 @@
 // The admin UI shell's own barrel — a consumer wires up its file-based
 // routes against these exports instead of reaching into individual files
-// under `admin/*`. Organized internally by concern (`views/` — rendered
-// components; `functions/` — pure logic, no JSX; `widgets/` — small
-// focused action surfaces, as opposed to `views/`'s full pages). Every
-// route-mounted view (one a consumer wires directly as a route's
-// `component`) gets its own folder with a single `component.tsx` inside
-// (`dashboard/`, `storage/`), or — for `Entry`, the `$collection/$` splat
-// route's dispatcher — a flat file, grouped under one `ContextView`
-// namespace (`ContextView.Entry`, not a separate barrel export) — mirroring
+// under `admin/*`. Organized internally by feature, not file type:
+// `views/auth/` (the admin auth screens), `views/document/` (collection/
+// global CRUD UI), `views/dispatch/` (the `$collection/$` route-resolution
+// layer — `RouteViewState`/`ProviderView`/`ContextView.Entry`), plus
+// `views/dashboard/`, `views/storage/` (each a route-mounted view with its
+// own folder, single `component.tsx` inside), and `views/render-view.tsx`/
+// `views/topbar.tsx` (shared chrome primitives used across those features,
+// so they stay flat rather than living inside any one feature folder).
+// `functions/` — pure logic, no JSX; `widgets/` — small focused action
+// surfaces, as opposed to `views/`'s full pages. `ContextView.Entry` (the
+// `$collection/$` splat route's dispatcher) is grouped under one
+// `ContextView` namespace rather than its own barrel export — mirroring
 // Payload's own `ListView/index.tsx` convention, and how compound
 // components group a set of related pieces under one name. `ProviderView`
 // is the sibling namespace a consumer wraps the `$collection` layout route
@@ -21,14 +25,13 @@ export {
 } from './functions/guard'
 export type { AdminSessionGuardOptions } from './functions/guard'
 export { createSessionQueryOptions } from './functions/session-query'
-export { CollectionForm } from './views/collection-form'
-export { CollectionTable } from './views/collection-table'
-export { GlobalForm } from './views/global-form'
-export { ContextView } from './views/context-view'
-export { ProviderView } from './views/provider'
-export { LoginView } from './views/login-view'
-export type { LoginFormValues } from './views/login-view'
-export { CreateAccountView } from './views/create-account-view'
-export type { CreateAccountFormValues } from './views/create-account-view'
-export { ForgotPasswordView } from './views/forgot-password-view'
-export { ResetPasswordView } from './views/reset-password-view'
+export { CollectionForm, CollectionTable, GlobalForm } from './views/document'
+export { ContextView, ProviderView } from './views/dispatch'
+export {
+	LoginView,
+	type LoginFormValues,
+	CreateAccountView,
+	type CreateAccountFormValues,
+	ForgotPasswordView,
+	ResetPasswordView
+} from './views/auth'

@@ -1,11 +1,8 @@
 import { useMemo } from 'react'
 import { collectionsBySlug, globalsBySlug } from '../../../collections/registry'
-import {
-	getAuthClient,
-	type BetterAuthAdminClient
-} from '../../../db/collections'
+import { useAdminSession } from '../../functions/session-query'
 import { useAdminConfig } from '../../functions/context'
-import { LoginView } from '../login-view'
+import { LoginView } from '../auth'
 import { RenderView } from '../render-view'
 
 /**
@@ -16,20 +13,15 @@ import { RenderView } from '../render-view'
  * hides its own chrome with no session, but that alone doesn't stop
  * whatever's mounted as `<Outlet/>` from still rendering — this is the one
  * other real admin surface that needs the same "no session → show login"
- * treatment, same `getAuthClient()`-then-`useSession()` shape `Topbar`/
- * `ProviderView.Context` already use. No `$collection` segment exists at
- * this bare path at all, so the fallback is unambiguous: `LoginView`,
- * matching `resolveRouteView`'s own default.
+ * treatment, using the same shared `useAdminSession()` read `Topbar`/
+ * `ProviderView.Context` use (not an independent subscription — see that
+ * hook's own doc comment). No `$collection` segment exists at this bare
+ * path at all, so the fallback is unambiguous: `LoginView`, matching
+ * `resolveRouteView`'s own default.
  */
 export function Dashboard() {
-	const authClient = getAuthClient()
-	if (!authClient) return <DashboardList />
-	return <DashboardGated authClient={authClient} />
-}
-
-function DashboardGated({ authClient }: { authClient: BetterAuthAdminClient }) {
-	const { data: session, isPending } = authClient.useSession()
-	if (isPending || !session) return <LoginView />
+	const { hasSession } = useAdminSession()
+	if (!hasSession) return <LoginView />
 	return <DashboardList />
 }
 
