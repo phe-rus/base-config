@@ -8,47 +8,32 @@ import { uploadValueSchema } from '../../fields/schema'
 import { uploadFile } from '../../fields/upload'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
+/** No `alt`/`caption` — the real upload value (`uploadValueSchema`'s own `name`/`url`/`size`) already covers what those stood in for; this block is just an image. */
 export const mediaBlockSchema = z.object({
 	blockType: z.literal('media'),
-	image: uploadValueSchema.optional(),
-	alt: z.string().optional(),
-	caption: z.string().optional()
+	image: uploadValueSchema.optional()
 })
 
 function MediaBlockFields({ form, path, uploadFolder, id }: BlockFieldsProps) {
 	const uploadPrefix = [uploadFolder, id, 'media'].filter(Boolean).join('/')
 
 	return (
-		<div className='flex flex-col gap-3'>
-			<form.AppField name={`${path}.image`}>
-				{(f: any) => (
-					<f.Upload
-						label='Image'
-						accept='image/*'
-						onUpload={(file: File) =>
-							uploadFile(file, uploadPrefix || undefined)
-						}
-						renderBrowser={(browserProps: StorageWidgetTriggerProps) => (
-							<StorageWidget
-								{...browserProps}
-								defaultFolder={uploadPrefix || undefined}
-								accept='image/*'
-							/>
-						)}
-					/>
-				)}
-			</form.AppField>
-			<form.AppField name={`${path}.alt`}>
-				{(f: any) => (
-					<f.Input label='Alt text' placeholder='Describe the image' />
-				)}
-			</form.AppField>
-			<form.AppField name={`${path}.caption`}>
-				{(f: any) => (
-					<f.Textarea label='Caption' placeholder='Optional caption' />
-				)}
-			</form.AppField>
-		</div>
+		<form.AppField name={`${path}.image`}>
+			{(f: any) => (
+				<f.Upload
+					label='Image'
+					accept='image/*'
+					onUpload={(file: File) => uploadFile(file, uploadPrefix || undefined)}
+					renderBrowser={(browserProps: StorageWidgetTriggerProps) => (
+						<StorageWidget
+							{...browserProps}
+							defaultFolder={uploadPrefix || undefined}
+							accept='image/*'
+						/>
+					)}
+				/>
+			)}
+		</form.AppField>
 	)
 }
 
@@ -56,7 +41,7 @@ export const mediaBlock: BlockConfig = {
 	slug: 'media',
 	label: 'Media / image',
 	schema: mediaBlockSchema,
-	defaultValue: { image: undefined, alt: undefined, caption: undefined },
+	defaultValue: { image: undefined },
 	Fields: MediaBlockFields,
 	Icon: IconPhoto
 }

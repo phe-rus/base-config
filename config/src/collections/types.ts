@@ -50,14 +50,18 @@ export const appearanceValues = [
 	'link'
 ] as const
 
-// A nav link is either a reference to an existing page/post/policy
-// (`mode: 'internal'`, `to` synced from `reference.slug` at selection time —
-// see `RelationshipField`'s `onValueChange`) or a hand-typed URL
-// (`mode: 'custom'`). Same shape either way, not a strict
-// `discriminatedUnion`, matching how `relationsSchema` above handles its own
-// manual/keyword mode.
-export const navMenuLinkSchema = z.object({
-	label: z.string().optional(),
+/**
+ * A single link's own mode/target — a reference to an existing
+ * page/post/policy (`mode: 'internal'`, `to` synced from `reference.slug`
+ * at selection time — see `RelationshipField`'s `onValueChange`) or a
+ * hand-typed URL (`mode: 'custom'`). Not a strict `discriminatedUnion`,
+ * matching how `relationsSchema` above handles its own manual/keyword
+ * mode. The base both `navMenuLinkSchema` (below) and `linkItemSchema`
+ * (further below — the real value behind `type: 'links'`,
+ * `fields/types.ts`'s `LinksFieldConfig`, rendered by `LinksField` —
+ * `fields/links-field.tsx`) extend with their own `label`/`appearance`.
+ */
+export const linkValueSchema = z.object({
 	mode: z.enum(['internal', 'custom']).optional(),
 	/** Used when `mode === 'internal'`. */
 	reference: relationshipValueSchema.optional(),
@@ -65,6 +69,34 @@ export const navMenuLinkSchema = z.object({
 	to: z.string().optional(),
 	openInNewTab: z.boolean().optional()
 })
+
+/** Plain TS shape of `linkValueSchema` — for a block's own `Render` (e.g. `blocks/cta.tsx`/`blocks/banner.tsx`) reading a document's raw stored `data`, which isn't run through the schema itself. */
+export type LinkValue = z.infer<typeof linkValueSchema>
+
+export const navMenuLinkSchema = linkValueSchema.extend({
+	label: z.string().optional()
+})
+
+/**
+ * One item in a `type: 'links'` field (`LinksField`, `fields/links-field.tsx`)
+ * — a link (`linkValueSchema`) plus its own `label` and button `appearance`,
+ * so a block like `cta`/`banner` can hold several differently-styled
+ * buttons instead of one block-level button. Same `label` field
+ * `navMenuLinkSchema` already has, plus `appearance` (nav *items*, not nav
+ * *links*, are the ones that already had this — `navMenuItemSchema` below
+ * — this is that same field, just on a plain link instead of a full nav
+ * item with its own mega-menu option).
+ */
+export const linkItemSchema = linkValueSchema.extend({
+	label: z.string().optional(),
+	appearance: z.enum(appearanceValues).optional()
+})
+
+/** Plain TS shape of `linkItemSchema` — for a block's own `Render` reading raw stored `data`. */
+export type LinkItemValue = z.infer<typeof linkItemSchema>
+
+/** The shape a `type: 'links'` field's value actually is — bare array, same convention `navMenuSchema` below already uses for `type: 'menu'`. */
+export const linksSchema = z.array(linkItemSchema)
 
 const navMenuColumnSchema = z.object({
 	title: z.string().optional(),

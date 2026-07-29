@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { BaseConfigRouteType } from './api/route'
 import { getBlocksSchema, registerBlocks } from './collections/blocks'
 import { BlocksField } from './collections/fields/blocks-field'
+import { LinksField } from './collections/fields/links-field'
 import { MetaFields } from './collections/fields/meta-fields'
 import { NavMenuField } from './collections/fields/nav-menu-field'
 import { RelationsField } from './collections/fields/relations-field'
@@ -23,7 +24,12 @@ import {
 	registerStorageDataSource
 } from './fields/storage-client'
 import type { CollectionSlug, GlobalSlug } from './collections/types'
-import { metaSchema, navMenuSchema, relationsSchema } from './collections/types'
+import {
+	linksSchema,
+	metaSchema,
+	navMenuSchema,
+	relationsSchema
+} from './collections/types'
 import type {
 	BaseConfigProps,
 	CollectionConfig as BaseCollectionConfig,
@@ -56,7 +62,8 @@ const schemaResolvers = {
 	// registered every plugin's own blocks), but `schemaResolvers` itself is
 	// built once, at this module's own eval time, well before that.
 	blocks: z.lazy(() => getBlocksSchema()),
-	menu: navMenuSchema
+	menu: navMenuSchema,
+	links: linksSchema
 }
 
 const fieldRenderers: FieldRenderers<CollectionSlug> = {
@@ -64,7 +71,8 @@ const fieldRenderers: FieldRenderers<CollectionSlug> = {
 	relations: RelationsField,
 	blocks: BlocksField,
 	relationship: RelationshipField,
-	menu: NavMenuField
+	menu: NavMenuField,
+	links: LinksField
 }
 
 // Field types whose value renders sensibly as a flat table cell — everything

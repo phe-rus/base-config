@@ -59,6 +59,12 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 		description?: string
 		startAsMegaMenu?: boolean
 	}>
+	links?: FC<{
+		form: any
+		name: string
+		label?: string
+		description?: string
+	}>
 }
 
 /** A stable React key for a container field (`row`/`collapsible`/`group`/`tabs`/`ui`) — none of these have a `name` to key off, so `prefix` + the field's own position stands in instead. Safe as an index key specifically because `fields`/`tabs` arrays are hand-authored config, never a runtime-reorderable list (unlike `ArrayField`'s own dynamic items). */
@@ -257,6 +263,19 @@ function renderField(
 				label={field.label}
 				description={field.description}
 				startAsMegaMenu={field.startAsMegaMenu}
+			/>
+		) : null
+	}
+
+	if (field.type === 'links') {
+		const Links = renderers.links
+		return Links ? (
+			<Links
+				key={name}
+				form={form}
+				name={name}
+				label={field.label}
+				description={field.description}
 			/>
 		) : null
 	}

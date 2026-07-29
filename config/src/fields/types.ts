@@ -150,6 +150,21 @@ export type MenuFieldConfig = BaseFieldConfig & {
 }
 
 /**
+ * A list of links — each its own label + button appearance + a
+ * reference-or-custom-URL target + "open in new tab", no mega-menu
+ * option. Dispatched to `LinksField`
+ * (`collections/fields/links-field.tsx`) — see that component's own doc
+ * comment for the full shape (`linksSchema`/`linkItemSchema`,
+ * `collections/types.ts`) and why its own mode/target logic
+ * (`LinkModeFields`) is shared with `NavMenuField`'s own per-item links,
+ * and with blocks (`cta`/`banner`) that call `LinksField` directly
+ * instead of going through this generic dispatch.
+ */
+export type LinksFieldConfig = BaseFieldConfig & {
+	type: 'links'
+}
+
+/**
  * Payload's own Row (https://payloadcms.com/docs/fields/row) — pure visual
  * arrangement, no data nesting at all: every field inside `fields` is still
  * a flat sibling of whatever contains this `row`, just laid out
@@ -275,6 +290,7 @@ export type FieldConfig<
 	| RelationsFieldConfig<TCollectionSlug>
 	| MetaFieldConfig
 	| MenuFieldConfig
+	| LinksFieldConfig
 	| RowFieldConfig<TCollectionSlug, TBlockSlug>
 	| CollapsibleFieldConfig<TCollectionSlug, TBlockSlug>
 	| GroupFieldConfig<TCollectionSlug, TBlockSlug>

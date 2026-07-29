@@ -9,16 +9,15 @@ import {
 } from '../../admin/widgets/storage-widget'
 import { uploadValueSchema } from '../../fields/schema'
 import { uploadFile } from '../../fields/upload'
-import { appearanceValues } from '../types'
+import { LinksField } from '../fields/links-field'
+import { linksSchema, type LinkItemValue } from '../types'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
 export const bannerBlockSchema = z.object({
 	blockType: z.literal('banner'),
 	content: z.custom<BasiccnContent>().optional(),
 	image: uploadValueSchema.optional(),
-	variant: z.enum(appearanceValues).optional(),
-	buttonLabel: z.string().optional(),
-	link: z.string().optional()
+	links: linksSchema.optional()
 })
 
 function BannerBlockFields({ form, path, uploadFolder, id }: BlockFieldsProps) {
@@ -49,26 +48,7 @@ function BannerBlockFields({ form, path, uploadFolder, id }: BlockFieldsProps) {
 					/>
 				)}
 			</form.AppField>
-			<form.AppField name={`${path}.variant`}>
-				{(f: any) => (
-					<f.Select
-						label='Button variant'
-						defaultValue='default'
-						options={appearanceValues.map((value) => ({
-							label: value[0]?.toUpperCase() + value.slice(1),
-							value
-						}))}
-					/>
-				)}
-			</form.AppField>
-			<form.AppField name={`${path}.buttonLabel`}>
-				{(f: any) => <f.Input label='Button label' placeholder='Optional' />}
-			</form.AppField>
-			<form.AppField name={`${path}.link`}>
-				{(f: any) => (
-					<f.Input label='Link' placeholder='https://… (optional)' />
-				)}
-			</form.AppField>
+			<LinksField form={form} name={`${path}.links`} />
 		</div>
 	)
 }
@@ -77,12 +57,9 @@ function BannerBlockFields({ form, path, uploadFolder, id }: BlockFieldsProps) {
 function BannerBlockRender({ data }: { data: Record<string, unknown> }) {
 	const content = data.content as BasiccnContent | undefined
 	const image = data.image as { url: string } | undefined
-	const variant = data.variant as (typeof appearanceValues)[number] | undefined
-	const buttonLabel =
-		typeof data.buttonLabel === 'string' ? data.buttonLabel : undefined
-	const link = typeof data.link === 'string' ? data.link : undefined
+	const links = Array.isArray(data.links) ? (data.links as LinkItemValue[]) : []
 
-	if (!content && !image && !(buttonLabel && link)) return null
+	if (!content && !image && links.length === 0) return null
 
 	return (
 		<section className='flex flex-col items-center gap-4 py-12 text-center'>
@@ -94,10 +71,22 @@ function BannerBlockRender({ data }: { data: Record<string, unknown> }) {
 				/>
 			) : null}
 			{content ? <Preview content={content} /> : null}
-			{buttonLabel && link ? (
-				<a href={link} className={buttonVariants({ variant })}>
-					{buttonLabel}
-				</a>
+			{links.length > 0 ? (
+				<div className='flex flex-wrap items-center justify-center gap-2'>
+					{links.map((link, index) =>
+						link.label && link.to ? (
+							<a
+								key={index}
+								href={link.to}
+								className={buttonVariants({ variant: link.appearance })}
+								target={link.openInNewTab ? '_blank' : undefined}
+								rel={link.openInNewTab ? 'noreferrer' : undefined}
+							>
+								{link.label}
+							</a>
+						) : null
+					)}
+				</div>
 			) : null}
 		</section>
 	)
@@ -110,9 +99,7 @@ export const bannerBlock: BlockConfig = {
 	defaultValue: {
 		content: undefined,
 		image: undefined,
-		variant: 'default',
-		buttonLabel: undefined,
-		link: undefined
+		links: []
 	},
 	Fields: BannerBlockFields,
 	Render: BannerBlockRender,

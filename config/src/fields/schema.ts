@@ -24,6 +24,7 @@ export type FieldSchemaResolvers = {
 	relations?: z.ZodTypeAny
 	blocks?: z.ZodTypeAny
 	menu?: z.ZodTypeAny
+	links?: z.ZodTypeAny
 }
 
 type SchemaTree = { [key: string]: z.ZodTypeAny | SchemaTree }
@@ -158,6 +159,8 @@ function baseFieldSchema(
 			return resolvers.blocks ?? z.array(z.unknown())
 		case 'menu':
 			return resolvers.menu ?? z.array(z.unknown())
+		case 'links':
+			return resolvers.links ?? z.array(z.unknown())
 	}
 }
 

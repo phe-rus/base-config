@@ -3,13 +3,14 @@ import { Preview } from '@base/ui/basiccn/preview'
 import { buttonVariants } from '@base/ui/components/button'
 import { IconClick } from '@tabler/icons-react'
 import { z } from 'zod'
+import { LinksField } from '../fields/links-field'
+import { linksSchema, type LinkItemValue } from '../types'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
 export const ctaBlockSchema = z.object({
 	blockType: z.literal('cta'),
 	content: z.custom<BasiccnContent>().optional(),
-	buttonLabel: z.string().optional(),
-	link: z.string().optional()
+	links: linksSchema.optional()
 })
 
 function CtaBlockFields({ form, path }: BlockFieldsProps) {
@@ -20,12 +21,7 @@ function CtaBlockFields({ form, path }: BlockFieldsProps) {
 					<f.RichText label='Content' placeholder='Write something…' />
 				)}
 			</form.AppField>
-			<form.AppField name={`${path}.buttonLabel`}>
-				{(f: any) => <f.Input label='Button label' placeholder='Learn more' />}
-			</form.AppField>
-			<form.AppField name={`${path}.link`}>
-				{(f: any) => <f.Input label='Link' placeholder='https://…' />}
-			</form.AppField>
+			<LinksField form={form} name={`${path}.links`} />
 		</div>
 	)
 }
@@ -33,19 +29,29 @@ function CtaBlockFields({ form, path }: BlockFieldsProps) {
 /** Same disclosed SSR-hydration-only gap as `richtext.tsx`'s own `RichTextBlockRender` — see that function's own doc comment for the full explanation (tiptap's `Preview` needs a real DOM, so this content is absent from server-rendered HTML until client JS hydrates). */
 function CtaBlockRender({ data }: { data: Record<string, unknown> }) {
 	const content = data.content as BasiccnContent | undefined
-	const buttonLabel =
-		typeof data.buttonLabel === 'string' ? data.buttonLabel : undefined
-	const link = typeof data.link === 'string' ? data.link : undefined
+	const links = Array.isArray(data.links) ? (data.links as LinkItemValue[]) : []
 
-	if (!content && !(buttonLabel && link)) return null
+	if (!content && links.length === 0) return null
 
 	return (
 		<section className='flex flex-col items-center gap-4 py-12 text-center'>
 			{content ? <Preview content={content} /> : null}
-			{buttonLabel && link ? (
-				<a href={link} className={buttonVariants()}>
-					{buttonLabel}
-				</a>
+			{links.length > 0 ? (
+				<div className='flex flex-wrap items-center justify-center gap-2'>
+					{links.map((link, index) =>
+						link.label && link.to ? (
+							<a
+								key={index}
+								href={link.to}
+								className={buttonVariants({ variant: link.appearance })}
+								target={link.openInNewTab ? '_blank' : undefined}
+								rel={link.openInNewTab ? 'noreferrer' : undefined}
+							>
+								{link.label}
+							</a>
+						) : null
+					)}
+				</div>
 			) : null}
 		</section>
 	)
@@ -57,8 +63,7 @@ export const ctaBlock: BlockConfig = {
 	schema: ctaBlockSchema,
 	defaultValue: {
 		content: undefined,
-		buttonLabel: undefined,
-		link: undefined
+		links: []
 	},
 	Fields: CtaBlockFields,
 	Render: CtaBlockRender,

@@ -2,9 +2,8 @@ import { Button } from '@base/ui/components/button'
 import { cn } from '@base/ui/lib/utils'
 import { ArrayField } from '@base/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
-import { appearanceValues, collectionPath } from '../types'
-import { collectionsBySlug } from '../registry'
-import { RelationshipField, type RelationshipValue } from './relationship-field'
+import { appearanceValues } from '../types'
+import { LinkModeFields } from './links-field'
 
 const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
 	label: value[0].toUpperCase() + value.slice(1),
@@ -109,7 +108,7 @@ function NavItemFields({ form, path }: { form: any; path: string }) {
 	)
 }
 
-/** The link's own mode (reference vs custom URL) + `to` + "open in new tab" — reused for a top-level link item and for every link inside a mega menu's flat list/columns. When `disabled`, `to` still renders but can't be edited, and the mode/reference/open-in-new-tab controls are hidden entirely (a mega menu item has no link of its own). */
+/** The link's own mode (reference vs custom URL) + `to` + "open in new tab" — reused for a top-level link item and for every link inside a mega menu's flat list/columns. When `disabled`, `to` still renders but can't be edited, and the mode/reference/open-in-new-tab controls are hidden entirely (a mega menu item has no link of its own). The real logic (everything but this `disabled` display-only case) lives in the shared `LinkModeFields` (`links-field.tsx`) — this is a thin wrapper. */
 function NavLinkModeFields({
 	form,
 	path,
@@ -127,55 +126,7 @@ function NavLinkModeFields({
 		)
 	}
 
-	return (
-		<form.AppField name={`${path}.mode`}>
-			{(f: any) => (
-				<>
-					<f.RadioGroup
-						label='Link type'
-						options={[
-							{ label: 'Reference', value: 'internal' },
-							{ label: 'Custom URL', value: 'custom' }
-						]}
-					/>
-					{f.state.value === 'custom' ? (
-						<form.AppField name={`${path}.to`}>
-							{(tf: any) => <tf.Input label='To' placeholder='https://…' />}
-						</form.AppField>
-					) : (
-						<>
-							<form.AppField name={`${path}.reference`}>
-								{() => (
-									<RelationshipField
-										label='Reference'
-										onValueChange={(value: RelationshipValue | undefined) =>
-											form.setFieldValue(
-												`${path}.to`,
-												value
-													? collectionPath(
-															collectionsBySlug[value.collection],
-															value.slug
-														)
-													: ''
-											)
-										}
-									/>
-								)}
-							</form.AppField>
-							<form.AppField name={`${path}.to`}>
-								{(tf: any) => (
-									<tf.Input label='To' placeholder='/slug' disabled />
-								)}
-							</form.AppField>
-						</>
-					)}
-					<form.AppField name={`${path}.openInNewTab`}>
-						{(of: any) => <of.Checkbox label='Open in new tab' />}
-					</form.AppField>
-				</>
-			)}
-		</form.AppField>
-	)
+	return <LinkModeFields form={form} name={path} />
 }
 
 /** One link entry inside a mega menu's flat list or a column's list — same fields as a top-level link (minus appearance/mega-menu, which only apply at the item level). */
