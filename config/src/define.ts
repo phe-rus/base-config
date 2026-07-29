@@ -13,6 +13,7 @@ import {
 	registerBaseConfig,
 	registerEndpointFactories
 } from './collections/registry'
+import { registerAdminConfig } from './admin/functions/config-registry'
 import { labelFromSlug } from './collections/slug'
 import {
 	createContentApiClient,
@@ -279,6 +280,7 @@ export function baseConfig(config: BaseConfigProps): BaseConfigProps {
 	registerBaseConfig(config.collections, config.globals)
 	registerBlocks(config.blocks ?? [])
 	registerEndpointFactories(config.endpointFactories ?? [])
+	registerAdminConfig(config.config)
 
 	const apiOrigin =
 		typeof window !== 'undefined' ? window.location.origin : config.hostDomain

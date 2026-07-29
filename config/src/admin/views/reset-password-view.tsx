@@ -2,17 +2,16 @@ import { cn } from '@base/ui/lib/utils'
 import { t } from '@base/ui/components/sonner'
 import { useAppForm } from '@base/ui/forms'
 import { useMutation } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { z } from 'zod'
 import { getAuthClient, unwrap } from '../../db/collections'
+import { getAdminConfig } from '../functions/config-registry'
 import { AuthBanner } from './auth-banner'
 
 type ResetPasswordViewProps = {
 	title?: string
-	/** e.g. a consumer's own `config.adminIcon` (`AdminSettings`) — omit for no icon. */
+	/** Defaults to `getAdminConfig()?.adminIcon` — see `LoginView`'s own doc comment. */
 	icon?: string
-	/** The `?token=` query param better-auth's reset-password email link appends — the route reads this from its own search params and passes it through. `undefined` (no token in the URL) shows an error state instead of a form. */
-	token: string | undefined
 	loginHref?: string
 	forgotPasswordHref?: string
 }
@@ -31,21 +30,23 @@ const resetPasswordSchema = z
 	})
 
 /**
- * The other half of `ForgotPasswordView` — takes the `token` from the
- * emailed reset link's own `?token=` query param (read by the route,
- * passed in as a prop, since this component itself has no router
- * dependency) and calls `authClient.resetPassword({newPassword, token})`
- * directly.
+ * The other half of `ForgotPasswordView` — reads the `token` from the
+ * emailed reset link's own `?token=` query param directly via
+ * `useSearch({strict: false})` (no `validateSearch` on the mounting route —
+ * this is the one search param the whole admin auth flow needs, and a full
+ * zod-validated route search schema was more ceremony than the value
+ * warranted) and calls `authClient.resetPassword({newPassword, token})`.
  */
 export function ResetPasswordView({
 	title = 'Reset password',
-	icon,
-	token,
+	icon = getAdminConfig()?.adminIcon,
 	loginHref = '/admin/login',
 	forgotPasswordHref = '/admin/forgot-password'
 }: ResetPasswordViewProps) {
 	const authClient = getAuthClient()
 	const navigate = useNavigate()
+	const search = useSearch({ strict: false }) as { token?: string }
+	const token = search.token
 
 	const resetPassword = useMutation({
 		mutationFn: async (newPassword: string) => {

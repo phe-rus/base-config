@@ -5,11 +5,12 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { z } from 'zod'
 import { getAuthClient, unwrap } from '../../db/collections'
+import { getAdminConfig } from '../functions/config-registry'
 import { AuthBanner } from './auth-banner'
 
 type ForgotPasswordViewProps = {
 	title?: string
-	/** e.g. a consumer's own `config.adminIcon` (`AdminSettings`) — omit for no icon. */
+	/** Defaults to `getAdminConfig()?.adminIcon` — see `LoginView`'s own doc comment. */
 	icon?: string
 	loginHref?: string
 	/**
@@ -31,7 +32,7 @@ const forgotPasswordSchema = z.object({ email: z.email() })
  */
 export function ForgotPasswordView({
 	title = 'Forgot password',
-	icon,
+	icon = getAdminConfig()?.adminIcon,
 	loginHref = '/admin/login',
 	resetPasswordHref = '/admin/reset-password'
 }: ForgotPasswordViewProps) {

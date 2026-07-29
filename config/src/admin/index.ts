@@ -14,7 +14,11 @@
 // with, resolving the state `Entry` reads via `useRouteView()`.
 
 export { Topbar } from './views/topbar'
-export { requireAdminSession } from './functions/guard'
+export {
+	requireAdminSession,
+	adminLoader,
+	redirectIfAuthenticated
+} from './functions/guard'
 export type { AdminSessionGuardOptions } from './functions/guard'
 export { createSessionQueryOptions } from './functions/session-query'
 export { CollectionForm } from './views/collection-form'

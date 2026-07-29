@@ -6,6 +6,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { z } from 'zod'
 import { getAuthClient, unwrap } from '../../db/collections'
+import { getAdminConfig } from '../functions/config-registry'
 import { AuthBanner } from './auth-banner'
 
 export type LoginFormValues = {
@@ -16,18 +17,19 @@ export type LoginFormValues = {
 
 type LoginViewProps = {
 	title?: string
-	/** e.g. a consumer's own `config.adminIcon` (`AdminSettings`) — omit for no icon. */
+	/** Defaults to `getAdminConfig()?.adminIcon` (set once via `baseConfig({config: {adminIcon}})`) — pass explicitly only to override that app-wide default for this one screen. Omit both for no icon. */
 	icon?: string
 	createAccountHref?: string
 	forgotPasswordHref?: string
 	termsHref?: string
 	privacyHref?: string
 	/**
-	 * Plain provider names (e.g. `['github', 'google']`) — not introspectable
+	 * Defaults to `getAdminConfig()?.socialProviders` — not introspectable
 	 * from the client object (social providers are configured server-side,
 	 * with real secrets, and better-auth's client has no "list configured
-	 * providers" endpoint), so a consumer declares which ones exist. Omit
-	 * (or pass `[]`) for no social buttons at all.
+	 * providers" endpoint), so a consumer states them once in `baseConfig()`'s
+	 * own `config.socialProviders` rather than per-screen. Pass explicitly
+	 * only to override that for this one screen; `[]` forces no buttons.
 	 */
 	socialProviders?: string[]
 }
@@ -70,16 +72,17 @@ function providerLabel(provider: string): string {
  * plugins (`passkeyClient()`/`twoFactorClient()`), a safe, real runtime
  * check with no server round-trip needed. Social sign-in isn't
  * feature-detectable the same way (see `socialProviders`' own doc
- * comment) — it's rendered from that explicit prop instead.
+ * comment) — it defaults from `getAdminConfig()` (`baseConfig()`'s own
+ * `config.socialProviders`, set once app-wide) rather than a per-call prop.
  */
 export function LoginView({
 	title = 'Sign in',
-	icon,
+	icon = getAdminConfig()?.adminIcon,
 	createAccountHref = '/admin/create-account',
 	forgotPasswordHref = '/admin/forgot-password',
 	termsHref = '/terms',
 	privacyHref = '/privacy',
-	socialProviders = []
+	socialProviders = getAdminConfig()?.socialProviders ?? []
 }: LoginViewProps) {
 	const authClient = getAuthClient()
 	const navigate = useNavigate()

@@ -86,6 +86,14 @@ export type AdminSettings = {
 	 */
 	adminPath: string
 	adminIcon: string
+	/**
+	 * Plain provider names (e.g. `['github', 'google']`) for the admin auth
+	 * screens' own social sign-in buttons — not introspectable from the
+	 * client (social providers are configured server-side, with real
+	 * secrets), so a consumer states them once here rather than passing them
+	 * to every `LoginView`/`CreateAccountView` individually. Omit for none.
+	 */
+	socialProviders?: string[]
 }
 
 /**

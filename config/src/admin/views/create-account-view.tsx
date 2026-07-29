@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { getAuthClient, unwrap } from '../../db/collections'
+import { getAdminConfig } from '../functions/config-registry'
 
 export type CreateAccountFormValues = {
 	name: string
@@ -17,12 +18,12 @@ export type CreateAccountFormValues = {
 
 type CreateAccountViewProps = {
 	title?: string
-	/** e.g. a consumer's own `config.adminIcon` (`AdminSettings`) — omit for no icon. */
+	/** Defaults to `getAdminConfig()?.adminIcon` — see `LoginView`'s own doc comment. */
 	icon?: string
 	loginHref?: string
 	termsHref?: string
 	privacyHref?: string
-	/** See `LoginView`'s own doc comment for why this is a plain, consumer-declared list rather than something feature-detected. */
+	/** Defaults to `getAdminConfig()?.socialProviders` — see `LoginView`'s own doc comment for why this isn't feature-detected. */
 	socialProviders?: string[]
 }
 
@@ -75,11 +76,11 @@ function providerLabel(provider: string): string {
  */
 export function CreateAccountView({
 	title = 'Create account',
-	icon,
+	icon = getAdminConfig()?.adminIcon,
 	loginHref = '/admin/login',
 	termsHref = '/terms',
 	privacyHref = '/privacy',
-	socialProviders = []
+	socialProviders = getAdminConfig()?.socialProviders ?? []
 }: CreateAccountViewProps) {
 	const authClient = getAuthClient()
 	const navigate = useNavigate()
