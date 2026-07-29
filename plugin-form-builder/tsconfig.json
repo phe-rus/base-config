@@ -12,6 +12,7 @@
 			"@base/config/*": ["../config/src/*"],
 			"@base/ui/*": ["../ui/src/*"]
 		},
+		"outDir": "dist",
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": true,

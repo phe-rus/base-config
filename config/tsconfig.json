@@ -3,17 +3,18 @@
 	"compilerOptions": {
 		"target": "ES2022",
 		"jsx": "react-jsx",
+		"jsxImportSource": "react",
 		"module": "ESNext",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"types": ["bun"],
 		"paths": {
-			"@base/config/*": ["./src/*"],
-			"@base/ui/*": ["../ui/src/*"],
-			"@pherus/ui/*": ["../../shared/ui/src/*"]
+			"@base/ui/*": ["../ui/src/*"]
 		},
+		"outDir": "dist",
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
 		"noEmit": true,
 		"skipLibCheck": true,
 		"strict": true,

@@ -4,17 +4,27 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./*": "./src/*"
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"default": "./dist/*.js"
+		}
 	},
 	"bin": {
-		"base": "./src/cli.ts"
+		"base": "./dist/cli.js"
 	},
 	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"tsdown": "latest",
+		"typescript": "^7.0.2"
 	},
 	"dependencies": {
 		"@base/ui": "workspace:*",
@@ -34,6 +44,6 @@
 		"@types/react": "^19",
 		"hono": "^4",
 		"react": ">=19",
-		"typescript": ">=5"
+		"typescript": ">=6"
 	}
 }

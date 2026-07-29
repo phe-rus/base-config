@@ -8,16 +8,19 @@
 		"./*": "./src/*"
 	},
 	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"tsdown": "latest"
 	},
 	"dependencies": {
-		"@base/config": "workspace:*",
-		"@base/ui": "workspace:*",
 		"@tabler/icons-react": "^3.45.0",
 		"@tanstack/react-db": "latest",
+		"@base/config": "workspace:*",
+		"@base/ui": "workspace:*",
 		"zod": "^4.4.3"
 	},
 	"peerDependencies": {

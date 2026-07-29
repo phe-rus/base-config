@@ -4,15 +4,38 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		"./basiccn": "./src/basiccn/index.ts",
-		"./basiccn/preview": "./src/basiccn/preview.tsx",
-		"./forms": "./src/forms/index.ts",
-		"./tables": "./src/tables/index.ts",
-		"./image": "./src/image/index.ts",
-		"./components/*": "./src/components/*.tsx",
-		"./lib/*": "./src/lib/*.ts"
+		"./basiccn": {
+			"types": "./dist/basiccn/index.d.ts",
+			"default": "./dist/basiccn/index.js"
+		},
+		"./basiccn/preview": {
+			"types": "./dist/basiccn/preview.d.ts",
+			"default": "./dist/basiccn/preview.js"
+		},
+		"./forms": {
+			"types": "./dist/forms/index.d.ts",
+			"default": "./dist/forms/index.js"
+		},
+		"./tables": {
+			"types": "./dist/tables/index.d.ts",
+			"default": "./dist/tables/index.js"
+		},
+		"./image": {
+			"types": "./dist/image/index.d.ts",
+			"default": "./dist/image/index.js"
+		},
+		"./components/*": {
+			"types": "./dist/components/*.d.ts",
+			"default": "./dist/components/*.js"
+		},
+		"./lib/*": {
+			"types": "./dist/lib/*.d.ts",
+			"default": "./dist/lib/*.js"
+		}
 	},
 	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -61,6 +84,11 @@
 		"lowlight": "^3.3.0",
 		"react-day-picker": "^10.0.1",
 		"tailwind-merge": "^3.6.0"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"tsdown": "latest",
+		"typescript": "^7.0.2"
 	},
 	"peerDependencies": {
 		"@tanstack/react-form": "latest",
