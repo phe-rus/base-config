@@ -1,7 +1,7 @@
 {
 	"name": "@base/plugin-form-builder",
 	"version": "0.0.1",
-	"private": true,
+	"private": false,
 	"type": "module",
 	"exports": {
 		".": {
