@@ -5,20 +5,28 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
+			"types": "./dist/index.d.mts",
+			"default": "./dist/index.mjs"
 		},
-		"./*": {
-			"types": "./dist/*.d.ts",
-			"default": "./dist/*.js"
+		"./admin": {
+			"types": "./dist/admin/index.d.mts",
+			"default": "./dist/admin/index.mjs"
+		},
+		"./api": {
+			"types": "./dist/api/index.d.mts",
+			"default": "./dist/api/index.mjs"
 		},
 		"./api/*": {
-			"types": "./dist/api/*.d.ts",
-			"default": "./dist/api/*.js"
+			"types": "./dist/api/*.d.mts",
+			"default": "./dist/api/*.mjs"
+		},
+		"./*": {
+			"types": "./dist/*.d.mts",
+			"default": "./dist/*.mjs"
 		}
 	},
 	"bin": {
-		"base": "./dist/cli.js"
+		"base": "./dist/cli.mjs"
 	},
 	"scripts": {
 		"build": "tsdown",

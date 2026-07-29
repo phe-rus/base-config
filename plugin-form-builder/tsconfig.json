@@ -1,5 +1,5 @@
 {
-	"include": ["src", "**/*.ts", "**/*.tsx"],
+	"include": ["src"],
 	"compilerOptions": {
 		"target": "ES2022",
 		"jsx": "react-jsx",
@@ -12,7 +12,6 @@
 			"@base/config/*": ["../config/src/*"],
 			"@base/ui/*": ["../ui/src/*"]
 		},
-		"outDir": "dist",
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": true,
