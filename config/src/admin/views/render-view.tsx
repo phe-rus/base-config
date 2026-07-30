@@ -220,7 +220,11 @@ RenderView.FolderCard = ({
 }: RenderViewFolderCardProps) => {
 	return (
 		<div
-			className={cn('group flex items-center gap-2 rounded-md bg-popover p-3')}
+			className={cn(
+				'group flex items-center gap-2 rounded-md bg-popover p-3',
+				'border border-border border-dashed shadow',
+				'hover:shadow-2xl shadow-primary/15'
+			)}
 		>
 			<button
 				type='button'

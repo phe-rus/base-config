@@ -1,6 +1,6 @@
 import type { AdminSettings } from '../../base.types'
 import { AdminConfigContext } from '../functions/context'
-import { useAdminSession } from '../functions/session-query'
+import { useAdminSession, useSignOut } from '../functions/session-query'
 import { AdminLoading } from './loading'
 import { collectionsBySlug, globalsBySlug } from '../../collections/registry'
 import type { CollectionSlug } from '../../collections/types'
@@ -8,7 +8,6 @@ import {
 	contentCollections,
 	draftCollections,
 	getAuthClient,
-	unwrap,
 	type BetterAuthAdminClient,
 	type ContentCollection,
 	type DraftCollection
@@ -17,7 +16,6 @@ import { Button } from '@baseconfig/ui/components/button'
 import { cn } from '@baseconfig/ui/lib/utils'
 import { IconLayoutSidebarInactive } from '@tabler/icons-react'
 import { useLiveQuery } from '@tanstack/react-db'
-import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect, useState, type PropsWithChildren } from 'react'
 
@@ -153,22 +151,19 @@ function ItemBreadcrumbLive({
 }
 
 /**
- * Split out from `Topbar` itself so `useSession()` (a real hook) is only
- * ever called from a subtree that's *conditionally rendered as a whole*
- * (`{authClient && <SessionGreeting authClient={authClient} />}` below) —
- * never conditionally *called*, which would break React's rules of hooks.
- * Real, live reactive read (better-auth's own `useSession()`, see
- * `BetterAuthAdminClient`'s own doc comment) rather than a `sessions` prop
- * a consumer's own route loader used to have to thread down just for this
- * one display — same self-contained shape the sign-out mutation already has.
+ * Plain, prop-driven — no session read of its own. Used to call
+ * `authClient.useSession()` directly (a real, independent reactive
+ * subscription, separate from `useAdminSession()`'s TanStack Query cache),
+ * which was exactly the class of bug `useAdminSession()`'s own doc comment
+ * describes fixing for `ProviderView.Context`/`Dashboard` — this one spot
+ * was missed, and was still producing genuine duplicate
+ * `/api/auth/get-session` traffic. `Topbar` already has `session` from its
+ * own `useAdminSession()` call; threading the name down as a prop is
+ * strictly cheaper than a second subscription for data the parent already
+ * has in hand.
  */
-function SessionGreeting({
-	authClient
-}: {
-	authClient: BetterAuthAdminClient
-}) {
-	const { data: session } = authClient.useSession()
-	return <p className='hidden md:flex text-sm!'>Holla, {session?.user?.name}</p>
+function SessionGreeting({ name }: { name?: string | null }) {
+	return <p className='hidden md:flex text-sm!'>Holla, {name}</p>
 }
 
 type TopbarProps = PropsWithChildren<{
@@ -213,7 +208,11 @@ export function Topbar({ children, config }: TopbarProps) {
 			{isPending ? (
 				<AdminLoading />
 			) : hasSession ? (
-				<TopbarChrome authClient={authClient} config={config}>
+				<TopbarChrome
+					authClient={authClient}
+					config={config}
+					userName={session?.user?.name}
+				>
 					{children}
 				</TopbarChrome>
 			) : (
@@ -226,10 +225,12 @@ export function Topbar({ children, config }: TopbarProps) {
 function TopbarChrome({
 	children,
 	config,
-	authClient
+	authClient,
+	userName
 }: PropsWithChildren<{
 	config: AdminSettings
 	authClient: BetterAuthAdminClient | undefined
+	userName?: string | null
 }>) {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname
@@ -238,19 +239,8 @@ function TopbarChrome({
 		pathname,
 		config.adminPath
 	)
-	const navigate = useNavigate()
-	const { mutate: handleSignOut, isPending: signingOut } = useMutation({
-		mutationFn: async () => {
-			if (!authClient) {
-				throw new Error(
-					'Sign-out was clicked but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
-				)
-			}
-			return unwrap(await authClient.signOut())
-		},
-		onSuccess: () => {
-			navigate({ to: '/admin/login', replace: true, reloadDocument: true })
-		}
+	const { signOut: handleSignOut, isPending: signingOut } = useSignOut({
+		redirectTo: '/admin/login'
 	})
 
 	return (
@@ -295,7 +285,7 @@ function TopbarChrome({
 					</div>
 
 					<nav className='flex items-center gap-2'>
-						{authClient && <SessionGreeting authClient={authClient} />}
+						{authClient && <SessionGreeting name={userName} />}
 						{authClient && (
 							<Button
 								variant='destructive'

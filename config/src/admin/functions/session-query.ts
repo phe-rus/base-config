@@ -1,5 +1,6 @@
-import { queryOptions, useQuery } from '@tanstack/react-query'
-import { getAuthClient } from '../../db/collections'
+import { useMutation, queryOptions, useQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { getAuthClient, unwrap } from '../../db/collections'
 
 /**
  * The tuned `queryOptions()` wrapper behind a consumer's own session query —
@@ -42,7 +43,8 @@ export function createSessionQueryOptions<TSession>(
 		})
 }
 
-type AdminSessionData = { user: { role?: string | string[] | null } } | null
+type SessionUser = { name?: string | null; role?: string | string[] | null }
+type AdminSessionData = { user: SessionUser } | null
 
 /**
  * The one shared session read every admin-side gate uses — `Topbar`
@@ -88,4 +90,77 @@ export function useAdminSession(): {
 		isPending: query.isPending,
 		hasSession: !query.isPending && Boolean(query.data)
 	}
+}
+
+/**
+ * A public-facing counterpart to `useAdminSession()` — for a consumer's own
+ * non-admin UI (a header, an account menu, ...) that wants to know "is
+ * someone signed in" without any of `useAdminSession()`'s admin-gate-specific
+ * `hasSession` semantics (deliberately `true` even with no session at all,
+ * so an ungated admin route doesn't hang forever — wrong default for a
+ * plain "am I logged in" read). **Reuses the exact same `queryFn` body as
+ * `useAdminSession()`, not just the same `queryKey`** — two hooks sharing a
+ * `queryKey` but returning differently-shaped data from their own `queryFn`
+ * would corrupt whichever one didn't win the race to actually fetch; this
+ * slices `.user` back out at the hook's own return, after the shared cache
+ * value resolves, not at fetch time. Confirmed this is the actual dedup
+ * mechanism at work — every caller (`useAdminSession()`, `useSession()`,
+ * `Topbar`) genuinely shares one `/api/auth/get-session` request, not just
+ * one query key with several independent fetches racing underneath it.
+ */
+export function useSession(): {
+	user: SessionUser | null
+	isPending: boolean
+} {
+	const authClient = getAuthClient()
+	const query = useQuery({
+		...createSessionQueryOptions(async () => {
+			const result = await authClient?.getSession()
+			return (result?.data ?? null) as AdminSessionData
+		})(),
+		enabled: Boolean(authClient)
+	})
+
+	if (!authClient) {
+		return { user: null, isPending: false }
+	}
+	return {
+		user: query.data?.user ?? null,
+		isPending: query.isPending
+	}
+}
+
+/**
+ * Wraps `authClient.signOut()` plus a post-sign-out redirect — the exact
+ * pattern `Topbar`'s own sign-out button already used inline (see its own
+ * doc comment), extracted so a consumer's own non-admin UI doesn't have to
+ * duplicate it, and so the two don't drift apart over time. `redirectTo`
+ * accepts any resolved path string, not a typed route — same
+ * "resolved literal path, not a typed route pattern" trade-off every other
+ * dynamic `navigate({to})` call in this package already makes.
+ */
+export function useSignOut(options?: { redirectTo?: string }): {
+	signOut: () => void
+	isPending: boolean
+} {
+	const authClient = getAuthClient()
+	const navigate = useNavigate()
+	const mutation = useMutation({
+		mutationFn: async () => {
+			if (!authClient) {
+				throw new Error(
+					'useSignOut() was called but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
+				)
+			}
+			return unwrap(await authClient.signOut())
+		},
+		onSuccess: () => {
+			navigate({
+				to: (options?.redirectTo ?? '/') as any,
+				replace: true,
+				reloadDocument: true
+			})
+		}
+	})
+	return { signOut: mutation.mutate, isPending: mutation.isPending }
 }

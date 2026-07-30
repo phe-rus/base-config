@@ -24,7 +24,11 @@ export {
 	redirectIfAuthenticated
 } from './functions/guard'
 export type { AdminSessionGuardOptions } from './functions/guard'
-export { createSessionQueryOptions } from './functions/session-query'
+export {
+	createSessionQueryOptions,
+	useSession,
+	useSignOut
+} from './functions/session-query'
 export { CollectionForm, CollectionTable, GlobalForm } from './views/document'
 export { ContextView, ProviderView } from './views/dispatch'
 export {
