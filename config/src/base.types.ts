@@ -5,7 +5,7 @@ import type { BlockConfig } from './collections/blocks/types'
 import type { BetterAuthAdminClient } from './db/collections'
 import type { EndpointFactory } from './db/content-route'
 
-// `@base/config`'s own root shape — independent of any one consumer's actual
+// `@baseconfig/core`'s own root shape — independent of any one consumer's actual
 // values. A consuming app (e.g. `www/src/hooks/config/base.config.ts`)
 // imports these types and fills in the real collections/globals/admin
 // settings for its own site.
@@ -121,7 +121,7 @@ export type BaseConfigProps = {
 	/**
 	 * Extra block types beyond this package's own 7 built-ins (richtext/
 	 * media/cta/banner/grid/columns/relatedPosts) — almost always populated
-	 * by a plugin (e.g. `@base/plugin-form-builder`'s `formBlock`) rather
+	 * by a plugin (e.g. `@baseconfig/plugin-form-builder`'s `formBlock`) rather
 	 * than hand-written here directly. `baseConfig()` merges these into the
 	 * live `blocksBySlug` registry (`collections/blocks/registry.ts`) as a
 	 * side effect, same pattern `collections`/`globals` already use.

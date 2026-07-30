@@ -1,4 +1,4 @@
-import { defineCollection } from '@base/config'
+import { defineCollection } from '@baseconfig/core'
 
 /**
  * The `form-submissions` collection — one row per real public submission,

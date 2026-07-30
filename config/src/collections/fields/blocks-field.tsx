@@ -1,4 +1,4 @@
-import { buttonVariants } from '@base/ui/components/button'
+import { buttonVariants } from '@baseconfig/ui/components/button'
 import {
 	Dialog,
 	DialogClose,
@@ -7,9 +7,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger
-} from '@base/ui/components/dialog'
-import { ArrayField } from '@base/ui/forms'
-import { cn } from '@base/ui/lib/utils'
+} from '@baseconfig/ui/components/dialog'
+import { ArrayField } from '@baseconfig/ui/forms'
+import { cn } from '@baseconfig/ui/lib/utils'
 import { IconBox, IconPlus } from '@tabler/icons-react'
 import { blocksBySlug } from '../blocks'
 

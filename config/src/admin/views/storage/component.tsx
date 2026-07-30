@@ -1,5 +1,5 @@
-import { buttonVariants } from '@base/ui/components/button'
-import { cn } from '@base/ui/lib/utils'
+import { buttonVariants } from '@baseconfig/ui/components/button'
+import { cn } from '@baseconfig/ui/lib/utils'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import {

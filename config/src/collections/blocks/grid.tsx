@@ -1,4 +1,4 @@
-import { cn } from '@base/ui/lib/utils'
+import { cn } from '@baseconfig/ui/lib/utils'
 import { IconLayoutGrid } from '@tabler/icons-react'
 import { z } from 'zod'
 import { BlocksField } from '../fields/blocks-field'

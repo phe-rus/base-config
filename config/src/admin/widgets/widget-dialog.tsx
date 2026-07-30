@@ -1,4 +1,4 @@
-import { Button } from '@base/ui/components/button'
+import { Button } from '@baseconfig/ui/components/button'
 import {
 	Drawer,
 	DrawerContent,
@@ -6,8 +6,8 @@ import {
 	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle
-} from '@base/ui/components/drawer'
-import { cn } from '@base/ui/lib/utils'
+} from '@baseconfig/ui/components/drawer'
+import { cn } from '@baseconfig/ui/lib/utils'
 import type { PropsWithChildren, ReactNode } from 'react'
 
 type WidgetDialogProps = PropsWithChildren<{

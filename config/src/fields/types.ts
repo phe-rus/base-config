@@ -1,9 +1,9 @@
 import type { FC } from 'react'
-import type { SelectOption } from '@base/ui/forms'
+import type { SelectOption } from '@baseconfig/ui/forms'
 
-// The declarative field-authoring vocabulary — `@base/config`'s own core.
+// The declarative field-authoring vocabulary — `@baseconfig/core`'s own core.
 // Each variant here maps 1:1 onto an existing rendered field
-// (`@base/ui/forms`'s primitives, or one of `collections/fields`'s
+// (`@baseconfig/ui/forms`'s primitives, or one of `collections/fields`'s
 // composites) — this is a vocabulary for *describing* a collection's fields.
 // `schema.ts`'s `fieldsToSchema`/`tabsToSchema` turn it into a zod schema;
 // `renderer.tsx`'s `createFieldsRenderer`/`createFlatFieldsRenderer` turn it
@@ -34,7 +34,7 @@ export type SwitchFieldConfig = BaseFieldConfig & { type: 'switch' }
 export type DateFieldConfig = BaseFieldConfig & { type: 'date' }
 export type KeywordsFieldConfig = BaseFieldConfig & { type: 'keywords' }
 
-/** A single file/image field — see `Upload` in `@base/ui/forms`. */
+/** A single file/image field — see `Upload` in `@baseconfig/ui/forms`. */
 export type UploadFieldConfig = BaseFieldConfig & {
 	type: 'upload'
 	accept?: string

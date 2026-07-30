@@ -22,7 +22,7 @@ export default defineConfig((inlineConfig) => ({
 			'react',
 			'hono',
 			'zod',
-			'@base/ui',
+			'@baseconfig/ui',
 			'react-dom',
 			'typescript',
 			'drizzle-orm',

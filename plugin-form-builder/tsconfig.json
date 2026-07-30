@@ -7,10 +7,10 @@
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"types": ["bun"],
 		"paths": {
-			"@base/plugin-form-builder/*": ["./src/*"],
-			"@base/config": ["../config/src/index.ts"],
-			"@base/config/*": ["../config/src/*"],
-			"@base/ui/*": ["../ui/src/*"]
+			"@baseconfig/plugin-form-builder/*": ["./src/*"],
+			"@baseconfig/core": ["../config/src/index.ts"],
+			"@baseconfig/core/*": ["../config/src/*"],
+			"@baseconfig/ui/*": ["../ui/src/*"]
 		},
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,

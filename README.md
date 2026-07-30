@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./screenshot/icon.png" alt="baseConfig" width="96" height="96" />
+  <img src="./screenshot/baseConfig.png" alt="baseConfig" />
 </p>
 
 <h1 align="center">baseConfig</h1>
@@ -10,9 +10,9 @@ This repo is a Bun workspace of the three packages that make up baseConfig:
 
 | Package | What it is |
 | --- | --- |
-| [`@base/config`](./config) | The engine itself — field vocabulary, schema deriver, content persistence (D1), the Hono API layer, and the full admin UI shell. |
-| [`@base/ui`](./ui) | The sibling primitive library — vendored shadcn/base-ui components, a tiptap v3 rich text editor, and the `useAppForm`-based form field system `@base/config` renders every field through. |
-| [`@base/plugin-form-builder`](./plugin-form-builder) | A real plugin built on baseConfig's extension points — a `forms`/`form-submissions` collection pair plus a public contact-form block that posts straight to a generated endpoint. |
+| [`@baseconfig/core`](./config) | The engine itself — field vocabulary, schema deriver, content persistence (D1), the Hono API layer, and the full admin UI shell. |
+| [`@baseconfig/ui`](./ui) | The sibling primitive library — vendored shadcn/base-ui components, a tiptap v3 rich text editor, and the `useAppForm`-based form field system `@baseconfig/core` renders every field through. |
+| [`@baseconfig/plugin-form-builder`](./plugin-form-builder) | A real plugin built on baseConfig's extension points — a `forms`/`form-submissions` collection pair plus a public contact-form block that posts straight to a generated endpoint. |
 
 ## Screenshots
 
@@ -31,12 +31,12 @@ This repo is a Bun workspace of the three packages that make up baseConfig:
 ## Quick start
 
 ```bash
-bun add @base/config @base/ui hono drizzle-orm better-auth
+bun add @baseconfig/core @baseconfig/ui hono drizzle-orm better-auth
 ```
 
 ```ts
 // base.config.ts — one call describes your whole app
-import { baseConfig, defineCollection, defineGlobal } from '@base/config'
+import { baseConfig, defineCollection, defineGlobal } from '@baseconfig/core'
 
 const posts = defineCollection({
 	slug: 'posts',
@@ -62,7 +62,7 @@ export default baseConfig({
 
 ```ts
 // api entry — the whole server-side surface is one call
-import { createHandler } from '@base/config/api'
+import { createHandler } from '@baseconfig/core/api'
 
 export default createHandler({
 	db: drizzle(env.BASECONFIG),
@@ -86,9 +86,9 @@ Every package builds to `dist/` via [tsdown](https://tsdown.dev) (rolldown-based
 
 ## How this compares to Payload CMS
 
-`@base/config` borrows Payload's shape on purpose — `defineCollection`/`defineGlobal`, a REST surface shaped like Payload's own, Local-API-style client method names (`find`/`findByID`/`create`/`update`) — because that shape is a good one, not because the goal is to be a drop-in replacement. The two projects optimize for different deployments: Payload targets a long-running Node server (commonly paired with Next.js) with a very deep, mature feature set built up over years; `@base/config` targets a single Cloudflare Worker, trading some of that depth for an edge-native runtime and a genuinely local-first editing model Payload doesn't have.
+`@baseconfig/core` borrows Payload's shape on purpose — `defineCollection`/`defineGlobal`, a REST surface shaped like Payload's own, Local-API-style client method names (`find`/`findByID`/`create`/`update`) — because that shape is a good one, not because the goal is to be a drop-in replacement. The two projects optimize for different deployments: Payload targets a long-running Node server (commonly paired with Next.js) with a very deep, mature feature set built up over years; `@baseconfig/core` targets a single Cloudflare Worker, trading some of that depth for an edge-native runtime and a genuinely local-first editing model Payload doesn't have.
 
-| Area | Payload CMS | `@base/config` | Status |
+| Area | Payload CMS | `@baseconfig/core` | Status |
 | --- | --- | --- | --- |
 | Collections & globals | ✅ | ✅ | Parity |
 | Field vocabulary | ~30 types, incl. virtual `join` | ~20 types — text/textarea/richtext/checkbox/switch/date/keywords/upload/select/radio/email/number/password/code/json/slug/point/array/blocks/relationship/relations/meta/menu/links, plus layout-only row/collapsible/group/tabs/ui | Partial — deliberately smaller, growing |
@@ -105,7 +105,7 @@ Every package builds to `dist/` via [tsdown](https://tsdown.dev) (rolldown-based
 | Query language | Rich `where` DSL across nested fields | Top-level columns only (`status`/`slug`, `equals`) — no querying into a document's own JSON data | **Gap** |
 | Relationships | Polymorphic, dynamic across all collections | `hasMany`/single, but the picker's own collection list is hand-written (three `useLiveQuery` calls), not derived from the registry | Partial — real, disclosed gap |
 | `join` field | ✅ | Not implemented — deliberately deferred (needs real query-layer support first) | **Missing** |
-| Plugin system | Deep — plugins can extend nearly every layer | Narrow: `endpointFactories`/`hooks`/`blocks` registration only (proven out by `@base/plugin-form-builder`) — a general plugin system was tried once and removed | **Narrower by design** |
+| Plugin system | Deep — plugins can extend nearly every layer | Narrow: `endpointFactories`/`hooks`/`blocks` registration only (proven out by `@baseconfig/plugin-form-builder`) — a general plugin system was tried once and removed | **Narrower by design** |
 | Jobs / scheduled tasks | ✅ | None | **Missing** |
 | Database | Postgres, MongoDB, SQLite adapters | Cloudflare D1 (SQLite) only, raw SQL against dynamically generated per-collection tables | Different tradeoff, not portable |
 | Deployment | Node.js server | **One Cloudflare Worker** — content, media, and admin UI all in one edge deployment | Differentiator |
@@ -124,7 +124,7 @@ In rough priority order, based on the gaps above and what's already flagged as d
 4. **KV edge-cache for content reads** — the storage CDN route already has this; content (`/api/<collection>`) doesn't yet.
 5. **Image variants/focal point** for uploads — currently one file in, one URL out, no resizing.
 6. **Server-side version history and scheduled publish** — local-first drafting solves "don't lose my work," not "what did this look like last week" or "publish this at 9am."
-7. **A wider plugin surface** — the current `endpointFactories`/`hooks`/`blocks` registration covers what `@base/plugin-form-builder` needs; a real third-party plugin ecosystem needs more surface area than that.
+7. **A wider plugin surface** — the current `endpointFactories`/`hooks`/`blocks` registration covers what `@baseconfig/plugin-form-builder` needs; a real third-party plugin ecosystem needs more surface area than that.
 
 Contributions on any of these — or on anything else in the field/admin-UI vocabulary — are genuinely welcome; see below.
 
@@ -146,3 +146,7 @@ bun run dev
 ## License
 
 [MIT](./LICENSE)
+
+## 👏 Thanks to all our contributors
+
+<img align="center" src="https://contributors-img.web.app/image?repo=phe-rus/base-config"/>

@@ -13,8 +13,8 @@ import {
 	type ContentCollection,
 	type DraftCollection
 } from '../../db/collections'
-import { Button } from '@base/ui/components/button'
-import { cn } from '@base/ui/lib/utils'
+import { Button } from '@baseconfig/ui/components/button'
+import { cn } from '@baseconfig/ui/lib/utils'
 import { IconLayoutSidebarInactive } from '@tabler/icons-react'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useMutation } from '@tanstack/react-query'

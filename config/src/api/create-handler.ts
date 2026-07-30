@@ -62,9 +62,9 @@ export type CreateHandlerOptions = {
 	 * comment, `db/content-route.ts`, for the general rule this narrows) —
 	 * forwarded as-is to every registered `EndpointFactory` (merged into
 	 * `{db, handleEmail}`), so a plugin that needs it (today, only
-	 * `@base/plugin-form-builder`'s own `formBuilderEndpoints`) reads it
+	 * `@baseconfig/plugin-form-builder`'s own `formBuilderEndpoints`) reads it
 	 * straight off its own factory arguments. This package still never
-	 * imports `@base/plugin-form-builder` — the shape here is a plain
+	 * imports `@baseconfig/plugin-form-builder` — the shape here is a plain
 	 * structural type, the same trade-off `AuthServerLike`/`R2BucketLike`
 	 * already make, not a real dependency on that plugin's own types.
 	 * Configure directly here, right alongside `db`/`auth`/`bindings` — not
@@ -124,7 +124,7 @@ export type CreateHandlerOptions = {
  *
  * A consumer's entire server-side footprint collapses to building this
  * once and serving it from whatever route file matches `/api/*` — e.g.
- * TanStack Start's own `@base/config/api`'s `Handler(app)` wrapping the
+ * TanStack Start's own `@baseconfig/core/api`'s `Handler(app)` wrapping the
  * returned app into a `{GET, POST, ...}` method map.
  */
 export function createHandler({

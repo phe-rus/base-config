@@ -11,7 +11,7 @@ import type { BlockConfig } from './types'
  * A live, runtime registry rather than the closed `Record<BlockSlug, BlockConfig>`
  * this used to be — mirrors `collections/registry.ts`'s own
  * `collectionsBySlug`/`globalsBySlug` pattern, for the same reason: a
- * plugin package (e.g. `@base/plugin-form-builder`) can't add a member to a
+ * plugin package (e.g. `@baseconfig/plugin-form-builder`) can't add a member to a
  * union type it doesn't own, so this needs to be something it can register
  * *into* instead. Seeded with this package's own 7 built-in blocks eagerly
  * (unlike `collectionsBySlug`, which starts empty — these aren't optional,

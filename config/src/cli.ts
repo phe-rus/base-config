@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * `@base/config`'s own CLI — `bun x base --config=<path> --output=<path>`,
+ * `@baseconfig/core`'s own CLI — `bun x base --config=<path> --output=<path>`,
  * matching `auth:gen`'s own `bun x auth@rc generate --config=... --output=...`
  * invocation shape exactly: `--config` points at the consumer's own
  * `base.config.ts` (whatever file calls `baseConfig({...})`), same as

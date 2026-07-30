@@ -1,5 +1,5 @@
-import { Button } from '@base/ui/components/button'
-import { ArrayField } from '@base/ui/forms'
+import { Button } from '@baseconfig/ui/components/button'
+import { ArrayField } from '@baseconfig/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
 import { collectionsBySlug } from '../registry'
 import { appearanceValues, collectionPath } from '../types'
@@ -99,7 +99,7 @@ export type LinksFieldProps = {
  * that call it without going through the generic per-field-type renderer
  * (`cta.tsx`/`banner.tsx`, the same way `related-posts.tsx` already
  * reuses `RelationGroupFields` directly). `ArrayField`'s own default row
- * label (`item?.label ?? ...`, `@base/ui`'s `Array/index.tsx`) already
+ * label (`item?.label ?? ...`, `@baseconfig/ui`'s `Array/index.tsx`) already
  * works here for free — every item genuinely has a real `label`.
  */
 export function LinksField({

@@ -1,4 +1,4 @@
-// Minimal shim for standalone `tsc` runs of this package — `@base/ui`'s
+// Minimal shim for standalone `tsc` runs of this package — `@baseconfig/ui`'s
 // `sonner.tsx` has a side-effect `import '...css'`, which Vite/bundler-mode
 // resolution handles natively but plain `tsc` doesn't know about unless
 // something declares it. `www`'s own tsconfig gets this for free via

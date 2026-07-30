@@ -11,8 +11,8 @@ import {
 	ComboboxList,
 	ComboboxValue,
 	useComboboxAnchor
-} from '@base/ui/components/combobox'
-import { FieldShell, useFieldState } from '@base/ui/forms'
+} from '@baseconfig/ui/components/combobox'
+import { FieldShell, useFieldState } from '@baseconfig/ui/forms'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useMemo, useState } from 'react'
 import type { CollectionSlug } from '../types'
@@ -69,12 +69,12 @@ function useRelationshipOptions(
 		// `users` is deliberately excluded — real accounts aren't a relatable
 		// content type, and (being server-backed, not `localStorage`) aren't
 		// queried here at all. See `CollectionConfig['auth']`. A plugin's own
-		// collections (e.g. `@base/plugin-form-builder`'s `forms`) are
+		// collections (e.g. `@baseconfig/plugin-form-builder`'s `forms`) are
 		// deliberately *not* wired in here either — this component only knows
 		// about the host app's own fixed `CollectionSlug` union (React's
 		// rules of hooks rule out looping `useLiveQuery` over a runtime-length
 		// list), so a plugin needing its own relationship-style picker builds
-		// a small one of its own instead (see `@base/plugin-form-builder`'s
+		// a small one of its own instead (see `@baseconfig/plugin-form-builder`'s
 		// own form-block picker) rather than this file growing a hook per
 		// plugin.
 		const bySlug: Partial<Record<CollectionSlug, typeof pages>> = {

@@ -20,7 +20,7 @@ export type BaseConfigRouteBindings = {
 }
 
 /**
- * Everything `@base/config` itself owns as API routes — content CRUD and
+ * Everything `@baseconfig/core` itself owns as API routes — content CRUD and
  * storage — composed into one app a consumer mounts with a single call:
  *
  * ```ts

@@ -1,4 +1,4 @@
-import type { BaseConfigProps, Plugin } from '@base/config'
+import type { BaseConfigProps, Plugin } from '@baseconfig/core'
 import { formBlock } from './form-block'
 import { formBuilderEndpoints } from './endpoints'
 import { formSubmissionsCollection } from './form-submissions-collection'
@@ -13,7 +13,7 @@ export type FormBuilderEmail = {
 }
 
 /**
- * This plugin's own email contract, matching `@base/config`'s own
+ * This plugin's own email contract, matching `@baseconfig/core`'s own
  * `CreateHandlerOptions['handleEmail']` structurally (that's the *only*
  * place a real implementation is ever configured — `createHandler({handleEmail})`
  * in the consumer's own server-only API entry, never here, never in
@@ -34,7 +34,7 @@ export type FormBuilderPluginOptions = {
 	 * every interpolated email about to be handled for one submission,
 	 * returns the (possibly transformed) list — e.g. to wrap `html` in a
 	 * shared template. Must stay pure/isomorphic-safe like any other Tier-1
-	 * hook (see `CollectionHooks`' own doc comment, `@base/config`'s
+	 * hook (see `CollectionHooks`' own doc comment, `@baseconfig/core`'s
 	 * `base.types.ts`) — it only ever transforms data that's already been
 	 * computed, it doesn't send anything itself.
 	 */
@@ -79,7 +79,7 @@ export function getFormBuilderOptions(): FormBuilderPluginOptions {
  *
  * **How the public half (`formBuilderEndpoints`, needs `db` — a real
  * binding this isomorphic config can never have, see `EndpointFactory`'s
- * own doc comment, `@base/config`'s `db/content-route.ts`) still ends up
+ * own doc comment, `@baseconfig/core`'s `db/content-route.ts`) still ends up
  * wired without a second call**: rather than building real endpoints here,
  * this pushes the *function* `formBuilderEndpoints` itself into
  * `config.endpointFactories` — a plain function reference is
@@ -91,7 +91,7 @@ export function getFormBuilderOptions(): FormBuilderPluginOptions {
  * extra field is threaded through too — so `www/src/api/index.ts` never
  * imports anything from this package at all beyond `formBuilderEndpoints`
  * being reachable through `config.endpointFactories`, and a plain
- * `import '@/config/base.config'` for its side effect (see `@base/config`'s
+ * `import '@/config/base.config'` for its side effect (see `@baseconfig/core`'s
  * own CLAUDE.md, "The circular-import trap," for why that one import is
  * required — without it, `createHandler()` can read an empty registry if
  * nothing else has evaluated `base.config.ts` first).

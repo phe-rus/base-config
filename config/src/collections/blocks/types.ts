@@ -33,7 +33,7 @@ export type BlockConfig = {
 	 * closed list of *built-in* block slugs (still useful as a restriction
 	 * hint on `BlocksFieldConfig['blocks']`), but `BlockConfig` itself also
 	 * describes a *plugin's* own blocks (e.g.
-	 * `@base/plugin-form-builder`'s `formBlock`), which by definition aren't
+	 * `@baseconfig/plugin-form-builder`'s `formBlock`), which by definition aren't
 	 * members of this package's own union. See `registry.ts`'s
 	 * `registerBlocks()`.
 	 */

@@ -2,13 +2,13 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger
-} from '@base/ui/components/collapsible'
+} from '@baseconfig/ui/components/collapsible'
 import {
 	Tabs,
 	TabsContent,
 	TabsList,
 	TabsTrigger
-} from '@base/ui/components/tabs'
+} from '@baseconfig/ui/components/tabs'
 import { IconChevronDown } from '@tabler/icons-react'
 import type { FC } from 'react'
 import type { CollectionFieldsProps } from '../base.types'

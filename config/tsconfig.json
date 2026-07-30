@@ -8,7 +8,7 @@
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"types": ["bun"],
 		"paths": {
-			"@base/ui/*": ["../ui/src/*"]
+			"@baseconfig/ui/*": ["../ui/src/*"]
 		},
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,

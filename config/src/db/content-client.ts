@@ -14,7 +14,7 @@ import { requireContentDataSource } from './collections'
  * `updateGlobal`), not a client a consumer builds themselves. Reads
  * `requireContentDataSource()` at call time (populated once by
  * `baseConfig({contentClient: ...})`, see `collections.ts`), so this can be
- * imported directly — `import { base } from '@base/config'` — with no
+ * imported directly — `import { base } from '@baseconfig/core'` — with no
  * client-construction step in `www` at all. Every call underneath still
  * goes through the consumer's own Hono RPC client (`ContentApiClient`,
  * built by `createContentApiClient`) — never `fetch` directly.

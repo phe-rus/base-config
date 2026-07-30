@@ -17,7 +17,7 @@ export function useAdminConfig(): AdminSettings {
 	const config = useContext(AdminConfigContext)
 	if (!config) {
 		throw new Error(
-			"useAdminConfig() called outside of <Topbar> — every `@base/config` page component must render below the admin route's <Topbar>."
+			"useAdminConfig() called outside of <Topbar> — every `@baseconfig/core` page component must render below the admin route's <Topbar>."
 		)
 	}
 	return config

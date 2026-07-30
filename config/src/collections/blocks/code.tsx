@@ -1,6 +1,6 @@
-import type { BasiccnContent } from '@base/ui/basiccn'
-import { Preview } from '@base/ui/basiccn/preview'
-import { defaultCodeEditorLanguages } from '@base/ui/components/code-editor'
+import type { BasiccnContent } from '@baseconfig/ui/basiccn'
+import { Preview } from '@baseconfig/ui/basiccn/preview'
+import { defaultCodeEditorLanguages } from '@baseconfig/ui/components/code-editor'
 import { IconCode } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'
@@ -49,7 +49,7 @@ function looksLikeJson(value: string): boolean {
  * pattern `nav-menu-field.tsx` already uses (`f.state.value === 'custom' ?
  * <form.AppField name={...}>...`), not a new mechanism. The language
  * select itself lives inline in `f.Code`'s own corner (`languages`/
- * `onLanguageChange`, see `@base/ui/forms`' `Code` field) — no separate
+ * `onLanguageChange`, see `@baseconfig/ui/forms`' `Code` field) — no separate
  * visible field for it anymore.
  */
 function CodeBlockFields({ form, path }: BlockFieldsProps) {

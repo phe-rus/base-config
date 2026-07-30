@@ -5,8 +5,8 @@ import {
 } from '../../../db/collections'
 import { useDocument } from '../../../db/use-document'
 import { DocumentHeader } from './document-header'
-import { Button } from '@base/ui/components/button'
-import { t } from '@base/ui/components/sonner'
+import { Button } from '@baseconfig/ui/components/button'
+import { t } from '@baseconfig/ui/components/sonner'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useEffect, useState } from 'react'
 

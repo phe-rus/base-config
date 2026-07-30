@@ -6,7 +6,7 @@
 		"module": "ESNext",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"paths": {
-			"@base/ui/*": ["./src/*"]
+			"@baseconfig/ui/*": ["./src/*"]
 		},
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,

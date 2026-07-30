@@ -1,5 +1,5 @@
-import type { BasiccnContent } from '@base/ui/basiccn'
-import { Preview } from '@base/ui/basiccn/preview'
+import type { BasiccnContent } from '@baseconfig/ui/basiccn'
+import { Preview } from '@baseconfig/ui/basiccn/preview'
 import { IconArticle } from '@tabler/icons-react'
 import { z } from 'zod'
 import type { BlockConfig, BlockFieldsProps } from './types'

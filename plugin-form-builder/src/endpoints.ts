@@ -1,5 +1,5 @@
-import { createDocument, createId, getDocument } from '@base/config'
-import type { EndpointFactory, EndpointFactoryBindings } from '@base/config'
+import { createDocument, createId, getDocument } from '@baseconfig/core'
+import type { EndpointFactory, EndpointFactoryBindings } from '@baseconfig/core'
 import { getFormBuilderOptions } from './plugin'
 import type { FormData } from './forms-collection'
 
@@ -21,14 +21,14 @@ function interpolate(template: string, data: Record<string, unknown>): string {
 
 /**
  * The public half of the form builder — an `EndpointFactory`
- * (`@base/config`'s own `db/content-route.ts`), not a function a consumer
+ * (`@baseconfig/core`'s own `db/content-route.ts`), not a function a consumer
  * calls directly. `plugin.ts` registers this itself, into
  * `config.endpointFactories`, the moment `formBuilderPlugin()` runs — so
  * `createHandler()` picks it up automatically and a consumer never imports
  * this file at all. `handleEmail` comes straight off this factory's own
  * `EndpointFactoryBindings` argument — `createHandler({handleEmail: ...})`
  * is what actually supplies it (see that option's own doc comment,
- * `@base/config`'s `api/create-handler.ts`); `beforeEmail` is the one
+ * `@baseconfig/core`'s `api/create-handler.ts`); `beforeEmail` is the one
  * piece still read from `getFormBuilderOptions()` (this plugin's own
  * isomorphic-safe registry, configured via `formBuilderPlugin({beforeEmail})`
  * in `base.config.ts`). One real endpoint: `POST /api/forms/:id/submit`,

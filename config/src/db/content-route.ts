@@ -69,7 +69,7 @@ export type ContentEndpoint = {
  * `api/create-handler.ts`) is the one deliberate, named exception today —
  * `createHandler()` forwards it into every factory's own bindings
  * alongside `db` when given, so a factory that wants it (only
- * `@base/plugin-form-builder`'s own `formBuilderEndpoints` does) can widen
+ * `@baseconfig/plugin-form-builder`'s own `formBuilderEndpoints` does) can widen
  * its own declared parameter type to read it, still structurally
  * assignable to `EndpointFactory` below since the field is optional. Not a
  * pattern to repeat reflexively for every future plugin need — see

@@ -4,7 +4,7 @@
 // know about unless something declares it. `www`'s own tsconfig gets this
 // for free via `vite/client` (a devDependency there); this package can't
 // depend on `vite` itself just for an ambient type, so it declares the one
-// thing it needs directly instead. Same shim `@base/config` already has
+// thing it needs directly instead. Same shim `@baseconfig/core` already has
 // for the same reason.
 declare module '*.css' {
 	const _unused: undefined

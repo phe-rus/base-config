@@ -1,4 +1,4 @@
-import { useAppForm } from '@base/ui/forms'
+import { useAppForm } from '@baseconfig/ui/forms'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useSelector } from '@tanstack/react-store'
 import { useEffect } from 'react'

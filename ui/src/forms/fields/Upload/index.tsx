@@ -22,7 +22,7 @@ type UploadProps = BaseFieldProps & {
 	 * closes it. Kept as an injected render function rather than a fixed
 	 * component so this package stays free of any real backend/storage
 	 * dependency — the actual browser UI (fetching a file listing, uploading,
-	 * etc.) lives in the consumer, e.g. `@base/config`'s `MediaPickerDrawer`.
+	 * etc.) lives in the consumer, e.g. `@baseconfig/core`'s `MediaPickerDrawer`.
 	 * Omit to skip the "choose from existing" affordance entirely.
 	 */
 	renderBrowser?: (props: {

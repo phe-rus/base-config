@@ -1,7 +1,7 @@
-import type { BlockConfig, BlockFieldsProps } from '@base/config'
-import { base, getContentCollection } from '@base/config'
-import { Button } from '@base/ui/components/button'
-import { Checkbox } from '@base/ui/components/checkbox'
+import type { BlockConfig, BlockFieldsProps } from '@baseconfig/core'
+import { base, getContentCollection } from '@baseconfig/core'
+import { Button } from '@baseconfig/ui/components/button'
+import { Checkbox } from '@baseconfig/ui/components/checkbox'
 import {
 	Combobox,
 	ComboboxContent,
@@ -9,10 +9,10 @@ import {
 	ComboboxInput,
 	ComboboxItem,
 	ComboboxList
-} from '@base/ui/components/combobox'
-import { Input } from '@base/ui/components/input'
-import { Textarea } from '@base/ui/components/textarea'
-import { FieldShell, useFieldState } from '@base/ui/forms'
+} from '@baseconfig/ui/components/combobox'
+import { Input } from '@baseconfig/ui/components/input'
+import { Textarea } from '@baseconfig/ui/components/textarea'
+import { FieldShell, useFieldState } from '@baseconfig/ui/forms'
 import { IconForms } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useLiveQuery } from '@tanstack/react-db'
@@ -35,12 +35,12 @@ type FormReference = z.infer<typeof formReferenceSchema>
 type Option = { label: string; value: string; slug: string }
 
 /**
- * A small, self-contained picker rather than `@base/config`'s own shared
+ * A small, self-contained picker rather than `@baseconfig/core`'s own shared
  * `RelationshipField` — that component's `targetType` is typed to *this
  * app's own* closed `CollectionSlug` union, which a plugin package can't
- * add `'forms'` to (see `@base/config`'s own `collections/types.ts` doc
+ * add `'forms'` to (see `@baseconfig/core`'s own `collections/types.ts` doc
  * history). `getContentCollection('forms')` is the plain-string-keyed
- * escape hatch built for exactly this (`@base/config`'s own barrel export).
+ * escape hatch built for exactly this (`@baseconfig/core`'s own barrel export).
  */
 function useFormOptions(): Option[] {
 	const { data } = useLiveQuery(getContentCollection('forms'))
@@ -59,7 +59,7 @@ function useFormOptions(): Option[] {
 	)
 }
 
-/** Calls `useFieldState()` itself, same as `@base/ui/forms`'s own field components (`Input`, etc.) — the `form.AppField` render-prop below just renders this, rather than calling the hook inline. */
+/** Calls `useFieldState()` itself, same as `@baseconfig/ui/forms`'s own field components (`Input`, etc.) — the `form.AppField` render-prop below just renders this, rather than calling the hook inline. */
 function FormReferencePicker({ options }: { options: Option[] }) {
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
 		useFieldState<FormReference | undefined>()

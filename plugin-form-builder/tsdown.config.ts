@@ -15,9 +15,9 @@ export default defineConfig((inlineConfig) => ({
 			'react-dom',
 			'hono',
 			'zod',
-			'@base/ui',
+			'@baseconfig/ui',
 			'typescript',
-			'@base/config',
+			'@baseconfig/core',
 			'@tanstack/react-query',
 			'@tabler/icons-react'
 		]

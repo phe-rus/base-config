@@ -1,4 +1,4 @@
-import { defineCollection } from '@base/config'
+import { defineCollection } from '@baseconfig/core'
 
 /**
  * One row of a form's own `fields` array — modeled on Payload's own

@@ -5,9 +5,9 @@ import {
 	BreadcrumbList,
 	BreadcrumbPage,
 	BreadcrumbSeparator
-} from '@base/ui/components/breadcrumb'
-import { Button } from '@base/ui/components/button'
-import { cn } from '@base/ui/lib/utils'
+} from '@baseconfig/ui/components/breadcrumb'
+import { Button } from '@baseconfig/ui/components/button'
+import { cn } from '@baseconfig/ui/lib/utils'
 import { IconFolderFilled, IconMinus, IconPlus } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { Fragment, type PropsWithChildren, type ReactNode } from 'react'

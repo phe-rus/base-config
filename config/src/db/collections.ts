@@ -772,7 +772,7 @@ const contentCollectionCache = new Map<string, ContentCollection>()
  * The plain-`string`-keyed lookup `contentCollections`'s own Proxy uses
  * internally — exported directly (unlike the Proxy, which is typed to this
  * app's own closed `CollectionSlug`) so a plugin package can fetch its own,
- * dynamically-registered collection (e.g. `@base/plugin-form-builder`'s
+ * dynamically-registered collection (e.g. `@baseconfig/plugin-form-builder`'s
  * `forms`) without needing that slug to be a member of a union it doesn't
  * own. Safe for any slug actually present in `collectionsBySlug` at call
  * time (i.e. after `baseConfig()` has registered it) — same caching

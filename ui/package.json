@@ -1,5 +1,5 @@
 {
-	"name": "@base/ui",
+	"name": "@baseconfig/ui",
 	"version": "0.0.1",
 	"description": "Vendored shadcn/base-ui primitives, a tiptap v3 rich text editor, and the useAppForm-based form field system baseConfig renders every field through.",
 	"license": "MIT",

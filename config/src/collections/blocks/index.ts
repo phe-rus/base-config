@@ -14,7 +14,7 @@ export { RelatedPostsGroupRender } from './related-posts'
  * module's own eval time, which happens when `www/src/config/collections/*.ts`
  * files are first imported — *before* `baseConfig({plugins: [...]})` has
  * run and registered a plugin's own blocks (e.g.
- * `@base/plugin-form-builder`'s `formBlock`). `define.ts` wraps this in
+ * `@baseconfig/plugin-form-builder`'s `formBlock`). `define.ts` wraps this in
  * `z.lazy(() => getBlocksSchema())` instead, deferring the actual
  * discriminated-union build until a real validation happens — always after
  * `baseConfig()` has finished, by which point every plugin's blocks are in

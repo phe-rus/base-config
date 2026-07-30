@@ -1,4 +1,4 @@
-import type { BasiccnContent } from '@base/ui/basiccn'
+import type { BasiccnContent } from '@baseconfig/ui/basiccn'
 import { z } from 'zod'
 import type { FieldConfig, TabConfig } from './types'
 
@@ -17,7 +17,7 @@ export const uploadValueSchema = z.object({
  * package's own* real shapes, wired in centrally by `define.ts`, but a
  * different consumer swapping in different collections/blocks would supply
  * different ones — the consumer passes them in here rather than this file
- * importing them directly, so `@base/config` stays reusable.
+ * importing them directly, so `@baseconfig/core` stays reusable.
  */
 export type FieldSchemaResolvers = {
 	meta?: z.ZodTypeAny

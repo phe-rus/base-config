@@ -42,7 +42,7 @@ export type CodeEditorProps = {
 	 * The corner language select's own options — omit (or pass `[]`) to hide
 	 * the toggle entirely and just render a fixed-language editor. Defaults
 	 * to the same 5 languages this app's `code` block already exposes
-	 * (`@base/config`'s `collections/blocks/code.tsx`), not because this
+	 * (`@baseconfig/core`'s `collections/blocks/code.tsx`), not because this
 	 * component only supports those, but because that's the one real
 	 * consumer so far — pass a different list for a different caller.
 	 */
@@ -115,7 +115,7 @@ const editorTheme = EditorView.theme({
  * A real CodeMirror 6 editor with an optional language toggle sitting
  * inline at its own top-right corner — a self-contained, form-agnostic
  * component (plain `value`/`onChange`, no `useFieldState()`/form context
- * dependency) so it's reusable anywhere, not just as `@base/ui/forms`'
+ * dependency) so it's reusable anywhere, not just as `@baseconfig/ui/forms`'
  * own `Code` field (that field is a thin wrapper around this one — see
  * `forms/fields/Code/index.tsx`).
  */

@@ -1,5 +1,5 @@
 {
-	"name": "@base/plugin-form-builder",
+	"name": "@baseconfig/plugin-form-builder",
 	"version": "0.0.1",
 	"description": "A baseConfig plugin: a forms/form-submissions collection pair plus a public contact-form block.",
 	"license": "MIT",
@@ -43,8 +43,8 @@
 	"dependencies": {
 		"@tabler/icons-react": "^3.45.0",
 		"@tanstack/react-db": "latest",
-		"@base/config": "workspace:*",
-		"@base/ui": "workspace:*",
+		"@baseconfig/core": "workspace:*",
+		"@baseconfig/ui": "workspace:*",
 		"zod": "^4.4.3"
 	},
 	"peerDependencies": {

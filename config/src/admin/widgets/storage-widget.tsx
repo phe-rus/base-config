@@ -1,6 +1,6 @@
-import { Button } from '@base/ui/components/button'
-import { Input } from '@base/ui/components/input'
-import { cn } from '@base/ui/lib/utils'
+import { Button } from '@baseconfig/ui/components/button'
+import { Input } from '@baseconfig/ui/components/input'
+import { cn } from '@baseconfig/ui/lib/utils'
 import { IconFile, IconMinus, IconUpload } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -43,9 +43,9 @@ function formatBytes(bytes: number) {
 
 /**
  * The `Upload` field's "choose existing, or drag-and-drop a new one" picker
- * — injected into `@base/ui/forms`'s `Upload` primitive via its
+ * — injected into `@baseconfig/ui/forms`'s `Upload` primitive via its
  * `renderBrowser` prop, so that package stays free of any real backend
- * dependency (this is the one place in `@base/config` that knows about
+ * dependency (this is the one place in `@baseconfig/core` that knows about
  * `/api/storage/*`, alongside `admin/views/storage/component.tsx`).
  * Browses every file as one flat list rather than folder-by-folder — the
  * full Storage page keeps folder browsing, this is just quick picking.
