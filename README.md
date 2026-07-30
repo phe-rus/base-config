@@ -1,4 +1,8 @@
-# baseConfig
+<p align="center">
+  <img src="./screenshot/icon.png" alt="baseConfig" width="96" height="96" />
+</p>
+
+<h1 align="center">baseConfig</h1>
 
 A config-driven, TanStack-Start-native CMS engine built for **one Cloudflare Worker** — no separate Node server, no separate database service. Payload-inspired in shape (`defineCollection`/`defineGlobal`, Local-API-style client naming, a generated REST surface), but built edge-first from the ground up: Hono for routing, Drizzle over D1 for content, R2 for media, and a genuinely **local-first admin UI** — editing a document never touches the network until you explicitly publish.
 
