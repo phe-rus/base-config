@@ -1,6 +1,16 @@
 {
 	"name": "base-config",
 	"version": "0.0.0",
+	"description": "baseConfig — a config-driven, edge-native CMS engine for TanStack Start on Cloudflare Workers.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/phe-rus/base-config.git"
+	},
+	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"bugs": {
+		"url": "https://github.com/phe-rus/base-config/issues"
+	},
 	"private": true,
 	"workspaces": [
 		"config",
@@ -15,7 +25,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.5.3",
 		"turbo": "^2.10.7",
-		"typescript": "^7.0.2"
+		"typescript": "^5.9.3"
 	},
 	"engines": {
 		"node": ">=20"

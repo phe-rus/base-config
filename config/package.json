@@ -1,6 +1,24 @@
 {
 	"name": "@base/config",
 	"version": "0.0.1",
+	"description": "baseConfig's engine — field vocabulary, schema deriver, D1-backed content persistence, the Hono API layer, and the admin UI shell.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/phe-rus/base-config.git",
+		"directory": "config"
+	},
+	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"bugs": {
+		"url": "https://github.com/phe-rus/base-config/issues"
+	},
+	"keywords": [
+		"cms",
+		"tanstack-start",
+		"cloudflare-workers",
+		"admin-panel",
+		"content-management"
+	],
 	"private": false,
 	"type": "module",
 	"exports": {
@@ -15,6 +33,10 @@
 		"./api": {
 			"types": "./dist/api/index.d.mts",
 			"default": "./dist/api/index.mjs"
+		},
+		"./collections/blocks": {
+			"types": "./dist/collections/blocks/index.d.mts",
+			"default": "./dist/collections/blocks/index.mjs"
 		},
 		"./api/*": {
 			"types": "./dist/api/*.d.mts",

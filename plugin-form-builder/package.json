@@ -1,6 +1,21 @@
 {
 	"name": "@base/plugin-form-builder",
 	"version": "0.0.1",
+	"description": "A baseConfig plugin: a forms/form-submissions collection pair plus a public contact-form block.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/phe-rus/base-config.git",
+		"directory": "plugin-form-builder"
+	},
+	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"bugs": {
+		"url": "https://github.com/phe-rus/base-config/issues"
+	},
+	"keywords": [
+		"baseconfig-plugin",
+		"forms"
+	],
 	"private": false,
 	"type": "module",
 	"exports": {

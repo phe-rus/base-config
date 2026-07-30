@@ -1,6 +1,24 @@
 {
 	"name": "@base/ui",
 	"version": "0.0.1",
+	"description": "Vendored shadcn/base-ui primitives, a tiptap v3 rich text editor, and the useAppForm-based form field system baseConfig renders every field through.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/phe-rus/base-config.git",
+		"directory": "ui"
+	},
+	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"bugs": {
+		"url": "https://github.com/phe-rus/base-config/issues"
+	},
+	"keywords": [
+		"ui",
+		"shadcn",
+		"tiptap",
+		"forms",
+		"tanstack-form"
+	],
 	"private": false,
 	"type": "module",
 	"exports": {
