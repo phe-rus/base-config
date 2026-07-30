@@ -17,20 +17,22 @@
   &nbsp;
   <a href="https://github.com/phe-rus/base-config"><img alt="views" src="https://api.visitorbadge.io/api/visitors?path=phe-rus%2Fbase-config&label=views&countColor=%23555555&style=flat-square" /></a>
 </p>
+
 <hr/>
 
-# baseConfig
+<div align='center'>
+  <h1 align='center'>Baseconfig</h1>
+  <h3 align='center'>The edge native, local first content<br /> management system for<br /> TanStack Start.</h3>
+  
+  <p align='center'>
+    Build content-driven apps without managing another backend.<br /> Define your content in code, deploy everything to a single Cloudflare Worker,<br /> and edit locally with changes only published when you're ready.
+  </p>
 
-> **The edge-native, local-first CMS for TanStack Start.**
+  <br />
 
-Build content-driven apps without managing another backend. Define your content in code, deploy everything to a single Cloudflare Worker, and edit locally with changes only published when you're ready.
-
-> [!WARNING]
-> **baseConfig is under active development.**
->
-> The project is currently in **0.x**. While the core is functional, APIs, field types, and behavior may change before the first stable release. It's not yet recommended for production use.
-
----
+  <p align='center'><strong>[!WARNING] baseConfig is under active development.</strong><br /> The project is currently in **0.x**. While the core is functional, APIs,<br /> field types, and behavior may change before the<br /> first stable release. It's not yet recommended for production use.
+  </p>
+</div>
 
 ## Why baseConfig?
 
