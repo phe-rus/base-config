@@ -4,12 +4,20 @@ name: Publish
 # commit, or just `git commit -m "final:publish: ..."`) to build, bump, and
 # publish all three packages to npm. Any other commit is a no-op here.
 #
-# Requires one repo secret: NPM_TOKEN — an npm Automation token (or a
-# Granular token with "bypass two-factor auth" enabled), since this account
-# has 2FA required on every publish and a normal token can't get past that
-# non-interactively. Create one at https://www.npmjs.com/settings/<you>/tokens
-# and add it at Settings -> Secrets and variables -> Actions -> New repository
-# secret.
+# Uses npm Trusted Publishing (OIDC) — no stored token/secret at all. Before
+# the first real run, each package needs a Trusted Publisher configured on
+# its own npmjs.com settings page:
+#
+#   npmjs.com -> package -> Settings -> Trusted Publisher -> GitHub Actions
+#     Organization or user: phe-rus
+#     Repository:           base-config
+#     Workflow filename:    publish.yml
+#     Environment:          (leave blank — this workflow doesn't use one)
+#
+# Do this for @baseconfig/ui, @baseconfig/core, and @baseconfig/plugin-form-builder.
+# Trusted Publishing is implemented in the npm CLI itself (not `bun publish`),
+# and requires a recent-enough npm — this workflow force-installs npm@latest
+# before publishing rather than relying on whatever ships with the runner.
 
 on:
   push:
@@ -17,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   publish:
@@ -33,6 +42,14 @@ jobs:
         with:
           bun-version: 1.3.14
 
+      - name: Setup Node (for a recent, OIDC-capable npm CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: bun install
 
@@ -45,9 +62,7 @@ jobs:
       # All three packages are tightly coupled (config depends on ui,
       # plugin-form-builder depends on both) and always released together
       # from this one monorepo — kept in lockstep rather than tracked
-      # independently, same as every publish so far. `workspace:*` internal
-      # deps don't need touching here; `bun publish` rewrites those to the
-      # real sibling version at publish time.
+      # independently, same as every publish so far.
       - name: Bump versions (patch, all three packages together)
         run: |
           for pkg in ui config plugin-form-builder; do
@@ -62,20 +77,43 @@ jobs:
           git commit -m "chore: bump package versions [skip ci]"
           git push
 
+      # `workspace:*` is what a real bun/pnpm workspace consumer needs to see
+      # committed — but `npm publish` (unlike `bun publish`) doesn't rewrite
+      # it to a real version, and plain npm CLI is what Trusted Publishing
+      # needs. Resolved here, in the ephemeral runner only, right before each
+      # publish call — never committed back, so the repo keeps workspace:*.
       - name: Publish @baseconfig/ui
         working-directory: ui
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+      - name: Resolve @baseconfig/ui's real version into config's package.json
+        run: |
+          UI_VERSION=$(node -p "require('./ui/package.json').version")
+          node -e "
+            const fs = require('fs');
+            const path = './config/package.json';
+            const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+            pkg.dependencies['@baseconfig/ui'] = '$UI_VERSION';
+            fs.writeFileSync(path, JSON.stringify(pkg, null, '\t') + '\n');
+          "
 
       - name: Publish @baseconfig/core
         working-directory: config
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+      - name: Resolve @baseconfig/core and @baseconfig/ui's real versions into plugin-form-builder's package.json
+        run: |
+          CORE_VERSION=$(node -p "require('./config/package.json').version")
+          UI_VERSION=$(node -p "require('./ui/package.json').version")
+          node -e "
+            const fs = require('fs');
+            const path = './plugin-form-builder/package.json';
+            const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+            pkg.dependencies['@baseconfig/core'] = '$CORE_VERSION';
+            pkg.dependencies['@baseconfig/ui'] = '$UI_VERSION';
+            fs.writeFileSync(path, JSON.stringify(pkg, null, '\t') + '\n');
+          "
 
       - name: Publish @baseconfig/plugin-form-builder
         working-directory: plugin-form-builder
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
