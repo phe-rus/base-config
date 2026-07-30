@@ -17,7 +17,7 @@ name: Publish
 #     Organization or user: phe-rus
 #     Repository:           base-config
 #     Workflow filename:    publish.yml
-#     Environment:          (leave blank — this workflow doesn't use one)
+#     Environment name:     npm-publish
 #
 # Do this for @baseconfig/ui, @baseconfig/core, and @baseconfig/plugin-form-builder.
 # Trusted Publishing is implemented in the npm CLI itself (not `bun publish`),
@@ -36,6 +36,7 @@ jobs:
   publish:
     if: startsWith(github.event.head_commit.message, 'final:publish')
     runs-on: ubuntu-latest
+    environment: npm-publish
     steps:
       - name: Checkout
         uses: actions/checkout@v4
