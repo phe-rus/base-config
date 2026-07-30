@@ -25,14 +25,9 @@
 
 ## Screenshots
 
-<div style="display: flex; align-items: center; overflow-x: auto; gap: 0.75rem; border-radius: 5px; scrollbar-width: none; -ms-overflow-style: none;">
-  <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig.png" alt="Admin dashboard listing every registered collection and global" height="220" />
-  <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig-page.png" alt="Editing a page's hero block, with the meta fields tab visible" height="220" />
-  <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig-storage.png" alt="Storage page browsing an R2-backed folder of uploaded media" height="220" />
-  <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig-blocks.png" alt="Picking a page-content block to add to a document" height="220" />
-  <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig-posts.png" alt="Editing an unpublished draft document, with Discard draft / Publish actions" height="220" />
-</div>
-
+<p align="center">
+  <img src="./screenshot/baseconfig.png" height="50" alt="Admin dashboard" /> <img src="./screenshot/baseconfig-page.png" height="50" alt="Editing page" /> <img src="./screenshot/baseconfig-storage.png" height="50" alt="Storage" /> <img src="./screenshot/baseconfig-blocks.png" height="50" alt="Picking block" /> <img src="./screenshot/baseconfig-posts.png" height="50" alt="Editing draft" />
+</p>
 
 ## Quick start
 
