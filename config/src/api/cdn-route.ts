@@ -24,6 +24,21 @@ export type CdnRouteType = ReturnType<typeof createCdnRoute>
  * plus the R2 object's own `etag` means a stale cache entry revalidates
  * cheaply instead of serving old content indefinitely.
  */
+/**
+ * Purges one object's edge-cache entry, called by `storage-route.ts`'s own
+ * delete handlers so a deleted file doesn't keep serving stale bytes from a
+ * warm edge location for up to its own `max-age` (1 hour) after it's gone
+ * from R2. Mirrors `createCdnRoute`'s own `cacheKey` construction exactly
+ * (same `/api/cdn/<key>` path assumption `storage-route.ts`'s own listing
+ * URLs already make), just built from the *deleting* request's own origin
+ * rather than an incoming CDN request's, since both routes are always
+ * mounted under the same origin by `createBaseConfigRoute`.
+ */
+export async function purgeCdnCache(origin: string, key: string): Promise<void> {
+	const cache = (caches as unknown as { default: Cache }).default
+	await cache.delete(new Request(`${origin}/api/cdn/${key}`, { method: 'GET' }))
+}
+
 export function createCdnRoute(bucket: R2BucketLike) {
 	// A plain `'/*'` wildcard route doesn't expose its match via
 	// `c.req.param('*')` in this Hono version — confirmed empirically, it

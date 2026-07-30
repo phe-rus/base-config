@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { purgeCdnCache } from './cdn-route'
 
 type SessionLike = { user: { role?: string | null } }
 
@@ -167,11 +168,13 @@ export function createStorageRoute(bucket: R2BucketLike) {
 		.delete('/file', zValidator('query', fileQuerySchema), async (c) => {
 			const { key } = c.req.valid('query')
 			await bucket.delete(key)
+			await purgeCdnCache(new URL(c.req.url).origin, key)
 			return c.json({ ok: true })
 		})
 		.delete('/folder', zValidator('query', folderQuerySchema), async (c) => {
 			const { path } = c.req.valid('query')
 			const prefix = `${path.replace(/\/+$/, '')}/`
+			const origin = new URL(c.req.url).origin
 
 			// A "folder" is only ever inferred from key prefixes (R2 has no
 			// real directory objects) — deleting every object under it is
@@ -185,6 +188,9 @@ export function createStorageRoute(bucket: R2BucketLike) {
 				const result = await bucket.list({ prefix, cursor })
 				if (result.objects.length) {
 					await bucket.delete(result.objects.map((object) => object.key))
+					await Promise.all(
+						result.objects.map((object) => purgeCdnCache(origin, object.key))
+					)
 					deleted += result.objects.length
 				}
 				cursor = result.truncated ? result.cursor : undefined

@@ -4,6 +4,7 @@ import { useSelector } from '@tanstack/react-store'
 import { useEffect } from 'react'
 import type { z } from 'zod'
 import type { ContentCollection, DraftCollection } from './collections'
+import { deepEqual } from './deep-equal'
 
 type UseDocumentOptions<TData extends Record<string, unknown>> = {
 	collection: ContentCollection
@@ -153,9 +154,11 @@ export function useDocument<TData extends Record<string, unknown>>({
 	// no separate saved/unsaved draft state to track anymore (the draft is
 	// always saved, to `localStorage`); this is what gates the
 	// Publish/Commit button instead. A brand-new document (no `remoteRow`)
-	// is always dirty — nothing is live yet.
-	const isDirty =
-		!remoteRow || JSON.stringify(store) !== JSON.stringify(remoteRow.data)
+	// is always dirty — nothing is live yet. `deepEqual`, not
+	// `JSON.stringify` equality: see that function's own doc comment for
+	// why a naive stringify comparison here previously reported "dirty"
+	// even immediately after a successful publish with no further edits.
+	const isDirty = !remoteRow || !deepEqual(store, remoteRow.data)
 
 	const row =
 		remoteRow ??

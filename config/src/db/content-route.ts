@@ -110,15 +110,23 @@ export type ContentRouteBindings = {
 	db: ContentDatabase
 	/**
 	 * Optional public-read cache — omit for no caching at all (every read
-	 * goes straight to D1, today's behavior). Only ever consulted/populated
-	 * for genuinely public reads (`publishedOnly` document reads, and every
-	 * global read — globals have no draft/published concept at all); an
-	 * authenticated admin request always bypasses it, since admins need to
-	 * see drafts. A cache-aside pattern, not "populate on publish": every
-	 * write (`PATCH`/`DELETE`) just invalidates the relevant key, and the
-	 * next public read repopulates it — simpler and harder to get subtly
-	 * wrong than trying to compute what a fresh read *would* return at
-	 * write time.
+	 * goes straight to D1). Only ever consulted/populated for genuinely
+	 * public reads (`publishedOnly` document reads, and every global read —
+	 * globals have no draft/published concept at all); an authenticated
+	 * admin request always bypasses it, since admins need to see drafts. A
+	 * cache-aside pattern, not "populate on publish": every write
+	 * (`PATCH`/`DELETE`) just invalidates the relevant key(s), and the next
+	 * public read repopulates it — simpler and harder to get subtly wrong
+	 * than trying to compute what a fresh read *would* return at write
+	 * time. Covers three shapes: a single document by `id`
+	 * (`GET /:collection/:id`), a single document by `slug`
+	 * (`GET /:collection?where={"slug":{"equals":"..."}}` with no other
+	 * filter/pagination, the one list query a public page-by-slug lookup
+	 * actually makes, since a public URL never knows a document's internal
+	 * `id`), and a single global (`GET /globals/:slug`, also reused by the
+	 * aggregate `GET /globals`). A plain unfiltered/paginated list has no
+	 * single natural cache key the way one document does, so it's still
+	 * never cached.
 	 */
 	cache?: KVNamespaceLike
 	/**
@@ -136,6 +144,17 @@ export type ContentRouteBindings = {
 
 function documentCacheKey(collection: string, id: string): string {
 	return `content:${collection}:${id}`
+}
+
+/**
+ * A second cache key for the exact same document, this one reachable by
+ * `slug` rather than `id`: a public page is looked up by its URL slug, not
+ * its internal id, so the id-keyed cache above is never actually hit by
+ * that lookup. Populated/invalidated alongside `documentCacheKey`, never on
+ * its own.
+ */
+function slugCacheKey(collection: string, slug: string): string {
+	return `content:${collection}:slug:${slug}`
 }
 
 function globalCacheKey(slug: string): string {
@@ -237,10 +256,11 @@ function isAdmin(session: SessionLike | undefined): boolean {
  * `status: 'published'` documents. Globals have no draft/published concept
  * (no `status` column) — `GET` on them is unconditionally public.
  *
- * **`cache` (optional) fronts the single-document/single-global public
- * reads** — see `ContentRouteBindings['cache']`'s own doc comment. List
- * reads (`GET /:collection`, `GET /globals`) are never cached — a filtered/
- * paginated list has no single natural cache key the way one document does.
+ * **`cache` (optional) fronts single-document/single-global public reads,
+ * by `id` or by `slug`, plus the aggregate globals list**, see
+ * `ContentRouteBindings['cache']`'s own doc comment for the three shapes it
+ * covers. A plain filtered/paginated document list is still never cached,
+ * no single natural cache key the way one document does.
  *
  * **`hooks`/`endpoints` (both optional)** — see `CollectionHooks`'/
  * `ContentEndpoint`'s own doc comments. `endpoints` are mounted first,
@@ -260,6 +280,27 @@ export function createContentRoute({
 	const adminOnly: MiddlewareHandler<ContentRouteEnv> = async (c, next) => {
 		if (!isAdmin(c.get('session'))) return c.text('Unauthorized', 401)
 		await next()
+	}
+
+	/**
+	 * Shared by both globals routes below (`GET /globals` and
+	 * `GET /globals/:slug`) so the aggregate list route benefits from the
+	 * same cache-aside behavior the single-global route already had:
+	 * before this, `GET /globals` called `getGlobal` directly, bypassing
+	 * `cache` entirely even though every individual slug was otherwise
+	 * cached.
+	 */
+	async function getCachedGlobal(slug: string) {
+		if (cache) {
+			const cached = await cache.get(globalCacheKey(slug))
+			if (cached) return JSON.parse(cached)
+		}
+		const row = await getGlobal(db, slug)
+		const result = row ? { slug, ...row } : null
+		if (cache && result) {
+			await cache.put(globalCacheKey(slug), JSON.stringify(result))
+		}
+		return result
 	}
 
 	const withEndpoints = (endpoints ?? []).reduce(
@@ -283,11 +324,11 @@ export function createContentRoute({
 			const slugs = await listGlobalSlugs(db)
 			const rows = await Promise.all(
 				slugs.map(async (slug) => {
-					const row = await getGlobal(db, slug)
+					const cached = await getCachedGlobal(slug)
 					return {
 						slug,
-						data: row?.data ?? {},
-						updatedAt: row?.updatedAt ?? new Date(0)
+						data: cached?.data ?? {},
+						updatedAt: cached?.updatedAt ?? new Date(0)
 					}
 				})
 			)
@@ -295,16 +336,7 @@ export function createContentRoute({
 		})
 		.get('/globals/:slug', async (c) => {
 			const slug = c.req.param('slug')
-			if (cache) {
-				const cached = await cache.get(globalCacheKey(slug))
-				if (cached) return c.json(JSON.parse(cached))
-			}
-			const row = await getGlobal(db, slug)
-			const result = row ? { slug, ...row } : null
-			if (cache && result) {
-				await cache.put(globalCacheKey(slug), JSON.stringify(result))
-			}
-			return c.json(result)
+			return c.json(await getCachedGlobal(slug))
 		})
 		.patch(
 			'/globals/:slug',
@@ -329,12 +361,37 @@ export function createContentRoute({
 			const collection = c.req.param('collection')
 			const publishedOnly = !isAdmin(c.get('session'))
 			const { where, limit, page } = c.req.valid('query')
+
+			// The one list shape a public page-by-slug lookup actually makes
+			// (`?where={"slug":{"equals":"..."}}`, no other filter/pagination):
+			// a public URL resolves to a document by slug, never by id, so
+			// this is the query that actually needs caching for a page to load
+			// fast; a plain unfiltered/paginated list has no single cache key
+			// the way one slug lookup does, so it stays uncached.
+			const slug = where?.slug?.equals
+			const cacheableSlugLookup =
+				cache && publishedOnly && slug && !where?.status && !limit && !page
+
+			if (cacheableSlugLookup) {
+				const cached = await cache.get(slugCacheKey(collection, slug))
+				if (cached) return c.json(JSON.parse(cached))
+			}
+
 			const result = await listDocuments(db, collection, {
 				publishedOnly,
 				where,
 				limit,
 				page
 			})
+
+			// Same convention `/:collection/:id` already follows: only a real
+			// hit gets cached, never a "not found" result, otherwise a
+			// document created later under a previously-missed slug would
+			// stay invisible until something else happened to invalidate it.
+			if (cacheableSlugLookup && result.docs.length > 0) {
+				await cache.put(slugCacheKey(collection, slug), JSON.stringify(result))
+			}
+
 			return c.json(result)
 		})
 		.get('/:collection/:id', async (c) => {
@@ -385,6 +442,13 @@ export function createContentRoute({
 					collectionHooks?.beforeChange && body.fields
 						? await collectionHooks.beforeChange(body.fields, ctx)
 						: body.fields
+
+				// Read the slug this document had *before* the write, in case
+				// this update renames it: a slug change needs its old cache
+				// entry invalidated too, not just whatever slug the row has
+				// after the write.
+				const existing = cache ? await getDocument(db, collection, id) : undefined
+
 				const row = await updateDocument(db, collection, id, {
 					...body,
 					fields
@@ -394,7 +458,15 @@ export function createContentRoute({
 				// publish, unpublish, and a plain draft edit alike (the next
 				// public read repopulates correctly either way, including
 				// caching nothing at all if the doc isn't publicly visible).
-				if (cache) await cache.delete(documentCacheKey(collection, id))
+				if (cache) {
+					await cache.delete(documentCacheKey(collection, id))
+					if (existing?.slug) {
+						await cache.delete(slugCacheKey(collection, existing.slug))
+					}
+					if (row.slug && row.slug !== existing?.slug) {
+						await cache.delete(slugCacheKey(collection, row.slug))
+					}
+				}
 				if (collectionHooks?.afterChange) {
 					await collectionHooks.afterChange(row, ctx)
 				}
@@ -403,8 +475,16 @@ export function createContentRoute({
 		)
 		.delete('/:collection/:id', adminOnly, async (c) => {
 			const { collection, id } = c.req.param()
+			// Same reasoning as the PATCH handler above: read the slug before
+			// deleting, since there's nothing left to read it from afterward.
+			const existing = cache ? await getDocument(db, collection, id) : undefined
 			await deleteDocument(db, collection, id)
-			if (cache) await cache.delete(documentCacheKey(collection, id))
+			if (cache) {
+				await cache.delete(documentCacheKey(collection, id))
+				if (existing?.slug) {
+					await cache.delete(slugCacheKey(collection, existing.slug))
+				}
+			}
 			return c.json({ ok: true })
 		})
 

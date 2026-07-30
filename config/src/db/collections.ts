@@ -16,6 +16,7 @@ import type {
 	UpdateDocumentInput,
 	WhereCondition
 } from './content-queries'
+import { deepEqual } from './deep-equal'
 
 export const statusValues = ['draft', 'published', 'unpublished'] as const
 export type DocumentStatus = (typeof statusValues)[number]
@@ -391,7 +392,7 @@ function createContentCollection(slug: string) {
 						)
 						const fields: Record<string, unknown> = {}
 						for (const key of Object.keys(modified.rest)) {
-							if (!Object.is(modified.rest[key], original.rest[key])) {
+							if (!deepEqual(modified.rest[key], original.rest[key])) {
 								fields[key] = modified.rest[key]
 							}
 						}
@@ -886,7 +887,7 @@ function createGlobalsCollection() {
 						const modified = mutation.modified.data as Record<string, unknown>
 						const fields: Record<string, unknown> = {}
 						for (const key of Object.keys(modified)) {
-							if (!Object.is(modified[key], original[key])) {
+							if (!deepEqual(modified[key], original[key])) {
 								fields[key] = modified[key]
 							}
 						}
@@ -1083,7 +1084,7 @@ export async function publishKeywordPool(): Promise<void> {
 	if (!draft) return
 
 	const remote = globalsCollection.get(KEYWORDS_GLOBAL_ID)
-	if (remote && JSON.stringify(remote.data) === JSON.stringify(draft.data)) {
+	if (remote && deepEqual(remote.data, draft.data)) {
 		return
 	}
 

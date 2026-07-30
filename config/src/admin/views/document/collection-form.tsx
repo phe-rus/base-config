@@ -115,6 +115,13 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 	const { adminPath } = useAdminConfig()
 	const navigate = useNavigate()
 
+	// "Publish" is for a document going live for the first time; "Update" is
+	// for pushing an edit to a document that's already live: same button,
+	// same `publish('published')` call underneath (the write itself doesn't
+	// care which label was showing), just a label that actually matches
+	// what's about to happen instead of always saying "Publish."
+	const alreadyPublished = hasRemoteRow && row.status === 'published'
+
 	// No remote row at all: nothing was ever published, so there's nothing
 	// to revert *to* — the only sensible action is deleting the local draft
 	// and leaving. A remote row exists but this browser's draft differs:
@@ -229,10 +236,14 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 							<Button
 								size='xs'
 								disabled={!isDirty}
-								title={isDirty ? undefined : 'No changes to publish'}
+								title={
+									isDirty
+										? undefined
+										: `No changes to ${alreadyPublished ? 'update' : 'publish'}`
+								}
 								onClick={() => runPublish(publish, 'published')}
 							>
-								Publish
+								{alreadyPublished ? 'Update' : 'Publish'}
 							</Button>
 						</>
 					)
