@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsdown'
 
-export default defineConfig({
+export default defineConfig((inlineConfig) => ({
 	entry: [
 		'src/index.ts',
 		'src/cli.ts',
@@ -10,7 +10,10 @@ export default defineConfig({
 	],
 	tsconfig: './tsconfig.json',
 	outDir: 'dist',
-	clean: true,
+	// See base/ui/tsdown.config.ts's own comment — `clean: true` under
+	// `--watch` briefly empties `dist/` on every rebuild, which a
+	// consumer's own dev server can observe mid dependency-scan.
+	clean: !inlineConfig.watch,
 	dts: true,
 	format: ['esm'],
 	platform: 'node',
@@ -32,4 +35,4 @@ export default defineConfig({
 			'@tanstack/query-db-collection'
 		]
 	}
-})
+}))

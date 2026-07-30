@@ -3,6 +3,7 @@ import type { CollectionHooks } from '../base.types'
 import type { ContentDatabase } from '../db/content-queries'
 import { createContentRoute } from '../db/content-route'
 import type { ContentEndpoint, KVNamespaceLike } from '../db/content-route'
+import { createCdnRoute } from './cdn-route'
 import { createStorageRoute } from './storage-route'
 
 export type BaseConfigRouteBindings = {
@@ -34,15 +35,20 @@ export type BaseConfigRouteBindings = {
  * Content is mounted at the API's own root (`/api/<collection>`,
  * `/api/globals/<slug>` — real REST addresses, matching Payload's own
  * shape, see `createContentRoute`'s own doc comment for exactly why),
- * storage at `/storage/*`. `/storage` is registered *before* the content
- * route's own root mount — see `createContentRoute`'s own doc comment for
- * why registration order (not "how specific a prefix looks") is what
- * actually resolves an ambiguous match against content's `/:collection`
- * wildcard.
+ * storage at `/storage/*`, and the public, unauthenticated media-serving
+ * route at `/cdn/*` (`createCdnRoute`, `cdn-route.ts`) — the "the library
+ * owns the whole capability" counterpart to `www/src/routes/(web)/$.tsx`'s
+ * old, deleted hand-rolled `GET` handler; a consumer needs zero route files
+ * of their own for uploaded media to be servable. `/storage`/`/cdn` are
+ * both registered *before* the content route's own root mount — see
+ * `createContentRoute`'s own doc comment for why registration order (not
+ * "how specific a prefix looks") is what actually resolves an ambiguous
+ * match against content's `/:collection` wildcard.
  */
 export function createBaseConfigRoute(bindings: BaseConfigRouteBindings) {
 	return new Hono()
 		.route('/storage', createStorageRoute(bindings.bucket))
+		.route('/cdn', createCdnRoute(bindings.bucket))
 		.route(
 			'/',
 			createContentRoute({

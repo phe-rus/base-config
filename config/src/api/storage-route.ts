@@ -25,14 +25,24 @@ type R2ListResultLike = {
 	delimitedPrefixes?: string[]
 }
 
+type R2ObjectBodyLike = {
+	body: ReadableStream | null
+	httpEtag: string
+	writeHttpMetadata: (headers: Headers) => void
+}
+
 /**
- * The exact slice of Cloudflare's real `R2Bucket` this route calls —
+ * The exact slice of Cloudflare's real `R2Bucket` this route (and
+ * `cdn-route.ts`'s `createCdnRoute`, which only needs `get`) calls —
  * structural on purpose (same trade-off `BetterAuthAdminClient` makes for
  * better-auth), so this package never needs `@cloudflare/workers-types` as
  * a dependency just for one binding's ambient type. A consumer's real
- * `env.MEDIA` (an actual `R2Bucket`) satisfies this without a cast.
+ * `env.MEDIA` (an actual `R2Bucket`) satisfies this without a cast. `get`
+ * is unused by this file's own routes — kept on the one shared type rather
+ * than a second near-duplicate, since both routes are always handed the
+ * same real bucket binding by `createBaseConfigRoute`.
  */
-type R2BucketLike = {
+export type R2BucketLike = {
 	list: (options?: {
 		prefix?: string
 		delimiter?: string
@@ -44,6 +54,7 @@ type R2BucketLike = {
 		options?: { httpMetadata?: { contentType?: string } }
 	) => Promise<unknown>
 	delete: (keys: string | string[]) => Promise<void>
+	get: (key: string) => Promise<R2ObjectBodyLike | null>
 }
 
 /**
@@ -115,7 +126,7 @@ export function createStorageRoute(bucket: R2BucketLike) {
 							key: object.key,
 							size: object.size,
 							uploadedAt: object.uploaded.toISOString(),
-							url: `/${object.key}`
+							url: `/api/cdn/${object.key}`
 						}))
 					)
 					cursor = result.truncated ? result.cursor : undefined
@@ -136,7 +147,7 @@ export function createStorageRoute(bucket: R2BucketLike) {
 				key: object.key,
 				size: object.size,
 				uploadedAt: object.uploaded.toISOString(),
-				url: `/${object.key}`
+				url: `/api/cdn/${object.key}`
 			}))
 
 			return c.json({ folders, files })
@@ -151,7 +162,7 @@ export function createStorageRoute(bucket: R2BucketLike) {
 				httpMetadata: { contentType: file.type }
 			})
 
-			return c.json({ key, url: `/${key}` })
+			return c.json({ key, url: `/api/cdn/${key}` })
 		})
 		.delete('/file', zValidator('query', fileQuerySchema), async (c) => {
 			const { key } = c.req.valid('query')

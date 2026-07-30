@@ -1,4 +1,3 @@
-import { TanstackImage } from '@base/ui/image'
 import type { ReactNode } from 'react'
 
 type AuthBannerProps = {
@@ -16,7 +15,7 @@ export function AuthBanner({ title, icon, description }: AuthBannerProps) {
 	return (
 		<div className='flex flex-col items-center text-center'>
 			{icon && (
-				<TanstackImage
+				<img
 					src={icon}
 					alt={title}
 					className='size-32 rounded-full overflow-hidden'

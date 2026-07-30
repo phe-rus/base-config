@@ -1,6 +1,7 @@
 import type { AdminSettings } from '../../base.types'
 import { AdminConfigContext } from '../functions/context'
 import { useAdminSession } from '../functions/session-query'
+import { AdminLoading } from './loading'
 import { collectionsBySlug, globalsBySlug } from '../../collections/registry'
 import type { CollectionSlug } from '../../collections/types'
 import {
@@ -194,7 +195,7 @@ type TopbarProps = PropsWithChildren<{
  */
 export function Topbar({ children, config }: TopbarProps) {
 	const authClient = getAuthClient()
-	const { data: session, hasSession } = useAdminSession()
+	const { data: session, isPending, hasSession } = useAdminSession()
 	const navigate = useNavigate()
 
 	useEffect(() => {
@@ -209,7 +210,9 @@ export function Topbar({ children, config }: TopbarProps) {
 
 	return (
 		<AdminConfigContext.Provider value={config}>
-			{hasSession ? (
+			{isPending ? (
+				<AdminLoading />
+			) : hasSession ? (
 				<TopbarChrome authClient={authClient} config={config}>
 					{children}
 				</TopbarChrome>
