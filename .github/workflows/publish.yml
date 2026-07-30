@@ -1,8 +1,13 @@
 name: Publish
 
-# Push a commit to main whose message contains `final:publish` (e.g. a merge
-# commit, or just `git commit -m "final:publish: ..."`) to build, bump, and
-# publish all three packages to npm. Any other commit is a no-op here.
+# Push a commit to main whose message STARTS WITH `final:publish` (e.g.
+# `git commit -m "final:publish: ..."`) to build, bump, and publish all
+# three packages to npm. Any other commit is a no-op here — deliberately
+# `startsWith`, not a bare substring match: a commit message that merely
+# *mentions* the trigger phrase (like this comment block, or a docs commit
+# explaining this workflow) must never fire it by accident. Confirmed this
+# was a real, not just theoretical, risk — an earlier commit whose message
+# explained this exact trigger phrase in its body fired the workflow.
 #
 # Uses npm Trusted Publishing (OIDC) — no stored token/secret at all. Before
 # the first real run, each package needs a Trusted Publisher configured on
@@ -29,7 +34,7 @@ permissions:
 
 jobs:
   publish:
-    if: contains(github.event.head_commit.message, 'final:publish')
+    if: startsWith(github.event.head_commit.message, 'final:publish')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -63,10 +68,25 @@ jobs:
       # plugin-form-builder depends on both) and always released together
       # from this one monorepo — kept in lockstep rather than tracked
       # independently, same as every publish so far.
+      #
+      # A plain patch bump, not `npm version patch` — confirmed (the hard
+      # way, via a real failed run) that npm CLI's `version` command chokes
+      # on a `workspace:*` dependency exactly like `npm publish` does
+      # (`EUNSUPPORTEDPROTOCOL`), even though it isn't touching that field
+      # at all. Writing the version field directly with plain Node sidesteps
+      # npm CLI entirely for this step.
       - name: Bump versions (patch, all three packages together)
         run: |
           for pkg in ui config plugin-form-builder; do
-            (cd "$pkg" && npm version patch --no-git-tag-version)
+            node -e "
+              const fs = require('fs');
+              const path = './$pkg/package.json';
+              const manifest = JSON.parse(fs.readFileSync(path, 'utf8'));
+              const [major, minor, patch] = manifest.version.split('.').map(Number);
+              manifest.version = [major, minor, patch + 1].join('.');
+              fs.writeFileSync(path, JSON.stringify(manifest, null, '\t') + '\n');
+              console.log(manifest.name, '->', manifest.version);
+            "
           done
 
       - name: Commit version bump

@@ -11,10 +11,6 @@
 ## Screenshots
 
 <div style="display: flex; align-items: center; overflow-x: auto; gap: 0.75rem; border-radius: 5px; scrollbar-width: none; -ms-overflow-style: none;">
-  <style>
-    div::-webkit-scrollbar { display: none; }
-  </style>
-
   <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig.png" alt="Admin dashboard listing every registered collection and global" height="220" />
   <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig-page.png" alt="Editing a page's hero block, with the meta fields tab visible" height="220" />
   <img style="border-radius: 5px; flex-shrink: 0; display: block;" src="./screenshot/baseconfig-storage.png" alt="Storage page browsing an R2-backed folder of uploaded media" height="220" />
