@@ -94,6 +94,17 @@ export type AdminSettings = {
 	 * to every `LoginView`/`CreateAccountView` individually. Omit for none.
 	 */
 	socialProviders?: string[]
+	/**
+	 * The CMS API's own CORS allowlist — string entries matched by exact
+	 * equality, `RegExp` entries via `.test()`. Isomorphic-safe (plain data,
+	 * no secret/binding), unlike `handleEmail` — see `createHandler`'s own
+	 * `cors` param doc comment for how this is consumed. Omit (or leave
+	 * empty) for a permissive default: every request's own `Origin` is
+	 * echoed back (the only valid way to be maximally permissive under
+	 * credentialed CORS — a literal `'*'` isn't allowed alongside
+	 * `credentials: true`).
+	 */
+	cors?: (string | RegExp)[]
 }
 
 /**

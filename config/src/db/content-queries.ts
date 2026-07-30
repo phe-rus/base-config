@@ -1,11 +1,16 @@
 import { sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import {
+	contentTableName,
+	isContentTableName,
+	slugFromContentTableName
+} from './table-name'
 
 /**
  * Structural, not `typeof someConcreteClient` — a consumer only ever hands
- * this package `drizzle(env.BASECONFIG, {logger: false, relations: ...})`
- * (see `www/db/content-db.ts`), nothing more. Bindings are the one thing
+ * this package `drizzle(env.DB, {logger: false})`
+ * (see `www/db/db.ts`), nothing more. Bindings are the one thing
  * this package can never resolve itself (same `env`-isolation reason
  * `ignite()` never reads `env` on its own either) — everything downstream
  * of that one client lives here instead of being re-implemented per
@@ -221,7 +226,7 @@ export async function listDocuments(
 	collection: string,
 	options?: ReadOptions
 ): Promise<PaginatedResult<DocumentRow>> {
-	const table = sql.raw(quoteIdent(collection))
+	const table = sql.raw(quoteIdent(contentTableName(collection)))
 	const conditions: SQL[] = []
 	if (options?.publishedOnly) conditions.push(sql`status = 'published'`)
 	if (options?.where?.status) {
@@ -271,7 +276,7 @@ export async function getDocument(
 	id: string,
 	options?: ReadOptions
 ): Promise<DocumentRow | undefined> {
-	const table = sql.raw(quoteIdent(collection))
+	const table = sql.raw(quoteIdent(contentTableName(collection)))
 	const conditions: SQL[] = [sql`id = ${id}`]
 	if (options?.publishedOnly) conditions.push(sql`status = 'published'`)
 
@@ -288,7 +293,7 @@ export async function createDocument(
 	collection: string,
 	input: CreateDocumentInput
 ): Promise<DocumentRow> {
-	const table = sql.raw(quoteIdent(collection))
+	const table = sql.raw(quoteIdent(contentTableName(collection)))
 	const row = await dbGet<RawDocumentRow>(
 		db,
 		sql`
@@ -315,7 +320,7 @@ export async function updateDocument(
 	const existing = await getDocument(db, collection, id)
 	if (!existing) return undefined
 
-	const table = sql.raw(quoteIdent(collection))
+	const table = sql.raw(quoteIdent(contentTableName(collection)))
 	const setClauses: SQL[] = [sql`updatedAt = ${Date.now()}`]
 	if (input.title !== undefined) setClauses.push(sql`title = ${input.title}`)
 	if (input.slug !== undefined) setClauses.push(sql`slug = ${input.slug}`)
@@ -341,7 +346,7 @@ export async function deleteDocument(
 ): Promise<void> {
 	await dbRun(
 		db,
-		sql`DELETE FROM ${sql.raw(quoteIdent(collection))} WHERE id = ${id}`,
+		sql`DELETE FROM ${sql.raw(quoteIdent(contentTableName(collection)))} WHERE id = ${id}`,
 		collection
 	)
 }
@@ -352,7 +357,7 @@ export async function getGlobal(
 ): Promise<GlobalRow | undefined> {
 	const row = await dbGet<RawGlobalRow>(
 		db,
-		sql`SELECT * FROM ${sql.raw(quoteIdent(slug))}`,
+		sql`SELECT * FROM ${sql.raw(quoteIdent(contentTableName(slug)))}`,
 		slug
 	)
 	return row ? toGlobalRow(row) : undefined
@@ -370,7 +375,7 @@ export async function upsertGlobal(
 	slug: string,
 	fields: Record<string, unknown>
 ): Promise<GlobalRow> {
-	const table = sql.raw(quoteIdent(slug))
+	const table = sql.raw(quoteIdent(contentTableName(slug)))
 	const existing = await getGlobal(db, slug)
 
 	if (!existing) {
@@ -397,7 +402,11 @@ export async function upsertGlobal(
  * doc comment for why) — a table counts as a global if it has a `data`
  * column but no `status` column (every collection table always has one,
  * every global table never does; see `content-schema.ts`). System tables
- * (`sqlite_%`, `d1_%`, `_cf_%`) are excluded.
+ * (`sqlite_%`, `d1_%`, `_cf_%`) are excluded, and now that this D1
+ * database also holds better-auth's own tables (`user`, `session`, ...),
+ * so is anything that isn't a `cn`-prefixed content table (`isContentTableName`,
+ * see `table-name.ts`), before the real table name is translated back into
+ * the bare slug callers expect (`slugFromContentTableName`).
  */
 export async function listGlobalSlugs(db: ContentDatabase): Promise<string[]> {
 	const tables = await db.all<{ name: string }>(sql`
@@ -410,12 +419,13 @@ export async function listGlobalSlugs(db: ContentDatabase): Promise<string[]> {
 
 	const slugs: string[] = []
 	for (const { name } of tables) {
+		if (!isContentTableName(name)) continue
 		const columns = await db.all<{ name: string }>(
 			sql`SELECT name FROM pragma_table_info(${name})`
 		)
 		const columnNames = new Set(columns.map((column) => column.name))
 		if (columnNames.has('data') && !columnNames.has('status')) {
-			slugs.push(name)
+			slugs.push(slugFromContentTableName(name))
 		}
 	}
 	return slugs

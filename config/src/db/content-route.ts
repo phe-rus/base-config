@@ -58,56 +58,49 @@ export type ContentEndpoint = {
 }
 
 /**
- * What an `EndpointFactory` is handed — always `db`, the one binding every
- * conceivable endpoint factory needs (content persistence). **Not
- * automatically a place for capability-specific bindings** (email,
- * payments, anything else a *particular* plugin might want) — the default
- * is still that those stay on that plugin's own contract, not threaded
- * through `createHandler()`, so its own signature stays stable as more
- * plugins with completely different needs (Stripe keys, a queue binding,
- * whatever) get added later. `handleEmail` (`CreateHandlerOptions`,
- * `api/create-handler.ts`) is the one deliberate, named exception today —
- * `createHandler()` forwards it into every factory's own bindings
- * alongside `db` when given, so a factory that wants it (only
- * `@baseconfig/plugin-form-builder`'s own `formBuilderEndpoints` does) can widen
- * its own declared parameter type to read it, still structurally
- * assignable to `EndpointFactory` below since the field is optional. Not a
- * pattern to repeat reflexively for every future plugin need — see
- * `CreateHandlerOptions['handleEmail']`'s own doc comment for why this one
- * exception was made.
+ * What an `EndpointFactory` is handed: always `db`, the one binding every
+ * conceivable endpoint factory needs (content persistence). Deliberately
+ * just this, no capability-specific bindings (email, payments, anything
+ * else one particular plugin might want) live here; a plugin that needs
+ * something beyond `db` owns that entirely on its own contract instead
+ * (see `EndpointFactory`'s own doc comment for how, e.g.
+ * `@baseconfig/plugin-form-builder`'s own `handleEmail`, configured once,
+ * directly on `formBuilderPlugin({handleEmail})`, read back by its own
+ * `formBuilderEndpoints` via its own options registry, never threaded
+ * through here). This keeps `createHandler()`'s own signature stable as
+ * more plugins with completely different needs (Stripe keys, a queue
+ * binding, whatever) get added later, none of them need a matching new
+ * field here.
  */
 export type EndpointFactoryBindings = {
 	db: ContentDatabase
-	handleEmail?: (email: {
-		to: string
-		from: string
-		subject: string
-		html: string
-	}) => Promise<void>
 }
 
 /**
  * **The mechanism that makes "plugins only configured in `base.config.ts`"
  * real**, not just true for isomorphic collections/blocks/hooks. A plugin
  * (e.g. `formBuilderPlugin()`) can't hand `createHandler()` real
- * `ContentEndpoint`s directly — building one needs `db` (and whatever
- * capability-specific things the plugin itself was separately configured
- * with, e.g. its own dedicated email hook — see `EndpointFactoryBindings`'
- * own doc comment for why those stay out of this generic bindings shape),
- * real bindings the plugin's own isomorphic `Plugin` function (running
- * inside `baseConfig()`, evaluated in the browser too) can never have.
- * What it *can* safely include in its returned config is this: a plain
- * function reference that *knows how* to build its endpoints once it's
- * later handed
- * `db` — the function itself touches no binding just by existing in the
- * client bundle, only by being *called*, and it's only ever called from
- * `createHandler()` (server-only). `baseConfig()` registers every
+ * `ContentEndpoint`s directly: building one needs `db`, a real binding the
+ * plugin's own isomorphic `Plugin` function (running inside `baseConfig()`,
+ * evaluated in the browser too) can never have. What it *can* safely
+ * include in its returned config is this: a plain function reference that
+ * *knows how* to build its endpoints once it's later handed `db`, the
+ * function itself touches no binding just by existing in the client
+ * bundle, only by being *called*, and it's only ever called from
+ * `createHandler()` (server-only). Any *other* capability a specific
+ * plugin needs (a secret, an email sender, anything) is a plain function
+ * reference too, just as safe to merely hold in the plugin's own
+ * isomorphic config as `db` is to hold here, since the actual risk is only
+ * ever in a function's *body* (does it import/reference something
+ * server-only?), never in the mere existence of a function value in the
+ * bundle. That's exactly how `@baseconfig/plugin-form-builder`'s own
+ * `formBuilderPlugin({handleEmail})` stays fully self-contained: one call
+ * configures everything the plugin needs, with no second, separate
+ * `createHandler()` param required for it. `baseConfig()` registers every
  * `BaseConfigProps['endpointFactories']` entry (`collections/registry.ts`'s
  * `registerEndpointFactories()`); `createHandler()` calls
- * `collectEndpointFactories()`, invokes each with `{db}`, and merges the
- * result with its own Tier-2 `endpoints` param — so a consumer's server
- * entry only ever passes `createHandler()` truly generic bindings, never
- * anything plugin-specific.
+ * `collectEndpointFactories()` and invokes each with `{db}`, merging the
+ * result with its own Tier-2 `endpoints` param.
  */
 export type EndpointFactory = (
 	bindings: EndpointFactoryBindings

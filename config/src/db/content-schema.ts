@@ -25,8 +25,14 @@
  * not full per-field typing.
  */
 
+import { contentTableName } from './table-name'
+
 export type ContentTableEntry = {
-	/** The collection/global's own slug — becomes the SQL table name verbatim. */
+	/**
+	 * The collection/global's own slug, becomes the SQL table name via
+	 * `contentTableName()` (`cn`-prefixed, camelCase, see that module's own
+	 * doc comment for why), not verbatim.
+	 */
 	slug: string
 	isGlobal: boolean
 }
@@ -61,7 +67,7 @@ function collectionTableSource(slug: string): string {
 	const varName = toVarName(slug)
 	return [
 		`export const ${varName} = sqliteTable(`,
-		`\t'${slug}',`,
+		`\t'${contentTableName(slug)}',`,
 		'\t{',
 		"\t\tid: text('id').primaryKey(),",
 		"\t\ttitle: text('title'),",
@@ -79,7 +85,7 @@ function collectionTableSource(slug: string): string {
 function globalTableSource(slug: string): string {
 	const varName = toVarName(slug)
 	return [
-		`export const ${varName} = sqliteTable('${slug}', {`,
+		`export const ${varName} = sqliteTable('${contentTableName(slug)}', {`,
 		"\tdata: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),",
 		`\tupdatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).default(${TIMESTAMP_DEFAULT}).$onUpdate(() => /* @__PURE__ */ new Date()).notNull()`,
 		'})'

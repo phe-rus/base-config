@@ -1,9 +1,44 @@
 import { Hono } from 'hono'
 import type { MiddlewareHandler } from 'hono'
+import { getAdminConfig } from '../admin/functions/config-registry'
 import { collectEndpointFactories, collectHooks } from '../collections/registry'
 import { createIgnite } from './ignite'
 import { createBaseConfigRoute } from './route'
 import type { BaseConfigRouteBindings } from './route'
+
+/**
+ * Generic, library-owned dev convenience, not something a consumer states
+ * in `config.cors`, since it isn't specific to any one app: any localhost/
+ * private-network origin, but *only* ever consulted when `bindings.isdev`
+ * is true (see `defaultCorsMatcher`'s own `isDevelopment` param below).
+ */
+const PRIVATE_NETWORK_ORIGIN =
+	/^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|10\.(?:\d{1,3}\.){2}\d{1,3}|100\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.)\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.(?:\d{1,3}\.)\d{1,3}):\d+$/
+
+/**
+ * Built only when a consumer omits `createHandler`'s own `cors` param,
+ * reads `config.cors` (`base.types.ts`'s `AdminSettings`) via the same
+ * plain module-level registry `getAdminConfig()` already serves other
+ * `config.*` fields (e.g. `socialProviders`) through. Empty/unset patterns
+ * means "allow everything else" (echo the origin back), see
+ * `AdminSettings['cors']`'s own doc comment for why that's the permissive
+ * default rather than a literal `'*'`. `isDevelopment` (the same
+ * `bindings.isdev` fact `ignite()` already takes) gates the private-network
+ * allowance above, kept out of `config.cors` itself so a consumer's
+ * isomorphic config can't accidentally widen *production* CORS to trust
+ * anything merely shaped like localhost.
+ */
+function defaultCorsMatcher(isDevelopment: boolean) {
+	return (origin: string): string => {
+		if (isDevelopment && PRIVATE_NETWORK_ORIGIN.test(origin)) return origin
+		const patterns = getAdminConfig()?.cors
+		if (!patterns || patterns.length === 0) return origin
+		const allowed = patterns.some((pattern) =>
+			pattern instanceof RegExp ? pattern.test(origin) : pattern === origin
+		)
+		return allowed ? origin : ''
+	}
+}
 
 type SessionLike = { user: { role?: string | null } }
 
@@ -44,86 +79,69 @@ export type CreateHandlerBindings = {
 }
 
 export type CreateHandlerOptions = {
-	/** The consumer's own `drizzle(env.BASECONFIG, ...)` instance — see `createContentRoute`'s own doc comment (`db/content-route.ts`). */
+	/** The consumer's own `drizzle(env.DB, ...)` instance — see `createContentRoute`'s own doc comment (`db/content-route.ts`). */
 	db: BaseConfigRouteBindings['db']
 	/** The consumer's own `betterAuth()` instance — see `AuthServerLike`'s own doc comment for why this stays structural. */
 	auth: AuthServerLike
 	/** See `CreateHandlerBindings`' own doc comment. */
 	bindings: CreateHandlerBindings
-	/** Given an `Origin` header value, return the origin to allow, or `''` to deny. Omit to skip CORS entirely. */
+	/**
+	 * Given an `Origin` header value, return the origin to allow, or `''` to
+	 * deny. Omit to fall back to a default matcher built from `config.cors`
+	 * (`base.config.ts`'s own `AdminSettings['cors']`), see
+	 * `defaultCorsMatcher`'s own doc comment. Unlike the library's other
+	 * server-only params, this one has a real isomorphic-config-backed
+	 * default, so omitting it doesn't skip CORS entirely the way it used to.
+	 */
 	cors?: (origin: string) => string
 	/** See `ContentRouteBindings['hooks']`'s own doc comment (`db/content-route.ts`) — Tier-2, binding-capable hooks, merged with the isomorphic Tier-1 map every registered collection/global already contributed. */
 	hooks?: BaseConfigRouteBindings['hooks']
 	/** See `ContentEndpoint`'s own doc comment (`db/content-route.ts`) — Tier-2 endpoints, merged with whatever every registered plugin's own `EndpointFactory` already contributed. */
 	endpoints?: BaseConfigRouteBindings['endpoints']
-	/**
-	 * A deliberate, named, one-off exception to "no capability-specific
-	 * params on this function" (see `EndpointFactoryBindings`' own doc
-	 * comment, `db/content-route.ts`, for the general rule this narrows) —
-	 * forwarded as-is to every registered `EndpointFactory` (merged into
-	 * `{db, handleEmail}`), so a plugin that needs it (today, only
-	 * `@baseconfig/plugin-form-builder`'s own `formBuilderEndpoints`) reads it
-	 * straight off its own factory arguments. This package still never
-	 * imports `@baseconfig/plugin-form-builder` — the shape here is a plain
-	 * structural type, the same trade-off `AuthServerLike`/`R2BucketLike`
-	 * already make, not a real dependency on that plugin's own types.
-	 * Configure directly here, right alongside `db`/`auth`/`bindings` — not
-	 * a separate call, and never through `base.config.ts`'s own
-	 * `formBuilderPlugin({...})`, since that config is isomorphic (also
-	 * evaluated in the browser for the admin UI) and can never safely hold
-	 * a real email implementation or its secrets.
-	 */
-	handleEmail?: (email: {
-		to: string
-		from: string
-		subject: string
-		html: string
-	}) => Promise<void>
 	requestTimeoutMs?: number
 	etag?: boolean
 }
 
 /**
- * The one call a consumer's own server-side API entry needs to make —
+ * The one call a consumer's own server-side API entry needs to make:
  * composes everything this package owns as API routes (content+storage via
  * `createBaseConfigRoute`), the consumer's own better-auth instance mounted
  * at `/auth/*`, the session middleware every admin-only route needs, and
  * CORS/security headers (`createIgnite`'s own `ignite()`) into one Hono
- * app, mounted at `/api` — matching the base path `baseConfig()`'s own
+ * app, mounted at `/api`, matching the base path `baseConfig()`'s own
  * internal `hc<BaseConfigRouteType>()` client (`define.ts`) already assumes.
  *
  * What this can't own, and takes as an explicit param instead: `db`/
  * `bindings.{r2,kv}` (real bindings only the consumer's own `env` can
- * resolve — this package has never read `env` itself anywhere, see
+ * resolve, this package has never read `env` itself anywhere, see
  * `createIgnite`'s own doc comment for why; `kv` is optional, see
  * `CreateHandlerBindings`' own doc comment for what it does when given),
  * `auth` (no dependency on any one auth library), `hooks`/`endpoints`
- * (Tier-2, binding-capable — see `CollectionHooks`'/`ContentEndpoint`'s own
- * doc comments for the tier split), `cors`/`bindings.isdev` (a
- * deployment's own CORS/origin policy — e.g. which domains are allowed —
- * that this package has no way to know on its own), and `handleEmail` (see
- * its own doc comment above — a deliberate, named exception to "no
- * capability-specific params," not a pattern to repeat reflexively for
- * every future plugin need without a similarly explicit reason).
+ * (Tier-2, binding-capable, see `CollectionHooks`'/`ContentEndpoint`'s own
+ * doc comments for the tier split), and `cors`/`bindings.isdev` (a
+ * deployment's own CORS/origin policy, e.g. which domains are allowed,
+ * that this package has no way to know on its own).
  *
  * **Merges `hooks` with `collectHooks()`'s own Tier-1 map** (`collections/registry.ts`)
- * before passing either down — a plain shallow merge, per-slug: if the same
+ * before passing either down: a plain shallow merge, per-slug; if the same
  * slug has hooks from both tiers, the Tier-2 entry passed here wins
- * *entirely* for that slug (not a per-hook-function merge) — a real,
+ * *entirely* for that slug (not a per-hook-function merge), a real,
  * disclosed limitation, not a hidden one; a slug needing both a pure
  * config-level hook and a binding-capable one should just define both
  * inside the one Tier-2 entry instead of splitting them.
  *
  * **Also invokes every registered `EndpointFactory`** (`collectEndpointFactories()`,
- * `collections/registry.ts`) with `{db, handleEmail}`, merging the results
- * with the explicit `endpoints` param — see `EndpointFactory`'s own doc
- * comment (`db/content-route.ts`) for why this is *the* mechanism that
- * keeps a plugin's entire footprint inside `base.config.ts`'s
- * `plugins: [...]` for everything except `handleEmail`, which this
- * function forwards from its own `handleEmail` option instead.
+ * `collections/registry.ts`) with `{db}`, merging the results with the
+ * explicit `endpoints` param, see `EndpointFactory`'s own doc comment
+ * (`db/content-route.ts`) for why this is *the* mechanism that keeps a
+ * plugin's entire footprint inside `base.config.ts`'s `plugins: [...]`,
+ * full stop, no capability-specific param on this function for any
+ * particular plugin's own needs (e.g. `@baseconfig/plugin-form-builder`'s
+ * own `handleEmail` lives entirely on `formBuilderPlugin({handleEmail})`
+ * instead, read back by its own endpoint factory).
  *
  * A consumer's entire server-side footprint collapses to building this
- * once and serving it from whatever route file matches `/api/*` — e.g.
+ * once and serving it from whatever route file matches `/api/*`, e.g.
  * TanStack Start's own `@baseconfig/core/api`'s `Handler(app)` wrapping the
  * returned app into a `{GET, POST, ...}` method map.
  */
@@ -134,7 +152,6 @@ export function createHandler({
 	cors,
 	hooks,
 	endpoints,
-	handleEmail,
 	requestTimeoutMs,
 	etag
 }: CreateHandlerOptions) {
@@ -152,14 +169,14 @@ export function createHandler({
 
 	const mergedHooks = { ...collectHooks(), ...hooks }
 	const factoryEndpoints = collectEndpointFactories().flatMap((factory) =>
-		factory({ db, handleEmail })
+		factory({ db })
 	)
 	const mergedEndpoints = [...factoryEndpoints, ...(endpoints ?? [])]
 
 	return ignite({
 		enabled: true,
 		isDevelopment: bindings.isdev,
-		matchOrigin: cors,
+		matchOrigin: cors ?? defaultCorsMatcher(bindings.isdev ?? false),
 		requestTimeoutMs,
 		etag
 	})

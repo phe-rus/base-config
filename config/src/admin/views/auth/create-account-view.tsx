@@ -10,7 +10,6 @@ import { getAdminConfig } from '../../functions/config-registry'
 
 export type CreateAccountFormValues = {
 	name: string
-	username: string
 	email: string
 	password: string
 	repassword: string
@@ -28,14 +27,6 @@ type CreateAccountViewProps = {
 }
 
 const createSchema = z.object({
-	username: z
-		.string()
-		.min(3, 'Username must be at least 3 characters long')
-		.max(28, 'Username must be at most 20 characters long')
-		.regex(
-			/^[a-z0-9_]+$/,
-			'Username can only contain lowercase letters, numbers, and underscores'
-		),
 	name: z.string().min(3, 'Name is required'),
 	email: z.email(),
 	password: z
@@ -61,8 +52,7 @@ const defaultValues: CreateAccountFormValues = {
 	email: '',
 	password: '',
 	repassword: '',
-	name: '',
-	username: ''
+	name: ''
 }
 
 function providerLabel(provider: string): string {
@@ -70,8 +60,8 @@ function providerLabel(provider: string): string {
 }
 
 /**
- * Owns its own sign-up logic end to end — calls `authClient.signUp.email`/
- * `authClient.isUsernameAvailable` directly, same boundary `LoginView`
+ * Owns its own sign-up logic end to end, calls `authClient.signUp.email`
+ * directly (email+password only, no username), same boundary `LoginView`
  * already draws (see that component's own doc comment).
  */
 export function CreateAccountView({
@@ -96,9 +86,7 @@ export function CreateAccountView({
 				await authClient.signUp.email({
 					email: value.email,
 					password: value.password,
-					name: value.name,
-					username: value.username,
-					displayUsername: value.name
+					name: value.name
 				})
 			)
 		},
@@ -152,31 +140,6 @@ export function CreateAccountView({
 								label='Prefered Name'
 								placeholder='Pixal'
 								description='This name will be displayed on your profile'
-							/>
-						)}
-					</form.AppField>
-
-					<form.AppField
-						name='username'
-						asyncDebounceMs={300}
-						validators={{
-							onChangeAsync: async ({ value }: { value: string }) => {
-								if (value.length < 3) return undefined
-								if (!authClient) return undefined
-								const result = await authClient.isUsernameAvailable({
-									username: value
-								})
-								return result.data?.available ? undefined : 'Username taken'
-							}
-						}}
-					>
-						{(f: any) => (
-							<f.Input
-								required
-								label='Username'
-								type='text'
-								placeholder='Username'
-								description='This name will be used for your profile url. E.g. @username'
 							/>
 						)}
 					</form.AppField>

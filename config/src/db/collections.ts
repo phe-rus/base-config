@@ -456,7 +456,6 @@ export type RealUserRow = {
 	email: string
 	role?: string | string[] | null
 	banned?: boolean | null
-	username?: string | null
 	/** Set by better-auth's own `twoFactor()` plugin — real, per-user, DB-backed. Not destructured out in `toUserDocumentRow()` below, so it flows through into a document's own `data` via `...rest` like any other field the admin's `users` collection wants to show (see `www/src/config/collections/users.ts`). */
 	twoFactorEnabled?: boolean | null
 	createdAt: string | Date
@@ -476,6 +475,12 @@ type AuthClientResult<T> = Promise<{ data: T | null; error: unknown }>
  * plugin was actually included), used by the admin auth screens
  * (`login-view.tsx`/`create-account-view.tsx`) to conditionally render
  * passkey/2FA UI rather than assuming every consumer has them configured.
+ * The admin auth screens are email+password only, no `username()` client
+ * plugin, so there's nothing to feature-detect there; a consumer whose own
+ * `authClient.ts` still registers `passkeyClient()` server-side (`auth.ts`'s
+ * own `passkey()` plugin) for some *other*, non-admin surface can do so
+ * without this package's own admin screens ever picking it up, since they
+ * only ever see whichever `authClient` instance was passed to `baseConfig({auth})`.
  */
 export type BetterAuthAdminClient = {
 	/** Core client method (not part of `adminClient()`) — used by `Topbar`'s sign-out button. */
@@ -509,15 +514,10 @@ export type BetterAuthAdminClient = {
 	getSession: () => AuthClientResult<{
 		user: { role?: string | string[] | null }
 	}>
-	/** Core client methods (email+password and username+password are "the same thing, different terminology" — a `LoginView` merges both into one `credentials` field and picks which of these to call based on whether it looks like an email, same design the app already had). `social` is optional — only called when a consumer's own `socialProviders` list names a provider. */
+	/** Core client method. `social` is optional, only called when a consumer's own `socialProviders` list names a provider. */
 	signIn: {
 		email: (opts: {
 			email: string
-			password: string
-			rememberMe?: boolean
-		}) => AuthClientResult<{ user: RealUserRow; token?: string | null }>
-		username: (opts: {
-			username: string
 			password: string
 			rememberMe?: boolean
 		}) => AuthClientResult<{ user: RealUserRow; token?: string | null }>
@@ -532,14 +532,8 @@ export type BetterAuthAdminClient = {
 			email: string
 			password: string
 			name: string
-			username?: string
-			displayUsername?: string
 		}) => AuthClientResult<{ user: RealUserRow }>
 	}
-	/** From `username()`'s own client plugin — the debounced availability check `CreateAccountView` calls per keystroke. */
-	isUsernameAvailable: (opts: {
-		username: string
-	}) => AuthClientResult<{ available: boolean }>
 	/** Core `emailAndPassword` client methods — `ForgotPasswordView`/`ResetPasswordView`'s own real logic. The server endpoint is `/request-password-reset` (confirmed against the installed better-auth's own route source, not guessed) — `requestPasswordReset`, not `forgetPassword`. `redirectTo` is what determines the path the emailed reset link ultimately lands on (see `www/src/api/auth/auth.ts`'s own `sendResetPassword` callback). */
 	requestPasswordReset: (opts: {
 		email: string
@@ -604,7 +598,7 @@ function toUserDocumentRow(
 			...rest,
 			role: Array.isArray(role) ? role[0] : (role ?? 'user'),
 			title: user.name,
-			slug: user.username || user.email
+			slug: user.email
 		},
 		status: banned ? 'unpublished' : 'published',
 		createdAt: new Date(createdAt).toISOString(),
@@ -713,7 +707,7 @@ function createUsersCollection() {
 						// object, so without this every publish would resend every
 						// field, including ones the admin never touched. That
 						// matters here specifically: a validation quirk on one
-						// untouched field (e.g. `username`) would otherwise block
+						// untouched field (e.g. `bio`) would otherwise block
 						// saving changes to everything else. `title`/`slug` are
 						// always excluded too — they only exist because
 						// `withBaseFields` requires every collection to have them;

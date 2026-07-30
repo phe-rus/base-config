@@ -1,4 +1,4 @@
-<p style='color: oklch(0.704 0.191 22.216); background: oklch(0.228 0.013 107.4); padding: 10px; border-radius: 5px; border-color: 0.5px solid oklch(1 0 0 / 10%);'> <strong>Actively under development.</strong> APIs, field types, and versions (currently 0.x) may change without notice not yet recommended for production use.
+<p color="oklch(0.704 0.191 22.216)" style='color: oklch(0.704 0.191 22.216); background: oklch(0.228 0.013 107.4); padding: 10px; border-radius: 5px; border-color: 0.5px solid oklch(1 0 0 / 10%);'> <strong>Actively under development.</strong> APIs, field types, and versions (currently 0.x) may change without notice not yet recommended for production use.
 </p>
 <p align="center" style="display: flex; border-radius: 5px; overflow: hidden; scrollbar-width: none; -ms-overflow-style: none;padding: p-0;">
   <img src="./screenshot/baseConfig.png" alt="baseConfig" />
@@ -19,7 +19,7 @@
 
 <h1 align="center">baseConfig</h1>
 
-<p style="display: flex; max-width: 32rem; margin-inline: auto; text-align: center;">
+<p align="center" margin="auto" width="32rem" style="display: flex; max-width: 32rem; margin-inline: auto; text-align: center;">
   Build content-driven apps with a config-driven CMS for TanStack Start. Local-first editing, edge-first architecture, no separate backend.
 </p>
 
@@ -36,7 +36,7 @@ bun add @baseconfig/core @baseconfig/ui hono drizzle-orm better-auth
 ```
 
 ```ts
-// base.config.ts — one call describes your whole app
+// base.config.ts: one call describes your whole app
 import { baseConfig, defineCollection, defineGlobal } from '@baseconfig/core'
 
 const posts = defineCollection({
@@ -62,7 +62,7 @@ export default baseConfig({
 ```
 
 ```ts
-// api entry — the whole server-side surface is one call
+// api entry: the whole server-side surface is one call
 import { createHandler } from '@baseconfig/core/api'
 
 export default createHandler({
@@ -132,7 +132,7 @@ export const Route = createFileRoute('/(admin)/admin/$collection/$')({
 
 ```
 
-That's it — content CRUD (`/api/<collection>`, `/api/globals/<slug>`), the media library (`/api/storage/*`), and public unauthenticated media serving (`/api/cdn/*`) are all mounted for you. See [`config/CLAUDE.md`](./config/CLAUDE.md) and [`ui/CLAUDE.md`](./ui/CLAUDE.md) for the full internals.
+That's it: content CRUD (`/api/<collection>`, `/api/globals/<slug>`), the media library (`/api/storage/*`), and public unauthenticated media serving (`/api/cdn/*`) are all mounted for you. See [`config/CLAUDE.md`](./config/CLAUDE.md) and [`ui/CLAUDE.md`](./ui/CLAUDE.md) for the full internals.
 
 ## Development
 
@@ -143,7 +143,7 @@ bun run build       # tsdown build, real dist output
 bun run typecheck   # tsc --noEmit per package
 ```
 
-Every package builds to `dist/` via [tsdown](https://tsdown.dev) (rolldown-based) — nothing runs against raw `src/` at runtime. `dependencies`/`peerDependencies` are deliberately split by "does this package really need its own copy" (`neverBundle`) vs "should this get inlined" (`alwaysBundle`) — see each package's own `tsdown.config.ts`.
+Every package builds to `dist/` via [tsdown](https://tsdown.dev) (rolldown-based); nothing runs against raw `src/` at runtime. `dependencies`/`peerDependencies` are deliberately split by "does this package really need its own copy" (`neverBundle`) vs "should this get inlined" (`alwaysBundle`), see each package's own `tsdown.config.ts`.
 
 <h2>Features</h2>
 
@@ -190,11 +190,11 @@ Every package builds to `dist/` via [tsdown](https://tsdown.dev) (rolldown-based
   </li>
   <li style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
     <input type="checkbox" disabled style="margin-top: 0.25rem; cursor: not-allowed;" />
-    <span><strong>Deep-field querying</strong> — <code>where</code> clauses currently only reach top-level columns (<code>status</code>/<code>slug</code>), not into a document's own JSON <code>data</code>. This is the single biggest daily-use gap, and blocks a <code>join</code> field type too.</span>
+    <span><strong>Deep-field querying</strong>: <code>where</code> clauses currently only reach top-level columns (<code>status</code>/<code>slug</code>), not into a document's own JSON <code>data</code>. This is the single biggest daily-use gap, and blocks a <code>join</code> field type too.</span>
   </li>
   <li style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
     <input type="checkbox" disabled style="margin-top: 0.25rem; cursor: not-allowed;" />
-    <span><strong>A generic, registry-driven relationship picker</strong> — today it's three hardcoded <code>useLiveQuery</code> calls, not derived from the collection registry, so a plugin-registered collection isn't relatable yet.</span>
+    <span><strong>A generic, registry-driven relationship picker</strong>: today it's three hardcoded <code>useLiveQuery</code> calls, not derived from the collection registry, so a plugin-registered collection isn't relatable yet.</span>
   </li>
   <li style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
     <input type="checkbox" disabled style="margin-top: 0.25rem; cursor: not-allowed;" />
@@ -202,11 +202,11 @@ Every package builds to `dist/` via [tsdown](https://tsdown.dev) (rolldown-based
   </li>
   <li style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
     <input type="checkbox" disabled style="margin-top: 0.25rem; cursor: not-allowed;" />
-    <span><strong>Image variants/focal point</strong> for uploads — currently one file in, one URL out, no resizing.</span>
+    <span><strong>Image variants/focal point</strong> for uploads: currently one file in, one URL out, no resizing.</span>
   </li>
   <li style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
     <input type="checkbox" disabled style="margin-top: 0.25rem; cursor: not-allowed;" />
-    <span><strong>Server-side version history and scheduled publish</strong> — local-first drafting solves "don't lose my work," not "what did this look like last week" or "publish this at 9am."</span>
+    <span><strong>Server-side version history and scheduled publish</strong>: local-first drafting solves "don't lose my work," not "what did this look like last week" or "publish this at 9am."</span>
   </li>
   <li style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
     <input type="checkbox" disabled style="margin-top: 0.25rem; cursor: not-allowed;" />
@@ -214,11 +214,11 @@ Every package builds to `dist/` via [tsdown](https://tsdown.dev) (rolldown-based
   </li>
   <li style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
     <input type="checkbox" disabled style="margin-top: 0.25rem; cursor: not-allowed;" />
-    <span><strong>Localization (i18n)</strong> and <strong>live preview</strong> — neither exists yet.</span>
+    <span><strong>Localization (i18n)</strong> and <strong>live preview</strong>: neither exists yet.</span>
   </li>
 </ul>
 
-<p>Contributions on any of these — or on anything else in the field/admin-UI vocabulary — are genuinely welcome; see below.</p>
+<p>Contributions on any of these, or on anything else in the field/admin-UI vocabulary, are genuinely welcome; see below.</p>
 
 ## Contributing
 

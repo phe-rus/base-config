@@ -20,18 +20,16 @@ function interpolate(template: string, data: Record<string, unknown>): string {
 }
 
 /**
- * The public half of the form builder — an `EndpointFactory`
+ * The public half of the form builder, an `EndpointFactory`
  * (`@baseconfig/core`'s own `db/content-route.ts`), not a function a consumer
  * calls directly. `plugin.ts` registers this itself, into
- * `config.endpointFactories`, the moment `formBuilderPlugin()` runs — so
+ * `config.endpointFactories`, the moment `formBuilderPlugin()` runs, so
  * `createHandler()` picks it up automatically and a consumer never imports
- * this file at all. `handleEmail` comes straight off this factory's own
- * `EndpointFactoryBindings` argument — `createHandler({handleEmail: ...})`
- * is what actually supplies it (see that option's own doc comment,
- * `@baseconfig/core`'s `api/create-handler.ts`); `beforeEmail` is the one
- * piece still read from `getFormBuilderOptions()` (this plugin's own
- * isomorphic-safe registry, configured via `formBuilderPlugin({beforeEmail})`
- * in `base.config.ts`). One real endpoint: `POST /api/forms/:id/submit`,
+ * this file at all. `handleEmail`/`beforeEmail` are both read from
+ * `getFormBuilderOptions()` (this plugin's own isomorphic-safe registry,
+ * configured once via `formBuilderPlugin({handleEmail, beforeEmail})` in
+ * `base.config.ts`), this factory only ever needs `db` off its own
+ * `EndpointFactoryBindings` argument. One real endpoint: `POST /api/forms/:id/submit`,
  * unauthenticated by design (matching Payload's own default for its
  * equivalent `/api/form-submissions` route) — a public visitor has no
  * session to check. Validates submitted data against the referenced form's
@@ -45,8 +43,7 @@ function interpolate(template: string, data: Record<string, unknown>): string {
  * to).
  */
 export const formBuilderEndpoints: EndpointFactory = ({
-	db,
-	handleEmail
+	db
 }: EndpointFactoryBindings) => {
 	return [
 		{
@@ -100,7 +97,7 @@ export const formBuilderEndpoints: EndpointFactory = ({
 					}
 				})
 
-				const { beforeEmail } = getFormBuilderOptions()
+				const { beforeEmail, handleEmail } = getFormBuilderOptions()
 				if (handleEmail && formData.emails?.length) {
 					const interpolated = formData.emails.map((email) => ({
 						to: interpolate(email.to, submissionData),

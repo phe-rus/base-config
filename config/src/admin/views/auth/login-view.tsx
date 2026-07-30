@@ -10,7 +10,7 @@ import { getAdminConfig } from '../../functions/config-registry'
 import { AuthBanner } from './auth-banner'
 
 export type LoginFormValues = {
-	credentials: string
+	email: string
 	password: string
 	rememberMe: boolean
 }
@@ -35,7 +35,7 @@ type LoginViewProps = {
 }
 
 const loginSchema = z.object({
-	credentials: z.string().min(1, 'Required'),
+	email: z.email(),
 	password: z.string().min(1, 'Required'),
 	rememberMe: z.boolean()
 })
@@ -45,7 +45,7 @@ const otpSchema = z.object({
 })
 
 const defaultValues: LoginFormValues = {
-	credentials: '',
+	email: '',
 	password: '',
 	rememberMe: true
 }
@@ -55,25 +55,27 @@ function providerLabel(provider: string): string {
 }
 
 /**
- * Owns its own sign-in logic end to end — calls `authClient.signIn.email`/
- * `signIn.username` directly (merged into one `credentials` field, since
- * email and username sign-in are "the same thing, different terminology";
- * this picks which to call based on whether the value looks like an
- * email), rather than taking `schema`/`onSubmit` props from a consumer's
- * own server-fn layer. Matches the boundary `Topbar`'s sign-out button and
- * the real `users` collection already draw around better-auth — a
- * consumer's own `auth.ts`/`authClient.ts` stay entirely their own, this
- * component only ever calls the already-injected `authClient`
- * (`getAuthClient()`, populated once via `baseConfig({auth})`).
+ * Owns its own sign-in logic end to end, calls `authClient.signIn.email`
+ * directly (email+password only, deliberately, no username sign-in),
+ * rather than taking `schema`/`onSubmit` props from a consumer's own
+ * server-fn layer. Matches the boundary `Topbar`'s sign-out button and the
+ * real `users` collection already draw around better-auth: a consumer's
+ * own `auth.ts`/`authClient.ts` stay entirely their own, this component
+ * only ever calls the already-injected `authClient` (`getAuthClient()`,
+ * populated once via `baseConfig({auth})`).
  *
- * Passkey sign-in and the 2FA challenge step are feature-detected —
+ * Passkey sign-in and the 2FA challenge step are feature-detected:
  * `authClient.signIn.passkey`/`authClient.twoFactor` are only present when
  * the consumer's own `authClient.ts` actually registered those client
  * plugins (`passkeyClient()`/`twoFactorClient()`), a safe, real runtime
- * check with no server round-trip needed. Social sign-in isn't
- * feature-detectable the same way (see `socialProviders`' own doc
- * comment) — it defaults from `getAdminConfig()` (`baseConfig()`'s own
- * `config.socialProviders`, set once app-wide) rather than a per-call prop.
+ * check with no server round-trip needed. A consumer that wants passkey
+ * available *elsewhere* but not in this admin panel keeps `passkey()`
+ * configured server-side (`auth.ts`) while simply not registering
+ * `passkeyClient()` on the `authClient` instance passed to `baseConfig({auth})`.
+ * Social sign-in isn't feature-detectable the same way (see
+ * `socialProviders`' own doc comment), it defaults from `getAdminConfig()`
+ * (`baseConfig()`'s own `config.socialProviders`, set once app-wide) rather
+ * than a per-call prop.
  */
 export function LoginView({
 	title = 'Sign in',
@@ -111,18 +113,11 @@ export function LoginView({
 					'LoginView was rendered but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
 				)
 			}
-			const isEmail = value.credentials.includes('@')
-			const result = isEmail
-				? await authClient.signIn.email({
-						email: value.credentials,
-						password: value.password,
-						rememberMe: value.rememberMe
-					})
-				: await authClient.signIn.username({
-						username: value.credentials,
-						password: value.password,
-						rememberMe: value.rememberMe
-					})
+			const result = await authClient.signIn.email({
+				email: value.email,
+				password: value.password,
+				rememberMe: value.rememberMe
+			})
 			return unwrap(result)
 		},
 		onSuccess: (data) => {
@@ -220,13 +215,13 @@ export function LoginView({
 						}}
 						className='flex flex-col gap-5'
 					>
-						<form.AppField name='credentials'>
+						<form.AppField name='email'>
 							{(f: any) => (
 								<f.Input
 									required
-									label='Email or Username'
-									type='text'
-									placeholder='Email or Username'
+									label='Email'
+									type='email'
+									placeholder='Email'
 								/>
 							)}
 						</form.AppField>

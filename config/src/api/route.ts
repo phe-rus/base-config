@@ -7,7 +7,7 @@ import { createCdnRoute } from './cdn-route'
 import { createStorageRoute } from './storage-route'
 
 export type BaseConfigRouteBindings = {
-	/** The consumer's own `drizzle(env.BASECONFIG, ...)` instance — see `createContentRoute`'s own doc comment. */
+	/** The consumer's own `drizzle(env.DB, ...)` instance — see `createContentRoute`'s own doc comment. */
 	db: ContentDatabase
 	/** The consumer's own R2 bucket binding — see `createStorageRoute`'s own doc comment. */
 	bucket: Parameters<typeof createStorageRoute>[0]
