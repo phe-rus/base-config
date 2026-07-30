@@ -36,30 +36,22 @@
 
 ## Why baseConfig?
 
-⚡ **Edge-native**
+- ⚡ **Edge-native**
 Runs entirely on Cloudflare. Your website, CMS, API, and media library deploy together as a single Worker.
 
-💾 **Local-first editing**
+- 💾 **Local-first editing**
 Write without worrying about your connection. Changes stay on your device until you choose to publish.
 
-🧩 **Config-driven**
+- 🧩 **Config-driven**
 Describe your collections, globals, and fields in TypeScript. Your configuration becomes your CMS.
 
-📦 **Batteries included**
+- 📦 **Batteries included**
 Collections, globals, rich text, blocks, relationships, media, authentication, and plugins in one place.
 
-🔌 **Built to extend**
+- 🔌 **Built to extend**
 Create your own fields, blocks, endpoints, hooks, and plugins without fighting the framework.
 
----
-
-## Preview
-
-> *(Replace this section with one large screenshot or a short GIF.)*
-
----
-
-## Quick Start
+### Quick Start
 
 ```bash
 bun add @baseconfig/core @baseconfig/ui hono drizzle-orm better-auth
@@ -76,35 +68,40 @@ export default baseConfig({
 
 That's it.
 
-baseConfig automatically provides:
+### baseConfig automatically provides:
 
-- Content API
-- Admin dashboard
-- Media library
-- Authentication
-- File uploads
-- Storage
-- Dashboard
+- Content API - Mounted to /api/$.ts
+- Admin dashboard - Mounted to /admin or whatever path you prefer
+- Media library - Pass the binding
+- Authentication - But based on your own better auth setup
+- File uploads - Fully setup to work with R2
+- Storage - Pass R2 Binding
+- Dashboard - Covered in admin/$.ts catch all
 
 All running from the same Cloudflare Worker.
 
----
+<div align="center">
+  <h2 style="margin-top: 50px; margin-bottom: 15px; font-weight: 500;">Technologies we use & love</h2>
+  
+  <p>
+    <img src="https://tanstack.com/favicon.ico" alt="TanStack Start" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://www.cloudflare.com/favicon.ico" alt="Cloudflare" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://turbo.build/favicon.ico" alt="Turborepo" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://better-auth.com/branding/svg/better-auth-mark-light.svg" alt="Better Auth" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://www.anthropic.com/favicon.ico" alt="Claude Code" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://bun.sh/favicon.ico" alt="Bun" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://orm.drizzle.team/favicon.ico" alt="Drizzle ORM" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://git-scm.com/favicon.ico" alt="Git" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+    <img src="https://ui.shadcn.com/favicon.ico" alt="shadcn/ui" width="30" height="30" style="border-radius: 50%; margin: 4px;" />
+  </p>
 
-## Built with
 
-- TanStack Start
-- Cloudflare Workers
-- Hono
-- Drizzle ORM
-- D1
-- R2
-- Better Auth
-- TypeScript
+  <h2>License</h2>
+   
+  [MIT](./LICENSE)
 
-## License
-
-[MIT](./LICENSE)
-
-## 👏 Thanks to all our contributors
+  <h2>👏 Thanks to all our contributors</h2>
 
 <img align="center" src="https://contributors-img.web.app/image?repo=phe-rus/base-config"/>
+
+</div>
