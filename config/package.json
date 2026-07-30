@@ -1,6 +1,6 @@
 {
 	"name": "@baseconfig/core",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "baseConfig's engine — field vocabulary, schema deriver, D1-backed content persistence, the Hono API layer, and the admin UI shell.",
 	"license": "MIT",
 	"repository": {
