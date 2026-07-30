@@ -1,5 +1,5 @@
-> **Actively under development.** APIs, field types, and versions (currently 0.x) may change without notice — not yet recommended for production use.
-
+<p style='color: oklch(0.704 0.191 22.216); background: oklch(0.228 0.013 107.4); padding: 10px; border-radius: 5px; border-color: 0.5px solid oklch(1 0 0 / 10%);'> <strong>Actively under development.</strong> APIs, field types, and versions (currently 0.x) may change without notice not yet recommended for production use.
+</p>
 <p align="center" style="display: flex; border-radius: 5px; overflow: hidden; scrollbar-width: none; -ms-overflow-style: none;padding: p-0;">
   <img src="./screenshot/baseConfig.png" alt="baseConfig" />
 </p>
