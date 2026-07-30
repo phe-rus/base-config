@@ -1,0 +1,88 @@
+{
+	"name": "@baseconfig/core",
+	"version": "0.0.6",
+	"description": "baseConfig's engine — field vocabulary, schema deriver, D1-backed content persistence, the Hono API layer, and the admin UI shell.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/phe-rus/base-config.git",
+		"directory": "packages/config"
+	},
+	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"bugs": {
+		"url": "https://github.com/phe-rus/base-config/issues"
+	},
+	"keywords": [
+		"cms",
+		"tanstack-start",
+		"cloudflare-workers",
+		"admin-panel",
+		"content-management"
+	],
+	"private": false,
+	"type": "module",
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"default": "./dist/index.mjs"
+		},
+		"./admin": {
+			"types": "./dist/admin/index.d.mts",
+			"default": "./dist/admin/index.mjs"
+		},
+		"./api": {
+			"types": "./dist/api/index.d.mts",
+			"default": "./dist/api/index.mjs"
+		},
+		"./collections/blocks": {
+			"types": "./dist/collections/blocks/index.d.mts",
+			"default": "./dist/collections/blocks/index.mjs"
+		},
+		"./api/*": {
+			"types": "./dist/api/*.d.mts",
+			"default": "./dist/api/*.mjs"
+		},
+		"./*": {
+			"types": "./dist/*.d.mts",
+			"default": "./dist/*.mjs"
+		},
+		"./tailwind.css": "./dist/tailwind.css"
+	},
+	"bin": {
+		"base": "dist/cli.mjs"
+	},
+	"scripts": {
+		"build": "tsdown && cp src/tailwind.css dist/tailwind.css",
+		"dev": "cp src/tailwind.css dist/tailwind.css && tsdown --watch",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"tsdown": "latest",
+		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"@baseconfig/ui": "workspace:*",
+		"@hono/zod-validator": "^0.9.0",
+		"@tabler/icons-react": "^3.45.0",
+		"@tanstack/query-db-collection": "^1.2.1",
+		"@tanstack/react-db": "latest",
+		"date-fns": "^4.4.0",
+		"drizzle-orm": "^1.0.0-rc.4",
+		"nanoid": "^6.0.0",
+		"zod": "^4.4.3"
+	},
+	"peerDependencies": {
+		"@tanstack/react-query": "^5.101.4",
+		"@tanstack/react-router": "latest",
+		"@tanstack/react-store": "^0.11.0",
+		"@types/react": "^19",
+		"hono": "^4",
+		"react": ">=19",
+		"typescript": ">=5",
+		"vite": "^5 || ^6 || ^7 || ^8"
+	}
+}

@@ -10,3 +10,9 @@ bun.lock
 
 # typescript
 *.tsbuildinfo
+
+# tangstack
+.tanstack
+
+# wrangler
+.wrangler

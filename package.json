@@ -13,14 +13,15 @@
 	},
 	"private": true,
 	"workspaces": [
-		"config",
-		"ui",
-		"plugin-form-builder"
+		"packages/*",
+		"plugins/*"
 	],
 	"scripts": {
 		"build": "turbo build",
 		"dev": "turbo dev",
-		"typecheck": "turbo typecheck"
+		"typecheck": "turbo typecheck",
+		"format": "biome format --write .",
+		"lint": "biome check --write ."
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.3",

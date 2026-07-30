@@ -1,0 +1,13 @@
+/*
+ * `@source` here is resolved relative to *this file's own location* once
+ * published (`dist/tailwind.css`), not relative to whatever consumer
+ * `@import`s it — that's how Tailwind v4 resolves `@source`/`@import`
+ * paths, always relative to the file containing them. A consumer just
+ * does `@import "@baseconfig/ui/tailwind.css";` once, the same way they'd
+ * already `@import "tw-animate-css";` — no glob into their own
+ * `node_modules/@baseconfig/ui/dist/...` required, and no risk of classes
+ * used only inside this package's vendored components (badges, buttons,
+ * form fields, the rich text editor, ...) getting silently purged from
+ * their compiled CSS.
+ */
+@source "./**/*.{js,mjs}";

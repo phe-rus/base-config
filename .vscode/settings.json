@@ -1,0 +1,61 @@
+{
+    "files.watcherExclude": {
+        "**/routeTree.gen.ts": true
+    },
+    "search.exclude": {
+        "**/routeTree.gen.ts": true
+    },
+    "files.readonlyInclude": {
+        "**/routeTree.gen.ts": true
+    },
+    "files.associations": {
+        "*.css": "tailwindcss"
+    },
+    "editor.quickSuggestions": {
+  "strings": "off"
+    },
+    "tailwindCSS.classFunctions": [
+        "tw",
+        "clsx",
+        "cva",
+        "cn",
+        "tw\\.[a-z-]+"
+    ],
+    "tailwindCSS.experimental.classRegex": [
+        [
+            "class:\\s*?[\"'`]([^\"'`]*).*?,",
+            "(?:'|\"|`)([^'\"`]*)(?:'|\"|`)"
+        ]
+    ],
+    "npm.packageManager": "bun",
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "biomejs.biome",
+    "[json]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "editor.codeActionsOnSave": {
+        "source.action.useSortedPackageJson.biome": "explicit",
+        "source.action.useSortedProperties.biome": "explicit",
+        "source.action.noDuplicateClasses.biome": "explicit",
+        "source.action.useSortedKeys.biome": "explicit",
+        "source.organizeImports.biome": "explicit",
+        "source.fixAll.biome": "explicit"
+    }
+}

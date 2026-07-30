@@ -1,0 +1,9 @@
+/*
+ * See `@baseconfig/ui/tailwind.css`'s own doc comment for the mechanism —
+ * `@source` here covers this package's own admin-shell classes (Topbar,
+ * CollectionForm/GlobalForm chrome, page-content blocks, ...); the
+ * `@import` below chains in `@baseconfig/ui`'s own sources too, so a
+ * consumer only ever needs one line: `@import "@baseconfig/core/tailwind.css";`.
+ */
+@import "@baseconfig/ui/tailwind.css";
+@source "./**/*.{js,mjs}";

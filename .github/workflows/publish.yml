@@ -78,7 +78,7 @@ jobs:
       # npm CLI entirely for this step.
       - name: Bump versions (patch, all three packages together)
         run: |
-          for pkg in ui config plugin-form-builder; do
+          for pkg in packages/ui packages/config plugins/plugin-form-builder; do
             node -e "
               const fs = require('fs');
               const path = './$pkg/package.json';
@@ -94,7 +94,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ui/package.json config/package.json plugin-form-builder/package.json
+          git add packages/ui/package.json packages/config/package.json plugins/plugin-form-builder/package.json
           git commit -m "chore: bump package versions [skip ci]"
           git push
 
@@ -104,31 +104,31 @@ jobs:
       # needs. Resolved here, in the ephemeral runner only, right before each
       # publish call — never committed back, so the repo keeps workspace:*.
       - name: Publish @baseconfig/ui
-        working-directory: ui
+        working-directory: packages/ui
         run: npm publish --access public
 
       - name: Resolve @baseconfig/ui's real version into config's package.json
         run: |
-          UI_VERSION=$(node -p "require('./ui/package.json').version")
+          UI_VERSION=$(node -p "require('./packages/ui/package.json').version")
           node -e "
             const fs = require('fs');
-            const path = './config/package.json';
+            const path = './packages/config/package.json';
             const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
             pkg.dependencies['@baseconfig/ui'] = '$UI_VERSION';
             fs.writeFileSync(path, JSON.stringify(pkg, null, '\t') + '\n');
           "
 
       - name: Publish @baseconfig/core
-        working-directory: config
+        working-directory: packages/config
         run: npm publish --access public
 
       - name: Resolve @baseconfig/core and @baseconfig/ui's real versions into plugin-form-builder's package.json
         run: |
-          CORE_VERSION=$(node -p "require('./config/package.json').version")
-          UI_VERSION=$(node -p "require('./ui/package.json').version")
+          CORE_VERSION=$(node -p "require('./packages/config/package.json').version")
+          UI_VERSION=$(node -p "require('./packages/ui/package.json').version")
           node -e "
             const fs = require('fs');
-            const path = './plugin-form-builder/package.json';
+            const path = './plugins/plugin-form-builder/package.json';
             const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
             pkg.dependencies['@baseconfig/core'] = '$CORE_VERSION';
             pkg.dependencies['@baseconfig/ui'] = '$UI_VERSION';
@@ -136,5 +136,5 @@ jobs:
           "
 
       - name: Publish @baseconfig/plugin-form-builder
-        working-directory: plugin-form-builder
+        working-directory: plugins/plugin-form-builder
         run: npm publish --access public

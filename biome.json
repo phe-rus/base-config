@@ -1,0 +1,106 @@
+{
+	"$schema": "node_modules/@biomejs/biome/configuration_schema.json",
+	"assist": {
+		"actions": {
+			"source": {
+				"noDuplicateClasses": "on",
+				"organizeImports": "off",
+				"useSortedKeys": "off",
+				"useSortedPackageJson": "off",
+				"useSortedProperties": "off"
+			}
+		},
+		"enabled": true
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!**/.next",
+			"!**/dist",
+			"!**/.turbo",
+			"!**/.nx",
+			"!**/dev-dist",
+			"!**/.zed",
+			"!**/.vscode",
+			"!**/routeTree.gen.ts",
+			"!**/src-tauri",
+			"!**/.nuxt",
+			"!bts.jsonc",
+			"!**/.expo",
+			"!**/.wrangler",
+			"!**/.alchemy",
+			"!**/.svelte-kit",
+			"!**/wrangler.jsonc",
+			"!**/.source",
+			"!**/convex/_generated",
+			"!**/*.tsbuildinfo",
+			"!**/*.d.ts",
+			"!**/node_modules",
+			"!package-lock.json",
+			"!yarn.lock",
+			"!pnpm-lock.yaml",
+			"!pnpm-workspace.yaml",
+			"!package.json",
+			"!bun.lock",
+			"!**/.git/",
+			"!**/out",
+			"!**/public",
+			"!**/playwright-report",
+			"!**/.gemini",
+			"!**/.gen.ts",
+			"!**/*.gen.ts",
+			"!**/.migrations",
+			"!**/.env.test",
+			"!**/bun.lockb",
+			"!**/.db.sqlite",
+			"**/wrangler-configuration.d.ts",
+			"!**/worker-configuration.d.ts",
+			"!**/src/routeTree.gen.ts"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"javascript": {
+		"formatter": {
+			"jsxQuoteStyle": "single",
+			"quoteStyle": "single",
+			"semicolons": "asNeeded",
+			"trailingCommas": "none"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "none",
+			"a11y": {
+				"noSvgWithoutTitle": "off",
+				"noStaticElementInteractions": "off",
+				"useFocusableInteractive": "off",
+				"useKeyWithClickEvents": "off"
+			},
+			"style": {
+				"useFilenamingConvention": "off"
+			},
+			"correctness": {
+				"noInvalidPositionAtImportRule": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "off",
+				"noArrayIndexKey": "off"
+			}
+		}
+	},
+	"vcs": {
+		"clientKind": "git",
+		"enabled": true,
+		"useIgnoreFile": true
+	}
+}
