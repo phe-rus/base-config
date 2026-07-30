@@ -7,11 +7,11 @@
 <p align="left">
   <a href="https://github.com/phe-rus/base-config/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/phe-rus/base-config/publish.yml?style=flat-square"></a>
   &nbsp;
-  <a href="https://www.npmjs.com/package/phe-rus"><img alt="npm" src="https://img.shields.io/npm/dw/phe-rus?style=flat-square" /></a>
+  <a href="https://www.npmjs.com/package/@baseconfig/core"><img alt="npm" src="https://img.shields.io/npm/dw/@baseconfig/core?style=flat-square" /></a>
   &nbsp;
   <a href="https://github.com/phe-rus/base-config/graphs/contributors"><img alt="npm" src="https://img.shields.io/github/contributors-anon/phe-rus/base-config?color=yellow&style=flat-square" /></a>
   &nbsp;
-  <a href="https://www.npmjs.com/package/phe-rus"><img alt="npm" src="https://img.shields.io/npm/v/payload?style=flat-square" /></a>
+  <a href="https://www.npmjs.com/package/@baseconfig/core"><img alt="npm" src="https://img.shields.io/npm/v/@baseconfig/core?style=flat-square" /></a>
   &nbsp;
   <a href="https://twitter.com/la_nniina"><img src="https://img.shields.io/badge/follow-la_nniina-1DA1F2?logo=twitter&style=flat-square" alt="La niina Twitter" /></a>
 </p>

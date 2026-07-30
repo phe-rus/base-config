@@ -7,8 +7,16 @@ import { z } from 'zod'
 
 export type { CollectionFieldsProps } from '../base.types'
 
-export type CollectionSlug = 'pages' | 'posts' | 'policies' | 'users'
-export type GlobalSlug = 'topbar' | 'footer' | 'keywords' | 'storage'
+// Deliberately plain `string`, not a hardcoded union of this library's own
+// built-in example slugs — this file is imported by every consumer, and a
+// closed union here would mean no consumer could ever register a collection
+// slug this library's own authors didn't happen to type out. `defineCollection`/
+// `defineGlobal` (`define.ts`) are already generic over `TSlug extends string`
+// specifically so a consumer's own literal slug (e.g. `'products'`) still gets
+// real type-level tracking — this default is only what a *plain, unannotated*
+// `CollectionConfig`/`GlobalConfig` reference resolves to.
+export type CollectionSlug = string
+export type GlobalSlug = string
 
 export const metaSchema = z.object({
 	title: z.string().optional(),

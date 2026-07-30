@@ -6,9 +6,9 @@ import type { BetterAuthAdminClient } from './db/collections'
 import type { EndpointFactory } from './db/content-route'
 
 // `@baseconfig/core`'s own root shape — independent of any one consumer's actual
-// values. A consuming app (e.g. `www/src/hooks/config/base.config.ts`)
-// imports these types and fills in the real collections/globals/admin
-// settings for its own site.
+// values. A consuming app (e.g. `www/src/config/base.config.ts`) imports
+// these types and fills in the real collections/globals/admin settings for
+// its own site.
 
 /**
  * What a `beforeChange`/`afterChange` hook is told about the write it's
@@ -99,9 +99,10 @@ export type AdminSettings = {
 /**
  * `collections`/`globals` use this file's own `CollectionConfig`/`GlobalConfig`
  * (both already generic, defaulted to `TSlug = string` below) — no separate
- * type parameters needed here: a consuming app's concrete `CollectionConfig`
- * (bound to its own slug union, e.g. `www/src/hooks/config`'s `CollectionSlug`)
- * already satisfies these structurally, since that union extends `string`.
+ * type parameters needed here: `defineCollection<TSlug extends string>()`
+ * (`define.ts`) already returns a `CollectionConfig` narrowed to whatever
+ * literal `slug` a consumer actually passed (e.g. `'products'`), and that
+ * satisfies this structurally, since every such union extends `string`.
  */
 export type BaseConfigProps = {
 	/**
@@ -194,9 +195,10 @@ export type CollectionFieldsProps = {
 
 /**
  * The generic shape behind both a collection and a global config — a
- * consuming app binds `TSlug` to its own concrete slug union (e.g.
- * `www/src/hooks/config`'s `CollectionSlug`) and adds anything
- * collection-specific (e.g. `color`).
+ * consuming app binds `TSlug` to its own concrete slug (usually just the
+ * literal string it passed to `defineCollection`/`defineGlobal`, inferred
+ * automatically — see `CollectionSlug`'s own doc comment,
+ * `collections/types.ts`) and adds anything collection-specific (e.g. `color`).
  */
 export type BaseConfig<TSlug extends string> = {
 	slug: TSlug
