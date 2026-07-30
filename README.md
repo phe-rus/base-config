@@ -1,3 +1,5 @@
+> **Actively under development.** APIs, field types, and versions (currently 0.x) may change without notice — not yet recommended for production use.
+
 <p align="center" style="display: flex; border-radius: 5px; overflow: hidden; scrollbar-width: none; -ms-overflow-style: none;padding: p-0;">
   <img src="./screenshot/baseConfig.png" alt="baseConfig" />
 </p>
