@@ -4,7 +4,7 @@
 
 <h1 align="center">baseConfig</h1>
 
-A config-driven, TanStack-Start-native CMS engine built for **one Cloudflare Worker** — no separate Node server, no separate database service. Payload-inspired in shape (`defineCollection`/`defineGlobal`, Local-API-style client naming, a generated REST surface), but built edge-first from the ground up: Hono for routing, Drizzle over D1 for content, R2 for media, and a genuinely **local-first admin UI** — editing a document never touches the network until you explicitly publish.
+A config-driven, TanStack start native CMS engine built for **one Cloudflare Worker**, no separate Node server, no separate database service. Payload-inspired in shape (`defineCollection`/`defineGlobal`, Local-API-style client naming, a generated REST surface), but built edge-first from the ground up: Hono for routing, Drizzle over D1 for content, R2 for media, and a genuinely **local-first admin UI** editing a document never touches the network until you explicitly publish.
 
 This repo is a Bun workspace of the three packages that make up baseConfig:
 
@@ -31,7 +31,7 @@ This repo is a Bun workspace of the three packages that make up baseConfig:
 ## Quick start
 
 ```bash
-bun add @base/config @base/ui hono drizzle-orm
+bun add @base/config @base/ui hono drizzle-orm better-auth
 ```
 
 ```ts
@@ -53,7 +53,7 @@ const footer = defineGlobal({
 export default baseConfig({
 	hostDomain: 'https://example.com',
 	queryClient,
-	auth: authClient,
+	auth: authClient, // better auth client
 	config: { adminPath: 'admin' },
 	collections: [posts],
 	globals: [footer]
@@ -66,7 +66,7 @@ import { createHandler } from '@base/config/api'
 
 export default createHandler({
 	db: drizzle(env.BASECONFIG),
-	auth, // a betterAuth() instance
+	auth, // a betterAuth server, instance
 	bindings: { r2: env.MEDIA, kv: env.CACHE, isdev: env.ENVIRONMENT === 'development' }
 })
 ```
