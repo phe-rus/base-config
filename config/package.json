@@ -21,6 +21,9 @@
 	],
 	"private": false,
 	"type": "module",
+	"files": [
+		"dist"
+	],
 	"exports": {
 		".": {
 			"types": "./dist/index.d.mts",
@@ -48,7 +51,7 @@
 		}
 	},
 	"bin": {
-		"base": "./dist/cli.mjs"
+		"base": "dist/cli.mjs"
 	},
 	"scripts": {
 		"build": "tsdown",

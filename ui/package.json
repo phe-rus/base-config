@@ -21,6 +21,9 @@
 	],
 	"private": false,
 	"type": "module",
+	"files": [
+		"dist"
+	],
 	"exports": {
 		"./basiccn": {
 			"types": "./dist/basiccn/index.d.ts",
