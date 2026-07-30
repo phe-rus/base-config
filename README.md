@@ -4,6 +4,19 @@
   <img src="./screenshot/baseConfig.png" alt="baseConfig" />
 </p>
 
+<p align="left">
+  <a href="https://github.com/phe-rus/base-config/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/phe-rus/base-config/publish.yml?style=flat-square"></a>
+  &nbsp;
+  <a href="https://www.npmjs.com/package/phe-rus"><img alt="npm" src="https://img.shields.io/npm/dw/phe-rus?style=flat-square" /></a>
+  &nbsp;
+  <a href="https://github.com/phe-rus/base-config/graphs/contributors"><img alt="npm" src="https://img.shields.io/github/contributors-anon/phe-rus/base-config?color=yellow&style=flat-square" /></a>
+  &nbsp;
+  <a href="https://www.npmjs.com/package/phe-rus"><img alt="npm" src="https://img.shields.io/npm/v/payload?style=flat-square" /></a>
+  &nbsp;
+  <a href="https://twitter.com/la_nniina"><img src="https://img.shields.io/badge/follow-la_nniina-1DA1F2?logo=twitter&style=flat-square" alt="La niina Twitter" /></a>
+</p>
+<hr/>
+
 <h1 align="center">baseConfig</h1>
 
 <p style="display: flex; max-width: 32rem; margin-inline: auto; text-align: center;">
@@ -62,6 +75,66 @@ export default createHandler({
 	auth, // a betterAuth server, instance
 	bindings: { r2: env.MEDIA, kv: env.CACHE, isdev: env.ENVIRONMENT === 'development' }
 })
+```
+
+```tsx
+import baseConfig from '@/config/base.config'
+import { Topbar } from '@baseconfig/core/admin'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
+
+export const Route = createFileRoute('/(admin)')({
+	component: RouteComponent
+})
+
+function RouteComponent() {
+	return (
+		<Topbar config={baseConfig.config}>
+			<Outlet />
+		</Topbar>
+	)
+}
+```
+
+```tsx
+import { ContextView } from '@baseconfig/core/admin'
+import { createFileRoute } from '@tanstack/react-router'
+
+const { Dashboard } = ContextView
+
+export const Route = createFileRoute('/(admin)/admin/')({
+	component: Dashboard
+})
+
+```
+
+```tsx
+import { ProviderView } from '@baseconfig/core/admin'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
+
+export const Route = createFileRoute('/(admin)/admin/$collection')({
+	component: RouteComponent
+})
+
+function RouteComponent() {
+	return (
+		<ProviderView.Context>
+			<Outlet />
+		</ProviderView.Context>
+	)
+}
+```
+
+
+```tsx
+import { ContextView } from '@baseconfig/core/admin'
+import { createFileRoute } from '@tanstack/react-router'
+
+const { Entry } = ContextView
+
+export const Route = createFileRoute('/(admin)/admin/$collection/$')({
+	component: Entry
+})
+
 ```
 
 That's it — content CRUD (`/api/<collection>`, `/api/globals/<slug>`), the media library (`/api/storage/*`), and public unauthenticated media serving (`/api/cdn/*`) are all mounted for you. See [`config/CLAUDE.md`](./config/CLAUDE.md) and [`ui/CLAUDE.md`](./ui/CLAUDE.md) for the full internals.
