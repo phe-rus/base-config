@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn'
+import { buttonVariants } from '@baseconfig/ui/components/button'
 import { createFileRoute, Link } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(frontend)/')({
@@ -53,7 +54,8 @@ function RouteComponent() {
 						className={cn(
 							'text-4xl font-bold cursor-pointer',
 							'hover:underline underline-offset-10 decoration-wavy',
-							'hover:text-olive-400 transition-all duration-200 hover:scale-[102%]'
+							'hover:text-olive-400 transition-all duration-200 hover:scale-[102%]',
+							buttonVariants({})
 						)}
 					>
 						Headless eCommerce

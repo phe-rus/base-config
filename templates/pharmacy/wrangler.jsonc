@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pharmacy",
+  "compatibility_date": "2026-07-10",
+  "main": "./src/server.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+  },
+  "kv_namespaces": [
+    {
+      // Public content-read cache — see @baseconfig/core's own
+      // "Public-read caching" docs. Placeholder id, fine for `--local`;
+      // run `wrangler kv namespace create CACHE` before a real deploy.
+      "binding": "CACHE",
+      "id": "00000000000000000000000000000c",
+    },
+  ],
+  "d1_databases": [
+    {
+      // One database for both better-auth's own tables and the CMS
+      // content tables (`cn`-prefixed). Placeholder id, fine for
+      // `--local`; run `wrangler d1 create basics` before a real deploy.
+      "binding": "DB",
+      "database_name": "basics",
+      "database_id": "00000000-0000-0000-0000-00000000db01",
+      "migrations_dir": ".migrations",
+      "migrations_pattern": ".migrations/*/migration.sql",
+    },
+  ],
+  "r2_buckets": [
+    {
+      // Placeholder bucket name; run `wrangler r2 bucket create basics-media`
+      // before a real deploy.
+      "binding": "MEDIA",
+      "bucket_name": "basics-media",
+    },
+  ],
+}
