@@ -4,10 +4,6 @@ dist
 *.local
 .env*
 
-# packages/cli's own bundled template snapshot (synced from templates/basics
-# at build time by scripts/sync-template.ts, never hand-edited directly)
-packages/cli/templates
-
 # turbo
 .turbo
 bun.lock

@@ -2,14 +2,14 @@ name: Publish
 
 # Push a commit to main whose message STARTS WITH `final:publish` (e.g.
 # `git commit -m "final:publish: ..."`) to build, bump, and publish all
-# four packages to npm. Any other commit is a no-op here — deliberately
+# four packages to npm. Any other commit is a no-op here, deliberately
 # `startsWith`, not a bare substring match: a commit message that merely
 # *mentions* the trigger phrase (like this comment block, or a docs commit
 # explaining this workflow) must never fire it by accident. Confirmed this
-# was a real, not just theoretical, risk — an earlier commit whose message
+# was a real, not just theoretical, risk: an earlier commit whose message
 # explained this exact trigger phrase in its body fired the workflow.
 #
-# Uses npm Trusted Publishing (OIDC) — no stored token/secret at all. Before
+# Uses npm Trusted Publishing (OIDC), no stored token/secret at all. Before
 # the first real run, each package needs a Trusted Publisher configured on
 # its own npmjs.com settings page:
 #
@@ -22,7 +22,7 @@ name: Publish
 # Do this for @baseconfig/ui, @baseconfig/core, @baseconfig/plugin-form-builder,
 # and @baseconfig/cli.
 # Trusted Publishing is implemented in the npm CLI itself (not `bun publish`),
-# and requires a recent-enough npm — this workflow force-installs npm@latest
+# and requires a recent-enough npm, this workflow force-installs npm@latest
 # before publishing rather than relying on whatever ships with the runner.
 
 on:
@@ -68,13 +68,15 @@ jobs:
 
       # `packages/config`/`packages/ui`/`plugins/plugin-form-builder` are
       # tightly coupled (config depends on ui, plugin-form-builder depends on
-      # both). `packages/cli` (`@baseconfig/cli`) has no such dependency (it
+      # both). `packages/cli` (`@baseconfig/cli`) has no such dependency, it
       # only ever resolves core/ui's latest published versions over the
-      # network, at scaffold time), but it bundles a snapshot of
-      # `templates/basics` and should never drift far behind whatever core/ui
-      # actually publish — kept in the same lockstep release for that reason.
+      # network, and clones a template directly from this repo's own GitHub
+      # branch, both at scaffold time, never at its own build/publish time.
+      # Still kept in the same lockstep release as the other three, so its
+      # own npm version stays a meaningful signal of "this CLI as of roughly
+      # when core/ui were at version X."
       #
-      # A plain patch bump, not `npm version patch` — confirmed (the hard
+      # A plain patch bump, not `npm version patch`: confirmed (the hard
       # way, via a real failed run) that npm CLI's `version` command chokes
       # on a `workspace:*` dependency exactly like `npm publish` does
       # (`EUNSUPPORTEDPROTOCOL`), even though it isn't touching that field
@@ -103,10 +105,10 @@ jobs:
           git push
 
       # `workspace:*` is what a real bun/pnpm workspace consumer needs to see
-      # committed — but `npm publish` (unlike `bun publish`) doesn't rewrite
+      # committed, but `npm publish` (unlike `bun publish`) doesn't rewrite
       # it to a real version, and plain npm CLI is what Trusted Publishing
       # needs. Resolved here, in the ephemeral runner only, right before each
-      # publish call — never committed back, so the repo keeps workspace:*.
+      # publish call, never committed back, so the repo keeps workspace:*.
       - name: Publish @baseconfig/ui
         working-directory: packages/ui
         run: npm publish --access public
@@ -143,7 +145,7 @@ jobs:
         working-directory: plugins/plugin-form-builder
         run: npm publish --access public
 
-      # No dependency-resolution step needed here — @baseconfig/cli has no
+      # No dependency-resolution step needed here: @baseconfig/cli has no
       # `workspace:*` dependency on core/ui, it resolves their latest
       # published versions over the network at scaffold time instead (see
       # `packages/cli/src/npm-registry.ts`).

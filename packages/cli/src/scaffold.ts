@@ -1,14 +1,9 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { downloadTemplate } from './github'
 import { fetchLatestVersion } from './npm-registry'
 import type { ScaffoldAnswers } from './prompts'
-
-const TEMPLATES_ROOT = path.resolve(import.meta.dirname, '../templates')
-
-export function templateDir(template: string): string {
-	return path.join(TEMPLATES_ROOT, template)
-}
 
 function commandExists(command: string): boolean {
 	const probe = process.platform === 'win32' ? 'where' : 'which'
@@ -23,7 +18,7 @@ function writeJson(filePath: string, value: unknown): void {
 	writeFileSync(filePath, `${JSON.stringify(value, null, '\t')}\n`)
 }
 
-/** Renames the copied template's own `package.json` and resolves `@baseconfig/core`/`@baseconfig/ui` to whatever's actually latest on npm right now, replacing whatever version happened to be baked into this package's bundled template snapshot at its own last publish. */
+/** Renames the cloned template's own `package.json` and resolves `@baseconfig/core`/`@baseconfig/ui` to whatever's actually latest on npm right now, replacing whatever version happens to be committed in the source repo's own copy of the template at this exact moment. */
 async function updatePackageJson(answers: ScaffoldAnswers): Promise<void> {
 	const pkgPath = path.join(answers.targetDir, 'package.json')
 	const pkg = readJson(pkgPath)
@@ -91,15 +86,12 @@ function runGitInit(targetDir: string): void {
 }
 
 export async function scaffold(answers: ScaffoldAnswers): Promise<void> {
-	const source = templateDir(answers.template)
-	if (!existsSync(source)) {
-		throw new Error(`Unknown template "${answers.template}" (looked in ${source})`)
-	}
 	if (existsSync(answers.targetDir)) {
 		throw new Error(`"${answers.targetDir}" already exists`)
 	}
+	mkdirSync(answers.targetDir, { recursive: true })
 
-	cpSync(source, answers.targetDir, { recursive: true })
+	await downloadTemplate(answers.template, answers.targetDir)
 	updateWranglerConfig(answers)
 	await updatePackageJson(answers)
 

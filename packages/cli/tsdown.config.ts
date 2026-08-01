@@ -10,6 +10,6 @@ export default defineConfig((inlineConfig) => ({
 	tsconfig: './tsconfig.json',
 	shims: true,
 	deps: {
-		neverBundle: ['@clack/prompts']
+		neverBundle: ['@clack/prompts', 'tar']
 	}
 }))

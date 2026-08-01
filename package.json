@@ -1,7 +1,7 @@
 {
 	"name": "base-config",
 	"version": "0.0.0",
-	"description": "baseConfig — a config-driven, edge-native CMS engine for TanStack Start on Cloudflare Workers.",
+	"description": "baseConfig: a config-driven, edge-native CMS engine for TanStack Start on Cloudflare Workers.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",

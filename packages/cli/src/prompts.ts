@@ -1,17 +1,7 @@
 import { cancel, intro, isCancel, log, select, text } from '@clack/prompts'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
-
-export type Template = { id: string; label: string; hint?: string }
-
-/** Every template this package ships (its own `templates/<id>/` folder, synced from this repo's own `templates/<id>` by `scripts/sync-template.ts`). Only one exists today: the select prompt below is skipped entirely while that stays true, per the CLI's own UX design. */
-export const TEMPLATES: Template[] = [
-	{
-		id: 'basics',
-		label: 'basics',
-		hint: 'one posts collection, one settings global, email+password auth'
-	}
-]
+import { listTemplates } from './github'
 
 export type CliFlags = {
 	name?: string
@@ -76,28 +66,43 @@ async function resolveName(
 	return answer
 }
 
+async function resolveTemplateList(): Promise<Awaited<ReturnType<typeof listTemplates>>> {
+	const templates = await listTemplates()
+	if (templates.length === 0) {
+		throw new Error(
+			'No templates found in the templates/ directory of github.com/phe-rus/base-config.'
+		)
+	}
+	return templates
+}
+
 async function resolveTemplate(flags: CliFlags): Promise<string> {
+	const templates = await resolveTemplateList()
+
 	if (flags.template) {
-		if (!TEMPLATES.some((t) => t.id === flags.template)) {
+		if (!templates.some((t) => t.id === flags.template)) {
 			throw new Error(
-				`Unknown template "${flags.template}". Available: ${TEMPLATES.map((t) => t.id).join(', ')}`
+				`Unknown template "${flags.template}". Available: ${templates.map((t) => t.id).join(', ')}`
 			)
 		}
 		return flags.template
 	}
 
-	// Only one template exists today: auto-select it and print a plain
-	// confirmation line instead of showing a select prompt with a single,
-	// forced choice. A real select only appears once a second template ships.
-	if (TEMPLATES.length === 1) {
-		log.step(`Using template: ${TEMPLATES[0].label}`)
-		return TEMPLATES[0].id
+	// Discovered live from github.com/phe-rus/base-config's own templates/
+	// directory (see `listTemplates()`, `github.ts`), not hardcoded here: a
+	// new template only ever needs a new folder pushed to that repo, this
+	// CLI needs no code change and no republish to pick it up. With exactly
+	// one available, skip the interactive select entirely and print a plain
+	// confirmation line instead of showing a forced single choice.
+	if (templates.length === 1) {
+		log.step(`Using template: ${templates[0].label}`)
+		return templates[0].id
 	}
-	if (flags.yes) return TEMPLATES[0].id
+	if (flags.yes) return templates[0].id
 
 	const answer = await select({
 		message: 'Template',
-		options: TEMPLATES.map((t) => ({ value: t.id, label: t.label, hint: t.hint }))
+		options: templates.map((t) => ({ value: t.id, label: t.label, hint: t.hint }))
 	})
 	if (isCancel(answer)) onCancel()
 	return answer

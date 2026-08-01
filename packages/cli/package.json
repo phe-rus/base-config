@@ -21,20 +21,19 @@
 	"private": false,
 	"type": "module",
 	"files": [
-		"dist",
-		"templates"
+		"dist"
 	],
 	"bin": {
 		"baseconfig": "dist/cli.mjs"
 	},
 	"scripts": {
-		"sync-template": "bun run scripts/sync-template.ts",
-		"build": "bun run sync-template && tsdown",
+		"build": "tsdown",
 		"dev": "tsdown --watch",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@clack/prompts": "^1.7.0"
+		"@clack/prompts": "^1.7.0",
+		"tar": "^7.5.22"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
