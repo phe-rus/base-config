@@ -19,7 +19,7 @@
 	],
 	"scripts": {
 		"build": "turbo build",
-		"dev": "turbo dev",
+		"dev": "turbo dev --filter=!@baseconfig/cli",
 		"typecheck": "turbo typecheck",
 		"format": "biome format --write .",
 		"lint": "biome check --write ."
