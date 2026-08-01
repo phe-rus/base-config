@@ -15,18 +15,18 @@ type WidgetDialogProps = PropsWithChildren<{
 	onOpenChange: (open: boolean) => void
 	title: string
 	description: string
-	/** Rendered inside `<Drawer>`, before the content — e.g. a self-triggered widget's own opener button. Omit for an externally-controlled widget (`open`/`onOpenChange` driven by the caller, no built-in trigger). */
+	/** Rendered inside `<Drawer>`, before the content, e.g. a self-triggered widget's own opener button. Omit for an externally-controlled widget (`open`/`onOpenChange` driven by the caller, no built-in trigger). */
 	trigger?: ReactNode
-	/** Extra footer action(s), rendered after the always-present Cancel button — e.g. a widget's own primary "Create"/"Save" button. */
+	/** Extra footer action(s), rendered after the always-present Cancel button, e.g. a widget's own primary "Create"/"Save" button. */
 	footer?: ReactNode
 }>
 
 /**
- * The shared chrome behind every `admin/widgets/*` — a small, focused
+ * The shared chrome behind every `admin/widgets/*`: a small, focused
  * action surface (as opposed to a full-page `admin/views/*`). Extracted
  * after `AuthWidget` and `StorageWidget` turned out to have byte-for-byte
  * identical Header/Footer/sizing, same as `DocumentHeader` did for
- * `CollectionForm`/`GlobalForm`. Built on `Drawer`, not `Dialog` —
+ * `CollectionForm`/`GlobalForm`. Built on `Drawer`, not `Dialog`:
  * `AuthWidget` (originally `CreateUserDialog`) used `Dialog` before this
  * extraction; converted to `Drawer` deliberately, so every widget shares
  * one real primitive instead of two visually different ones.

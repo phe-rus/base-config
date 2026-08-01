@@ -5,7 +5,7 @@ import type { FormData } from './forms-collection'
 
 /**
  * `{{fieldName}}` → that field's submitted value, `{{*}}` → every
- * submitted field as a `name: value` list — same convention Payload's own
+ * submitted field as a `name: value` list, same convention Payload's own
  * form-builder plugin uses for its `to`/`from`/`subject`/`message` fields.
  */
 function interpolate(template: string, data: Record<string, unknown>): string {
@@ -31,13 +31,13 @@ function interpolate(template: string, data: Record<string, unknown>): string {
  * `base.config.ts`), this factory only ever needs `db` off its own
  * `EndpointFactoryBindings` argument. One real endpoint: `POST /api/forms/:id/submit`,
  * unauthenticated by design (matching Payload's own default for its
- * equivalent `/api/form-submissions` route) — a public visitor has no
+ * equivalent `/api/form-submissions` route): a public visitor has no
  * session to check. Validates submitted data against the referenced form's
- * own `fields` config (required-field presence only — real per-type
+ * own `fields` config (required-field presence only; real per-type
  * validation, e.g. a genuine email-format check, isn't attempted here),
  * stores a `form-submissions` row (see that collection's own doc comment
  * for why it's never publicly readable), then hands off every configured
- * email to `handleEmail` (best-effort — one failing call doesn't fail the
+ * email to `handleEmail` (best-effort: one failing call doesn't fail the
  * submission itself, it's logged and swallowed) before returning the
  * form's own confirmation config (a message to show, or a URL to redirect
  * to).
@@ -106,7 +106,7 @@ export const formBuilderEndpoints: EndpointFactory = ({
 						html: interpolate(email.message ?? '', submissionData)
 					}))
 					// `beforeEmail` (configured once, via `formBuilderPlugin({beforeEmail})`
-					// in `base.config.ts` — see `plugin.ts`'s own doc comment) gets the
+					// in `base.config.ts`, see `plugin.ts`'s own doc comment) gets the
 					// last word on what actually gets handed to `handleEmail`.
 					const emailsToHandle = beforeEmail
 						? beforeEmail(interpolated, { doc: row })

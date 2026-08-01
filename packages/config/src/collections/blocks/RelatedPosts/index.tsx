@@ -1,11 +1,11 @@
 import { IconNews } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
-import { base } from '../../db/content-client'
-import { RelationGroupFields } from '../fields/relations-field'
-import { collectionsBySlug } from '../registry'
-import { collectionPath } from '../types'
-import type { BlockConfig, BlockFieldsProps } from './types'
+import { base } from '../../../db/content-client'
+import { RelationGroupFields } from '../../fields/Relations'
+import { collectionsBySlug } from '../../registry'
+import { collectionPath } from '../../types'
+import type { BlockConfig, BlockFieldsProps } from '../shared/types'
 
 export const relatedPostsBlockSchema = z.object({
 	blockType: z.literal('relatedPosts'),
@@ -22,12 +22,12 @@ function RelatedPostsBlockFields({ form, path }: BlockFieldsProps) {
 /**
  * Shared by the block itself (`relatedPostsBlock.Render` below) *and* a
  * `relations`-type field's own top-level value directly (see `posts.ts`'s
- * own `relations` tab) — both are one group of the exact same shape
+ * own `relations` tab), both are one group of the exact same shape
  * (`{label?, mode?, ids?, keywords?}`), so a public article route renders
  * a document's own `data.relations` groups through this same component
  * rather than a second, parallel implementation.
  *
- * **Fetches every published post, unfiltered, then filters client-side** —
+ * **Fetches every published post, unfiltered, then filters client-side**:
  * `base.find()`'s own `where` only supports top-level `status`/`slug`
  * (see `WhereCondition`'s own doc comment, `db/content-queries.ts`), so
  * keyword-mode filtering (which reaches into a post's own `data.metadata.keywords`)

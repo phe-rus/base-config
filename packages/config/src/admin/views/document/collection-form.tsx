@@ -25,12 +25,12 @@ type CollectionFormProps = {
 }
 
 /**
- * Shared by every explicit publish action ("Commit & push", "Publish") —
+ * Shared by every explicit publish action ("Commit & push", "Publish"):
  * awaits the real write's `isPersisted` promise and toasts success/error,
  * so a network failure surfaces to the admin instead of silently vanishing.
- * This is the only place `useDocument`'s `publish()` ever gets called from
- * — editing itself never touches the network (see that hook's own doc
- * comment). Also flushes the local keyword-pool draft live right after —
+ * This is the only place `useDocument`'s `publish()` ever gets called from,
+ * editing itself never touches the network (see that hook's own doc
+ * comment). Also flushes the local keyword-pool draft live right after:
  * see `publishKeywordPool()`'s own doc comment for why a document's publish
  * is what carries any newly-typed keywords live, not a separate step.
  */
@@ -59,7 +59,7 @@ export function CollectionForm({
 	id
 }: CollectionFormProps) {
 	// Gated behind a client mount *before* `useLiveQuery` is ever called (not
-	// just before its result is used) — `CollectionFormLive` below is the
+	// just before its result is used), `CollectionFormLive` below is the
 	// only place that hook runs, and it's never rendered during SSR. Calling
 	// `useLiveQuery` unconditionally at the top of this component crashed
 	// during SSR (`useSyncExternalStore` needs a `getServerSnapshot` this
@@ -73,17 +73,17 @@ export function CollectionForm({
 }
 
 function CollectionFormLive({ config, collection, id }: CollectionFormProps) {
-	// No existence check here anymore — a missing remote row isn't "not
+	// No existence check here anymore: a missing remote row isn't "not
 	// found," it's a not-yet-published local draft (see `useDocument`'s own
 	// doc comment, which calls `useLiveQuery` itself and re-renders once the
 	// real row appears after the first `publish()`).
 	//
 	// `DocumentEditor` (and the `useAppForm` call inside it, via
 	// `useDocument`) must not mount until BOTH collections have actually
-	// finished their first read — `useAppForm` snapshots its `defaultValues`
+	// finished their first read: `useAppForm` snapshots its `defaultValues`
 	// once, at that first render, and never re-reads them later. Mounting
 	// before either query resolves would snapshot empty/default field
-	// values, which then never get replaced once the real data arrives —
+	// values, which then never get replaced once the real data arrives,
 	// this was the actual cause of a Base UI "uncontrolled → controlled"
 	// warning (a field rendering with `value: undefined`, only for a later
 	// render to hand it a real value) and of a document silently appearing
@@ -123,12 +123,12 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 	const alreadyPublished = hasRemoteRow && row.status === 'published'
 
 	// No remote row at all: nothing was ever published, so there's nothing
-	// to revert *to* — the only sensible action is deleting the local draft
+	// to revert *to*: the only sensible action is deleting the local draft
 	// and leaving. A remote row exists but this browser's draft differs:
 	// revert the draft back to what's actually live. `useAppForm` snapshots
 	// `defaultValues` once at mount and never re-reads them, so resetting
 	// the draft's own `localStorage` data alone wouldn't update the
-	// already-rendered fields — `reloadDocument: true` forces a clean
+	// already-rendered fields: `reloadDocument: true` forces a clean
 	// remount that re-seeds from the now-reverted draft, same pattern
 	// sign-in/sign-out already use elsewhere for exactly this class of
 	// "state changed out from under the router" problem.
@@ -160,7 +160,7 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 				title={
 					useAsTitle ? (
 						// `useAsTitle`'s field is already a real, directly editable
-						// field rendered by `config.Fields` below — this is a
+						// field rendered by `config.Fields` below: this is a
 						// read-only heading, not a second input for the same field.
 						<h2 className='text-2xl font-bold'>
 							{((row.data as Record<string, unknown>)[useAsTitle] as

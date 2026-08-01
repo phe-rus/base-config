@@ -28,7 +28,7 @@ export function GlobalForm({ config, id }: GlobalFormProps) {
  * Same reasoning as `CollectionForm`'s own `CollectionFormLive` gate: don't
  * mount `GlobalEditor` (and the `useAppForm` call inside it, via
  * `useDocument`) until both the remote and local-draft queries have
- * actually resolved — `useAppForm` only snapshots its `defaultValues` once,
+ * actually resolved: `useAppForm` only snapshots its `defaultValues` once,
  * at first render, so mounting too early would freeze fields at
  * empty/default values that then never get replaced, and can flip a field
  * from an uncontrolled `undefined` to a real value on a later render (a
@@ -44,7 +44,7 @@ function GlobalFormLive({ config, id }: GlobalFormProps) {
 }
 
 function GlobalEditor({ config, id }: GlobalFormProps) {
-	// Globals have no draft/published status distinction — `publish()` is
+	// Globals have no draft/published status distinction: `publish()` is
 	// still the one and only action that ever reaches the real
 	// `/api/globals/<slug>` backend, edits themselves stay purely local
 	// (see `useDocument`'s own doc comment).

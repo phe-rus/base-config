@@ -2,7 +2,7 @@ name: Publish
 
 # Push a commit to main whose message STARTS WITH `final:publish` (e.g.
 # `git commit -m "final:publish: ..."`) to build, bump, and publish all
-# three packages to npm. Any other commit is a no-op here — deliberately
+# four packages to npm. Any other commit is a no-op here — deliberately
 # `startsWith`, not a bare substring match: a commit message that merely
 # *mentions* the trigger phrase (like this comment block, or a docs commit
 # explaining this workflow) must never fire it by accident. Confirmed this
@@ -19,7 +19,8 @@ name: Publish
 #     Workflow filename:    publish.yml
 #     Environment name:     npm-publish
 #
-# Do this for @baseconfig/ui, @baseconfig/core, and @baseconfig/plugin-form-builder.
+# Do this for @baseconfig/ui, @baseconfig/core, @baseconfig/plugin-form-builder,
+# and @baseconfig/cli.
 # Trusted Publishing is implemented in the npm CLI itself (not `bun publish`),
 # and requires a recent-enough npm — this workflow force-installs npm@latest
 # before publishing rather than relying on whatever ships with the runner.
@@ -65,10 +66,13 @@ jobs:
       - name: Build
         run: bunx turbo run build
 
-      # All three packages are tightly coupled (config depends on ui,
-      # plugin-form-builder depends on both) and always released together
-      # from this one monorepo — kept in lockstep rather than tracked
-      # independently, same as every publish so far.
+      # `packages/config`/`packages/ui`/`plugins/plugin-form-builder` are
+      # tightly coupled (config depends on ui, plugin-form-builder depends on
+      # both). `packages/cli` (`@baseconfig/cli`) has no such dependency (it
+      # only ever resolves core/ui's latest published versions over the
+      # network, at scaffold time), but it bundles a snapshot of
+      # `templates/basics` and should never drift far behind whatever core/ui
+      # actually publish — kept in the same lockstep release for that reason.
       #
       # A plain patch bump, not `npm version patch` — confirmed (the hard
       # way, via a real failed run) that npm CLI's `version` command chokes
@@ -76,9 +80,9 @@ jobs:
       # (`EUNSUPPORTEDPROTOCOL`), even though it isn't touching that field
       # at all. Writing the version field directly with plain Node sidesteps
       # npm CLI entirely for this step.
-      - name: Bump versions (patch, all three packages together)
+      - name: Bump versions (patch, all four packages together)
         run: |
-          for pkg in packages/ui packages/config plugins/plugin-form-builder; do
+          for pkg in packages/ui packages/config packages/cli plugins/plugin-form-builder; do
             node -e "
               const fs = require('fs');
               const path = './$pkg/package.json';
@@ -94,7 +98,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/ui/package.json packages/config/package.json plugins/plugin-form-builder/package.json
+          git add packages/ui/package.json packages/config/package.json packages/cli/package.json plugins/plugin-form-builder/package.json
           git commit -m "chore: bump package versions [skip ci]"
           git push
 
@@ -137,4 +141,12 @@ jobs:
 
       - name: Publish @baseconfig/plugin-form-builder
         working-directory: plugins/plugin-form-builder
+        run: npm publish --access public
+
+      # No dependency-resolution step needed here — @baseconfig/cli has no
+      # `workspace:*` dependency on core/ui, it resolves their latest
+      # published versions over the network at scaffold time instead (see
+      # `packages/cli/src/npm-registry.ts`).
+      - name: Publish @baseconfig/cli
+        working-directory: packages/cli
         run: npm publish --access public

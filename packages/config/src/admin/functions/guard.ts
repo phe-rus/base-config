@@ -2,7 +2,7 @@ import { redirect } from '@tanstack/react-router'
 
 type GuardSession = { user: { role?: string | null } } | null | undefined
 
-/** Where the admin dashboard and its own login screen live — the one convention every default in this file (and `Topbar`'s sign-out mutation, and every admin auth view's own href defaults) is already built around. Not exported as configurable further than these two functions' own `options` — a consumer that genuinely mounts the admin dashboard somewhere else can still fall back to calling `requireAdminSession`/`redirect` directly. */
+/** Where the admin dashboard and its own login screen live: the one convention every default in this file (and `Topbar`'s sign-out mutation, and every admin auth view's own href defaults) is already built around. Not exported as configurable further than these two functions' own `options`. A consumer that genuinely mounts the admin dashboard somewhere else can still fall back to calling `requireAdminSession`/`redirect` directly. */
 const DEFAULT_ADMIN_PATH = '/admin'
 const DEFAULT_LOGIN_PATH = '/admin/login'
 
@@ -20,7 +20,7 @@ export type AdminSessionGuardOptions = {
 /**
  * The session-gate mechanism behind an `(admin)`-style route group: no
  * session → bounce to `loginTo`; wrong role → bounce to `unauthorizedTo`.
- * Kept structural on the session type on purpose — this package has no
+ * Kept structural on the session type on purpose: this package has no
  * dependency on any particular auth library (see `admin/views/topbar.tsx`'s
  * `sessions` prop for the same reasoning). Exported directly for a consumer
  * that wants to call it from their own hand-written `loader`; `adminLoader`
@@ -56,12 +56,12 @@ export function requireAdminSession<TSession extends GuardSession>(
 
 /**
  * The actual value an `(admin)`-style route group assigns to its own
- * `loader` — not just the gate logic (`requireAdminSession` above) but the
+ * `loader`, not just the gate logic (`requireAdminSession` above) but the
  * `({context: {session}}) => ...` wiring around it too, so a consumer's
  * route file needs zero session-guard code of its own:
  * `loader: adminLoader({unauthorizedMessage: '...'})`. `TSession` is only
  * ever inferred from how the *consumer's* router context types this
- * loader's own parameter — there's nothing to pass explicitly.
+ * loader's own parameter; there's nothing to pass explicitly.
  */
 export function adminLoader<TSession extends GuardSession>(
 	options: AdminSessionGuardOptions = {}
@@ -71,7 +71,7 @@ export function adminLoader<TSession extends GuardSession>(
 }
 
 /**
- * The inverse of `adminLoader` — for an `(auth)`-style route group's own
+ * The inverse of `adminLoader`: for an `(auth)`-style route group's own
  * `loader`, bouncing an already-signed-in visitor away from the sign-in/
  * sign-up/reset screens before they ever render: `loader:
  * redirectIfAuthenticated()`. `to` defaults to the admin dashboard's own

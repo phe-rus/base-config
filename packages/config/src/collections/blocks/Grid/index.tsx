@@ -1,14 +1,14 @@
 import { cn } from '@baseconfig/ui/lib/utils'
 import { IconLayoutGrid } from '@tabler/icons-react'
 import { z } from 'zod'
-import { BlocksField } from '../fields/blocks-field'
-import { blocksBySlug } from './registry'
-import type { BlockConfig, BlockFieldsProps } from './types'
+import { BlocksField } from '../../fields/BlocksField'
+import { blocksBySlug } from '../registry'
+import type { BlockConfig, BlockFieldsProps } from '../shared/types'
 
 /**
- * Same lenient shape `columns` (now deleted — this block absorbed its
+ * Same lenient shape `columns` (now deleted, this block absorbed its
  * role, see `gridBlock`'s own doc comment) used for its own nested
- * blocks — validated loosely (just "has a `blockType`") rather than
+ * blocks, validated loosely (just "has a `blockType`") rather than
  * against the full block union, to avoid a circular schema reference
  * back to `blocksSchema` (`./index.ts`).
  */
@@ -43,7 +43,7 @@ function GridBlockFields({ form, path, uploadFolder, id }: BlockFieldsProps) {
 				form={form}
 				name={`${path}.items`}
 				label='Items'
-				description='Any block goes here — each one lays out as one grid cell.'
+				description='Any block goes here, each one lays out as one grid cell.'
 				exclude={['grid']}
 				uploadFolder={uploadFolder}
 				id={id}
@@ -54,12 +54,12 @@ function GridBlockFields({ form, path, uploadFolder, id }: BlockFieldsProps) {
 
 /**
  * `blocksBySlug` is imported from `./registry`, which itself imports
- * `gridBlock` (this file) to build that same registry — a real circular
+ * `gridBlock` (this file) to build that same registry: a real circular
  * import, safe here specifically because this function only ever reads
  * `blocksBySlug` at actual render time (inside the closure, never at this
  * module's own top-level evaluation), by which point `registry.ts` has
  * long finished assigning it. Same underlying tension `getBlocksSchema()`
- * (`./index.ts`) already resolves with `z.lazy()` — this is the render-side
+ * (`./index.ts`) already resolves with `z.lazy()`, this is the render-side
  * equivalent of that same pattern.
  */
 function GridBlockRender({ data }: { data: Record<string, unknown> }) {
@@ -98,7 +98,7 @@ function GridBlockRender({ data }: { data: Record<string, unknown> }) {
 
 /**
  * Absorbed `columns`' own role (a fixed 2-column layout, each column its
- * own nested `BlocksField`) — that was a narrower special case of exactly
+ * own nested `BlocksField`), that was a narrower special case of exactly
  * what this block already needed to be: a general "compose blocks
  * visually" primitive, not two overlapping ones. `variant` controls how
  * each item is wrapped when rendered publicly (`GridBlockRender` above);

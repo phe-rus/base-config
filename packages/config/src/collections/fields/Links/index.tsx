@@ -1,9 +1,9 @@
 import { Button } from '@baseconfig/ui/components/button'
 import { ArrayField } from '@baseconfig/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
-import { collectionsBySlug } from '../registry'
-import { appearanceValues, collectionPath } from '../types'
-import { RelationshipField, type RelationshipValue } from './relationship-field'
+import { collectionsBySlug } from '../../registry'
+import { appearanceValues, collectionPath } from '../../types'
+import { RelationshipField, type RelationshipValue } from '../Relationship'
 
 const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
 	label: value[0].toUpperCase() + value.slice(1),
@@ -11,20 +11,20 @@ const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
 }))
 
 export type LinkModeFieldsProps = {
-	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */
+	/** See the note on `CollectionFieldsProps['form']` in `../types.ts`, same reasoning applies here. */
 	form: any
-	/** The dotted path to this link's own mode/target value (`linkValueSchema` in `../types.ts`) — never the label/appearance, which a caller (`LinksField` below, or `NavMenuField`'s own per-item fields) renders separately alongside this. */
+	/** The dotted path to this link's own mode/target value (`linkValueSchema` in `../types.ts`), never the label/appearance, which a caller (`LinksField` below, or `NavMenuField`'s own per-item fields) renders separately alongside this. */
 	name: string
 }
 
 /**
- * A link's own mode (reference vs custom URL) + `to` + "open in new tab" —
+ * A link's own mode (reference vs custom URL) + `to` + "open in new tab":
  * pick an existing document (reference, auto-synced into a real `to` path
  * via `collectionPath()`) or type a custom URL. Deliberately excludes
- * `label`/`appearance` — those are a *link item*'s own fields (see
+ * `label`/`appearance`, those are a *link item*'s own fields (see
  * `LinksField` below), not part of the link's mode/target itself, and
  * `NavMenuField`'s own items already have their own separate label/
- * appearance fields (`nav-menu-field.tsx`'s `NavItemFields`) — this is the
+ * appearance fields (`nav-menu-field.tsx`'s `NavItemFields`), this is the
  * one piece shared between both callers.
  */
 export function LinkModeFields({ form, name }: LinkModeFieldsProps) {
@@ -80,7 +80,7 @@ export function LinkModeFields({ form, name }: LinkModeFieldsProps) {
 }
 
 export type LinksFieldProps = {
-	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */
+	/** See the note on `CollectionFieldsProps['form']` in `../types.ts`, same reasoning applies here. */
 	form: any
 	name: string
 	label?: string
@@ -88,19 +88,19 @@ export type LinksFieldProps = {
 }
 
 /**
- * A list of links — each its own `label` + button `appearance` (the real
+ * A list of links, each its own `label` + button `appearance` (the real
  * shadcn `Button` variants, `appearanceValues`) alongside `LinkModeFields`'
  * own mode/target/open-in-new-tab. No mega-menu option at all (that's
- * `NavMenuField`'s own extra complexity — this is a plain array, nothing
- * more) — deliberately narrower, for a block (`cta`/`banner`) that wants
+ * `NavMenuField`'s own extra complexity, this is a plain array, nothing
+ * more), deliberately narrower, for a block (`cta`/`banner`) that wants
  * several independently-styled buttons instead of one. The real logic
  * behind `type: 'links'` (`fields/types.ts`'s `LinksFieldConfig`,
- * dispatched via `fields/renderer.tsx`) — also reused directly by blocks
+ * dispatched via `fields/renderer.tsx`), also reused directly by blocks
  * that call it without going through the generic per-field-type renderer
  * (`cta.tsx`/`banner.tsx`, the same way `related-posts.tsx` already
  * reuses `RelationGroupFields` directly). `ArrayField`'s own default row
  * label (`item?.label ?? ...`, `@baseconfig/ui`'s `Array/index.tsx`) already
- * works here for free — every item genuinely has a real `label`.
+ * works here for free, every item genuinely has a real `label`.
  */
 export function LinksField({
 	form,

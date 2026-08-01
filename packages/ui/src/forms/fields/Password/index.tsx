@@ -8,7 +8,7 @@ type PasswordProps = BaseFieldProps & {
 	autoComplete?: string
 }
 
-/** A preset `Input` — `type='password'` (already gives the show/hide toggle `Input` itself implements), lock icon. A distinct, discoverable field type rather than every consumer remembering to pass `type='password'` to a plain `Input`. */
+/** A preset `Input` (`type='password'`, already gives the show/hide toggle `Input` itself implements), lock icon. A distinct, discoverable field type rather than every consumer remembering to pass `type='password'` to a plain `Input`. */
 export const Password = ({ autoComplete, ...props }: PasswordProps) => (
 	<Input
 		{...props}

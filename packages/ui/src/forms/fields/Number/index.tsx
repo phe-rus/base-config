@@ -18,7 +18,7 @@ type NumberProps = BaseFieldProps & {
 }
 
 /**
- * Its own implementation, not a preset `Input` — a native `<input>`'s
+ * Its own implementation, not a preset `Input`: a native `<input>`'s
  * `value`/`e.target.value` is always a string even with `type='number'`,
  * so this field's own `value: number` (matching Payload's own Number
  * field's real output type) needs `e.target.valueAsNumber`, not `Input`'s
@@ -59,7 +59,7 @@ export const Number = ({
 					onBlur={handleBlur}
 					onChange={(e) => {
 						// `Number` here would refer to this component itself, not the
-						// global constructor — this component's own export name
+						// global constructor: this component's own export name
 						// shadows it for the whole module. `globalThis.Number` sidesteps that.
 						const raw = e.target.valueAsNumber
 						handleChange(globalThis.Number.isNaN(raw) ? undefined : raw)

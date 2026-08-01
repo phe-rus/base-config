@@ -17,12 +17,12 @@ export type CreateAccountFormValues = {
 
 type CreateAccountViewProps = {
 	title?: string
-	/** Defaults to `getAdminConfig()?.adminIcon` — see `LoginView`'s own doc comment. */
+	/** Defaults to `getAdminConfig()?.adminIcon`, see `LoginView`'s own doc comment. */
 	icon?: string
 	loginHref?: string
 	termsHref?: string
 	privacyHref?: string
-	/** Defaults to `getAdminConfig()?.socialProviders` — see `LoginView`'s own doc comment for why this isn't feature-detected. */
+	/** Defaults to `getAdminConfig()?.socialProviders`, see `LoginView`'s own doc comment for why this isn't feature-detected. */
 	socialProviders?: string[]
 }
 
@@ -79,7 +79,7 @@ export function CreateAccountView({
 		mutationFn: async (value: CreateAccountFormValues) => {
 			if (!authClient) {
 				throw new Error(
-					'CreateAccountView was rendered but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
+					'CreateAccountView was rendered but no `auth` was passed to baseConfig(): see BaseConfigProps["auth"].'
 				)
 			}
 			return unwrap(

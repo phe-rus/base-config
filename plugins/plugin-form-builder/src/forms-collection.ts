@@ -1,14 +1,14 @@
 import { defineCollection } from '@baseconfig/core'
 
 /**
- * One row of a form's own `fields` array — modeled on Payload's own
+ * One row of a form's own `fields` array, modeled on Payload's own
  * `@payloadcms/plugin-form-builder` field blocks (text/email/textarea/
  * select/checkbox), simplified to one fixed row shape instead of a real
  * per-type block picker (this repo's `array` field type has no such picker
- * yet — see `packages/config/CLAUDE.md`'s "Field types", the "layout/grouping"
+ * yet; see `packages/config/CLAUDE.md`'s "Field types", the "layout/grouping"
  * gap). `options` is a flat comma-separated string, only read when
- * `type: 'select'` — a real nested array-of-options would need array
- * nesting this repo doesn't support yet either.
+ * `type: 'select'` (a real nested array-of-options would need array
+ * nesting this repo doesn't support yet either).
  */
 export type FormFieldRow = {
 	name: string
@@ -18,7 +18,7 @@ export type FormFieldRow = {
 	options?: string
 }
 
-/** One configured email, modeled on Payload's own form-builder — `{{fieldName}}` in `to`/`from`/`subject`/`message` gets interpolated against the submission's own data at send time (see `endpoints.ts`'s `interpolate()`). */
+/** One configured email, modeled on Payload's own form-builder: `{{fieldName}}` in `to`/`from`/`subject`/`message` gets interpolated against the submission's own data at send time (see `endpoints.ts`'s `interpolate()`). */
 export type FormEmailRow = {
 	to: string
 	from: string
@@ -35,10 +35,10 @@ export type FormData = {
 }
 
 /**
- * The `forms` collection — an admin defines a form's own field list,
+ * The `forms` collection: an admin defines a form's own field list,
  * post-submit confirmation, and which emails to send, all from the admin
  * UI, same as Payload's own form-builder plugin. Added to `www/src/config`
- * via `formBuilderPlugin()` (`plugin.ts`), never hand-registered directly —
+ * via `formBuilderPlugin()` (`plugin.ts`), never hand-registered directly;
  * see that file's own doc comment.
  */
 export const formsCollection = defineCollection({
@@ -86,7 +86,7 @@ export const formsCollection = defineCollection({
 						{
 							name: 'options',
 							type: 'text',
-							label: 'Options (comma-separated — only for Select)'
+							label: 'Options (comma-separated, only for Select)'
 						}
 					]
 				}

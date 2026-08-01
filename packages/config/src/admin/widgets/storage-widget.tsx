@@ -15,7 +15,7 @@ const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|svg|avif)$/i
 
 export type StorageWidgetValue = { url: string; name: string; size: number }
 
-/** The shape `Upload`'s own `renderBrowser` prop passes in — split out so call sites (`fields/renderer.tsx`, `meta-fields.tsx`) can type that render function's parameter without `f: any`'s lack of inference leaving it an implicit `any`. */
+/** The shape `Upload`'s own `renderBrowser` prop passes in: split out so call sites (`fields/renderer.tsx`, `meta-fields.tsx`) can type that render function's parameter without `f: any`'s lack of inference leaving it an implicit `any`. */
 export type StorageWidgetTriggerProps = {
 	open: boolean
 	onOpenChange: (open: boolean) => void
@@ -23,7 +23,7 @@ export type StorageWidgetTriggerProps = {
 }
 
 export type StorageWidgetProps = StorageWidgetTriggerProps & {
-	/** Where a new drag-and-dropped upload lands by default — the owning field's own folder (collection slug + document id + optional field `prefix`, see `fields/renderer.tsx`). Shown as an editable field so a different destination can be typed in before uploading. */
+	/** Where a new drag-and-dropped upload lands by default: the owning field's own folder (collection slug + document id + optional field `prefix`, see `fields/renderer.tsx`). Shown as an editable field so a different destination can be typed in before uploading. */
 	defaultFolder?: string
 	accept?: string
 }
@@ -42,14 +42,14 @@ function formatBytes(bytes: number) {
 }
 
 /**
- * The `Upload` field's "choose existing, or drag-and-drop a new one" picker
- * — injected into `@baseconfig/ui/forms`'s `Upload` primitive via its
+ * The `Upload` field's "choose existing, or drag-and-drop a new one" picker,
+ * injected into `@baseconfig/ui/forms`'s `Upload` primitive via its
  * `renderBrowser` prop, so that package stays free of any real backend
  * dependency (this is the one place in `@baseconfig/core` that knows about
  * `/api/storage/*`, alongside `admin/views/storage/component.tsx`).
- * Browses every file as one flat list rather than folder-by-folder — the
+ * Browses every file as one flat list rather than folder-by-folder, the
  * full Storage page keeps folder browsing, this is just quick picking.
- * Lives under `admin/widgets/`, not `fields/`, alongside `AuthWidget` — the
+ * Lives under `admin/widgets/`, not `fields/`, alongside `AuthWidget`: the
  * one deliberate exception to `fields/` never depending on `admin/` in
  * reverse: both widgets share `WidgetDialog`'s chrome, and this is the more
  * natural home for that than either widget's original location.
@@ -70,7 +70,7 @@ export function StorageWidget({
 	const [deletingKey, setDeletingKey] = useState<string | null>(null)
 	const inputRef = useRef<HTMLInputElement>(null)
 
-	// Every fresh open resumes at the field's own folder — otherwise
+	// Every fresh open resumes at the field's own folder, otherwise
 	// re-opening later would resume wherever a previous session left off.
 	useEffect(() => {
 		if (open) setUploadFolder(defaultFolder ?? '')

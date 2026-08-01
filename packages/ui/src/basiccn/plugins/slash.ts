@@ -16,7 +16,7 @@ export interface SlashCommandOptions {
  * its own `items`/`render` wiring (unlike most tiptap examples that leave
  * that to the consumer) so `utils/extensions.ts` just adds `SlashCommand`
  * with no further setup, and `editor.tsx` never renders `<Slashmenus>`
- * declaratively — `ReactRenderer` + `props.mount()` mount/position/tear it
+ * declaratively: `ReactRenderer` + `props.mount()` mount/position/tear it
  * down entirely outside the normal React tree, which is the standard
  * tiptap+React pattern for suggestion-driven popups (same one `Mention`
  * itself uses).

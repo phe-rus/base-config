@@ -26,7 +26,7 @@ export interface CommandItem {
 }
 
 /**
- * The single source of truth for "things you can insert" — both the slash
+ * The single source of truth for "things you can insert": both the slash
  * command menu (`plugins/slash.ts`) and the add-block button next to the
  * drag handle read from this list, so a new insertable thing is defined
  * once, not once per menu.

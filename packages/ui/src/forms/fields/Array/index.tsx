@@ -15,10 +15,10 @@ type ArrayFieldProps = BaseFieldProps & {
 	/**
 	 * Replaces the default "Add items" row with custom UI (e.g. a menu of
 	 * item variants to choose from). Called with a function that appends a
-	 * given item to the array — call it with no argument to append `{}`.
+	 * given item to the array; call it with no argument to append `{}`.
 	 */
 	renderAdd?: (add: (item?: Record<string, any>) => void) => React.ReactNode
-	/** Overrides the collapsed row header's label — the default falls back through `item?.label ?? item?.title ?? item?.name ?? 'No name'`, which only ever matches when an item happens to have one of those exact fields (e.g. a block instance never does, since a block's own type name lives in `blockType`/a registry, not on the item itself — see `@baseconfig/core`'s `BlocksField`, the one real consumer of this so far). */
+	/** Overrides the collapsed row header's label: the default falls back through `item?.label ?? item?.title ?? item?.name ?? 'No name'`, which only ever matches when an item happens to have one of those exact fields (e.g. a block instance never does, since a block's own type name lives in `blockType`/a registry, not on the item itself; see `@baseconfig/core`'s `BlocksField`, the one real consumer of this so far). */
 	getItemLabel?: (item: Record<string, any>, index: number) => string
 	children: (props: {
 		path: string

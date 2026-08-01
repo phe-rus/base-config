@@ -14,14 +14,14 @@ export type UploadValue = {
 
 type UploadProps = BaseFieldProps & {
 	accept?: string
-	/** Uploads the file and resolves to the stored object key (or a data URL) — the field packs that together with the picked `File`'s own name/size into its value, so both persist across reloads (unlike local-only component state). */
+	/** Uploads the file and resolves to the stored object key (or a data URL): the field packs that together with the picked `File`'s own name/size into its value, so both persist across reloads (unlike local-only component state). */
 	onUpload: (file: File) => Promise<string>
 	/**
 	 * Renders the "choose existing" experience (a media browser) given the
 	 * picker's open state and a `select` callback that commits a pick and
 	 * closes it. Kept as an injected render function rather than a fixed
 	 * component so this package stays free of any real backend/storage
-	 * dependency — the actual browser UI (fetching a file listing, uploading,
+	 * dependency: the actual browser UI (fetching a file listing, uploading,
 	 * etc.) lives in the consumer, e.g. `@baseconfig/core`'s `MediaPickerDrawer`.
 	 * Omit to skip the "choose from existing" affordance entirely.
 	 */

@@ -21,7 +21,7 @@ type KeywordsInputProps = BaseFieldProps & {
 	placeholder?: string
 	className?: string
 	suggestions?: string[]
-	/** Called with the raw text whenever the user creates a new keyword (not just picks an existing suggestion) — e.g. to persist it into a shared, app-wide keyword pool. */
+	/** Called with the raw text whenever the user creates a new keyword (not just picks an existing suggestion), e.g. to persist it into a shared, app-wide keyword pool. */
 	onCreate?: (value: string) => void
 }
 
@@ -48,9 +48,9 @@ export const KeywordsInput = ({
 	)
 
 	// `suggestions` can arrive after mount (e.g. a live-queried shared keyword
-	// pool that starts empty) — merge new ones in rather than only reading
+	// pool that starts empty), merge new ones in rather than only reading
 	// `suggestions` once via `useState`'s initializer. Bails out when nothing
-	// actually changed (not just re-checking the array *reference*) — a
+	// actually changed (not just re-checking the array *reference*): a
 	// caller passing a `suggestions` array that's re-created every render
 	// (any `.map()`/`.filter()` result, a fresh `[]` literal, …) would
 	// otherwise turn this into an infinite render loop: new reference →

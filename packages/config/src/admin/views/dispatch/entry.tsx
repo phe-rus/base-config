@@ -12,11 +12,11 @@ import { RenderView } from '../render-view'
 import { useRouteView } from './context'
 
 /**
- * The single dispatcher mounted at the `$collection/$` splat route —
+ * The single dispatcher mounted at the `$collection/$` splat route:
  * replaces what used to be two separate route-mounted components (`List`
  * at `$collection/index.tsx`, `CollectionEdit` at `$collection/$uid.tsx`).
  * All the slug/uid resolution now happens once, upstream, in
- * `<ProviderView.Context>` (`provider.tsx`) — this file only renders
+ * `<ProviderView.Context>` (`provider.tsx`), this file only renders
  * whichever mode `useRouteView()` reports.
  */
 export function Entry() {
@@ -61,7 +61,7 @@ export function Entry() {
 			config={view.collectionConfig}
 			collection={contentCollections[view.collectionConfig.slug]}
 			onOpen={(id) =>
-				// resolved literal path, not a typed route pattern — same
+				// resolved literal path, not a typed route pattern, same
 				// trade-off `List` made before this file replaced it
 				navigate({
 					to: `/${config.adminPath}/${view.collectionConfig.slug}/${id}` as any

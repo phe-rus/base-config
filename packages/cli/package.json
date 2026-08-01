@@ -1,0 +1,48 @@
+{
+	"name": "@baseconfig/cli",
+	"version": "0.0.1",
+	"description": "Scaffold a new baseConfig app: bunx @baseconfig/cli my-app.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/phe-rus/base-config.git",
+		"directory": "packages/cli"
+	},
+	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"bugs": {
+		"url": "https://github.com/phe-rus/base-config/issues"
+	},
+	"keywords": [
+		"baseconfig",
+		"cms",
+		"scaffold",
+		"create-app"
+	],
+	"private": false,
+	"type": "module",
+	"files": [
+		"dist",
+		"templates"
+	],
+	"bin": {
+		"baseconfig": "dist/cli.mjs"
+	},
+	"scripts": {
+		"sync-template": "bun run scripts/sync-template.ts",
+		"build": "bun run sync-template && tsdown",
+		"dev": "tsdown --watch",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.7.0"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/node": "^26",
+		"tsdown": "latest",
+		"typescript": "^5.9.3"
+	},
+	"engines": {
+		"node": ">=18"
+	}
+}

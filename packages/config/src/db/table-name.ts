@@ -15,7 +15,7 @@
  * collision with whatever tables a better-auth plugin adds later. A slug is
  * already kebab-case by this repo's own `slugify()` convention
  * (`collections/slug.ts`), so the transform is just "prepend `cn-`" and its
- * exact inverse "strip `cn-`" — no case conversion in either direction,
+ * exact inverse "strip `cn-`", no case conversion in either direction,
  * nothing to drift. Fixed, not configurable: a configurable prefix would
  * need to stay perfectly in sync between schema-gen time and runtime, a
  * real footgun (a mismatch silently 404s a table that actually exists) for

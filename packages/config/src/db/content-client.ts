@@ -9,20 +9,20 @@ import type {
 import { requireContentDataSource } from './collections'
 
 /**
- * The ready-to-import Local API — Payload's own shape
+ * The ready-to-import Local API, Payload's own shape
  * (`payload.find`/`findByID`/`create`/`update`/`delete`/`findGlobal`/
  * `updateGlobal`), not a client a consumer builds themselves. Reads
  * `requireContentDataSource()` at call time (populated once by
  * `baseConfig({contentClient: ...})`, see `collections.ts`), so this can be
- * imported directly — `import { base } from '@baseconfig/core'` — with no
+ * imported directly, `import { base } from '@baseconfig/core'`, with no
  * client-construction step in `www` at all. Every call underneath still
  * goes through the consumer's own Hono RPC client (`ContentApiClient`,
- * built by `createContentApiClient`) — never `fetch` directly.
+ * built by `createContentApiClient`), never `fetch` directly.
  *
  * **Query-based, not promise-based.** Payload's real Local API returns
  * promises you `await` directly; this instead returns TanStack Query
- * `queryOptions()`/`mutationOptions()` objects — `useQuery(base.find({...}))`,
- * `useMutation(base.createMutation('posts'))` — so reads get real
+ * `queryOptions()`/`mutationOptions()` objects, `useQuery(base.find({...}))`,
+ * `useMutation(base.createMutation('posts'))`, so reads get real
  * caching/dedup/refetch behavior for free instead of firing a fresh
  * request on every render, and writes get `useMutation`'s
  * pending/error/optimistic-update machinery instead of a bare `await`.

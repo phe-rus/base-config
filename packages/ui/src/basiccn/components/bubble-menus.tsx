@@ -60,12 +60,12 @@ type FormatingList = {
 
 export const BubbleMenus: FC<BubblemenuProps> = ({ editor }) => {
 	// Popover/Select content renders through a portal, outside this bubble
-	// menu's own DOM subtree — tiptap's default `shouldShow` hides the menu
+	// menu's own DOM subtree: tiptap's default `shouldShow` hides the menu
 	// on editor blur unless the mousedown target is a DOM descendant of the
 	// menu element, which portaled content never is. Without this override,
 	// opening any nested popover (link, colors, font) blurs the editor,
 	// hides (unmounts) the whole bar mid-interaction, and the popover's
-	// anchor disappears with it — which is what shows up as the popover
+	// anchor disappears with it, which is what shows up as the popover
 	// "jumping" to a corner of the screen. `pinnedCount` keeps the bar
 	// (and everything nested in it) visible while any of its own popovers
 	// are open, regardless of editor focus.

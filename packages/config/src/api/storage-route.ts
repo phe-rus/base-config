@@ -34,12 +34,12 @@ type R2ObjectBodyLike = {
 
 /**
  * The exact slice of Cloudflare's real `R2Bucket` this route (and
- * `cdn-route.ts`'s `createCdnRoute`, which only needs `get`) calls —
+ * `cdn-route.ts`'s `createCdnRoute`, which only needs `get`) calls,
  * structural on purpose (same trade-off `BetterAuthAdminClient` makes for
  * better-auth), so this package never needs `@cloudflare/workers-types` as
  * a dependency just for one binding's ambient type. A consumer's real
  * `env.MEDIA` (an actual `R2Bucket`) satisfies this without a cast. `get`
- * is unused by this file's own routes — kept on the one shared type rather
+ * is unused by this file's own routes, kept on the one shared type rather
  * than a second near-duplicate, since both routes are always handed the
  * same real bucket binding by `createBaseConfigRoute`.
  */
@@ -59,7 +59,7 @@ export type R2BucketLike = {
 }
 
 /**
- * The media-library API — factored out the same way `content-route.ts`
+ * The media-library API, factored out the same way `content-route.ts`
  * is: a plain Hono app a consumer mounts directly
  * (`.route('/storage', createStorageRoute(env.MEDIA))` in their own
  * `api.ts`), taking the consumer's own R2 bucket binding directly rather
@@ -67,7 +67,7 @@ export type R2BucketLike = {
  * context, same auth-agnostic trade-off `content-route.ts`/`guard.ts`/
  * `Topbar` already make.
  *
- * **One chained expression, never a bare `app.get(...)` statement** — see
+ * **One chained expression, never a bare `app.get(...)` statement**, see
  * `content-route.ts`'s own doc comment for exactly why: Hono's RPC type
  * inference only accumulates route information through each call's
  * *return value*, so a route added via its own separate statement (return
@@ -88,7 +88,7 @@ const uploadFormSchema = z.object({
 
 /**
  * **Every query param this route reads goes through `zValidator('query', ...)`
- * now** — an earlier version read `c.req.query(...)` directly with no
+ * now**: an earlier version read `c.req.query(...)` directly with no
  * validator. That still works as a *server*, but Hono's `hc<TypeRouter>()`
  * client only infers a typed `query` argument for `$get`/`$delete` from a
  * route's own validator; without one, a consumer's RPC client has no way to
@@ -105,13 +105,13 @@ export function createStorageRoute(bucket: R2BucketLike) {
 			await next()
 		})
 		// Folders and files under `prefix`, matching R2's own "directory"
-		// convention (`delimiter: '/'`) — `delimitedPrefixes` are the
+		// convention (`delimiter: '/'`): `delimitedPrefixes` are the
 		// immediate subfolders, `objects` are the files sitting directly in
-		// this folder (not in one of those subfolders). No pagination yet —
+		// this folder (not in one of those subfolders). No pagination yet,
 		// fine for a media library this size, revisit if `truncated` ever
 		// comes back `true` in practice.
 		.get('/list', zValidator('query', listQuerySchema), async (c) => {
-			// `?flat=true` is the `Upload` field's media picker — it browses
+			// `?flat=true` is the `Upload` field's media picker: it browses
 			// every file across every folder as one pool (no folder
 			// grouping), unlike the full Storage page's own
 			// folder-by-folder browsing below.
@@ -177,7 +177,7 @@ export function createStorageRoute(bucket: R2BucketLike) {
 			const origin = new URL(c.req.url).origin
 
 			// A "folder" is only ever inferred from key prefixes (R2 has no
-			// real directory objects) — deleting every object under it is
+			// real directory objects), deleting every object under it is
 			// what makes it disappear from a `list()` call, no separate
 			// cleanup needed. Paginate via `cursor` since a folder can hold
 			// more than one page of objects, and batch deletes at 1000 keys

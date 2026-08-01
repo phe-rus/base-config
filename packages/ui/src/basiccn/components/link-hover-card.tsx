@@ -14,8 +14,8 @@ interface HoverTarget {
 /**
  * Small floating tooltip that shows a link's destination on hover, anywhere
  * in the editor's rendered content (not just when it's selected). Reads the
- * DOM directly via `editor.view.dom` rather than a tiptap plugin/decoration
- * — link elements are plain ProseMirror-rendered `<a>` tags, so listening
+ * DOM directly via `editor.view.dom` rather than a tiptap plugin/decoration.
+ * Link elements are plain ProseMirror-rendered `<a>` tags, so listening
  * for `mouseover`/`mouseout` at the editor root is simpler than wiring a
  * ProseMirror plugin just to track hover state.
  */
@@ -57,7 +57,7 @@ export const LinkHoverCard: FC<LinkHoverCardProps> = ({ editor }) => {
 		const url = new URL(hover.href, window.location.origin)
 		display = url.hostname + (url.pathname === '/' ? '' : url.pathname)
 	} catch {
-		// relative or malformed href — fall back to showing it verbatim
+		// relative or malformed href: fall back to showing it verbatim
 	}
 
 	return (

@@ -10,7 +10,7 @@ export default defineConfig((inlineConfig) => ({
 	],
 	tsconfig: './tsconfig.json',
 	outDir: 'dist',
-	// See base/ui/tsdown.config.ts's own comment — `clean: true` under
+	// See base/ui/tsdown.config.ts's own comment: `clean: true` under
 	// `--watch` briefly empties `dist/` on every rebuild, which a
 	// consumer's own dev server can observe mid dependency-scan.
 	clean: !inlineConfig.watch,

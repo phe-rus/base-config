@@ -15,12 +15,12 @@ import { RenderView } from '../render-view'
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|svg|avif)$/i
 
 /**
- * The media library — lists folders/files from the consumer's own
+ * The media library: lists folders/files from the consumer's own
  * `/api/storage/list` (the same convention `uploadFile()` assumes for
  * `/api/storage/upload`). Navigation is search-param based (`?path=...`)
  * rather than nested dynamic route segments, since folder depth is
  * arbitrary and this is a fully generic library component mounted directly
- * as a route's `component` — same reasoning as every other page here for
+ * as a route's `component`, same reasoning as every other page here for
  * using `useSearch`/`useNavigate` loosely instead of the consumer's own
  * generated route types.
  */

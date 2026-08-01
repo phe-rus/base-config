@@ -1,4 +1,4 @@
-// Minimal shim for standalone `tsc` runs of this package — `sonner.tsx`
+// Minimal shim for standalone `tsc` runs of this package: `sonner.tsx`
 // has a side-effect `import '...css'` (`goey-toast/styles.css`), which
 // Vite/bundler-mode resolution handles natively but plain `tsc` doesn't
 // know about unless something declares it. `www`'s own tsconfig gets this

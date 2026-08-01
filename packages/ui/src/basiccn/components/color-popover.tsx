@@ -21,7 +21,7 @@ interface ColorPopoverProps {
 /**
  * A single icon button (sits inline in a bubble-menu-style row, same as
  * Bold/Italic/etc.) whose click opens a small popover holding the actual
- * swatch grid — the "more options" for that one control, not a whole
+ * swatch grid: the "more options" for that one control, not a whole
  * separate settings panel.
  */
 export const ColorPopover: FC<ColorPopoverProps> = ({

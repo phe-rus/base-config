@@ -1,32 +1,32 @@
 import {
 	StorageWidget,
 	type StorageWidgetTriggerProps
-} from '../../admin/widgets/storage-widget'
-import { uploadFile } from '../../fields/upload'
+} from '../../../admin/widgets/storage-widget'
+import { uploadFile } from '../../../fields/upload'
 import {
 	registerKeyword,
 	useGlobalKeywordSuggestions
-} from '../../db/collections'
+} from '../../../db/collections'
 import { useSelector } from '@tanstack/react-store'
-import { collectionsBySlug } from '../registry'
-import { collectionPath } from '../types'
-import type { CollectionFieldsProps } from '../types'
+import { collectionsBySlug } from '../../registry'
+import { collectionPath } from '../../types'
+import type { CollectionFieldsProps } from '../../types'
 
 export function MetaFields({
 	form,
 	uploadFolder,
 	id
 }: Pick<CollectionFieldsProps, 'form'> & {
-	/** The owning collection's own `slug` — the share image lands under `meta/<uploadFolder>/<id>` rather than every collection's (and every document's) SEO image colliding in one flat `metadata.image` folder. Doubles as the lookup key into `collectionsBySlug` below, so the preview shows the document's real public path (`collectionPath()`'s own `/<path>/<slug>` shape, e.g. `/post/<slug>`) instead of a bare `/<slug>`. */
+	/** The owning collection's own `slug`, the share image lands under `meta/<uploadFolder>/<id>` rather than every collection's (and every document's) SEO image colliding in one flat `metadata.image` folder. Doubles as the lookup key into `collectionsBySlug` below, so the preview shows the document's real public path (`collectionPath()`'s own `/<path>/<slug>` shape, e.g. `/post/<slug>`) instead of a bare `/<slug>`. */
 	uploadFolder?: string
-	/** The document's own id — see `uploadFolder` above. */
+	/** The document's own id, see `uploadFolder` above. */
 	id?: string
 }) {
 	const store = useSelector(form.store, (s: any) => s.values)
 	const keywordSuggestions = useGlobalKeywordSuggestions()
 	const metaUploadPrefix = ['meta', uploadFolder, id].filter(Boolean).join('/')
-	// Widened to a plain-`string`-keyed lookup — same trade-off `Topbar` already
-	// makes (`admin/views/topbar.tsx`) — `uploadFolder` is a plain `string`
+	// Widened to a plain-`string`-keyed lookup, same trade-off `Topbar` already
+	// makes (`admin/views/topbar.tsx`): `uploadFolder` is a plain `string`
 	// here (any registered collection's own slug), not the narrower
 	// `CollectionConfig['slug']` union `collectionsBySlug` is declared against.
 	const collectionConfig = uploadFolder

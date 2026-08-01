@@ -23,7 +23,7 @@ type ContentRouteEnv = { Variables: { session?: SessionLike } }
 export type ContentRouteType = ReturnType<typeof createContentRoute>
 
 /**
- * The exact slice of Cloudflare's real `KVNamespace` this route calls —
+ * The exact slice of Cloudflare's real `KVNamespace` this route calls on,
  * structural, same trade-off `R2BucketLike`/`BetterAuthAdminClient` already
  * make so this package never needs `@cloudflare/workers-types` as a
  * dependency for one binding's ambient type. A consumer's real `env.CACHE`
@@ -36,16 +36,16 @@ export type KVNamespaceLike = {
 }
 
 /**
- * A Payload-style custom endpoint (https://payloadcms.com/docs/rest-api/overview) —
+ * A Payload-style custom endpoint (https://payloadcms.com/docs/rest-api/overview):
  * `collection`/`path`/`method` describe where it's mounted (`/api/<collection><path>`,
- * registered *before* the generic `/:collection`/`/:collection/:id` wildcards
- * — same registration-order rule `/globals` already relies on, since e.g.
+ * registered *before* the generic `/:collection`/`/:collection/:id` wildcards,
+ * same registration-order rule `/globals` already relies on, since e.g.
  * `form-submissions` + `/submit` would otherwise ambiguously match
  * `/:collection/:id` with `id: 'submit'`). `handler` is a plain Hono
- * handler — loosely typed (`Context`, not this file's own internal
+ * handler, loosely typed (`Context`, not this file's own internal
  * `ContentRouteEnv`) since a plugin author outside this file can't name
  * that type. Always Tier 2 (never declared inside `defineCollection`'s
- * isomorphic config, same as binding-capable hooks — see
+ * isomorphic config, same as binding-capable hooks, see
  * `CollectionHooks`' own doc comment): a custom endpoint's whole reason to
  * exist is almost always binding/DB access, so it's registered directly at
  * `createHandler({endpoints: [...]})` instead.
@@ -109,14 +109,14 @@ export type EndpointFactory = (
 export type ContentRouteBindings = {
 	db: ContentDatabase
 	/**
-	 * Optional public-read cache — omit for no caching at all (every read
+	 * Optional public-read cache, omit for no caching at all (every read
 	 * goes straight to D1). Only ever consulted/populated for genuinely
-	 * public reads (`publishedOnly` document reads, and every global read —
+	 * public reads (`publishedOnly` document reads, and every global read;
 	 * globals have no draft/published concept at all); an authenticated
 	 * admin request always bypasses it, since admins need to see drafts. A
 	 * cache-aside pattern, not "populate on publish": every write
 	 * (`PATCH`/`DELETE`) just invalidates the relevant key(s), and the next
-	 * public read repopulates it — simpler and harder to get subtly wrong
+	 * public read repopulates it, simpler and harder to get subtly wrong
 	 * than trying to compute what a fresh read *would* return at write
 	 * time. Covers three shapes: a single document by `id`
 	 * (`GET /:collection/:id`), a single document by `slug`
@@ -130,7 +130,7 @@ export type ContentRouteBindings = {
 	 */
 	cache?: KVNamespaceLike
 	/**
-	 * Tier-1 (isomorphic, pure) hooks, keyed by collection/global slug —
+	 * Tier-1 (isomorphic, pure) hooks, keyed by collection/global slug:
 	 * `createHandler()` builds this by merging `collectHooks()`
 	 * (`collections/registry.ts`) with its own Tier-2 `hooks` param before
 	 * ever reaching here; a consumer calling `createContentRoute()`
@@ -180,11 +180,11 @@ const upsertGlobalSchema = z.record(z.string(), z.unknown())
 
 /**
  * `where` arrives as a JSON-encoded query string (`?where={"status":{"equals":"published"}}`)
- * rather than separate `?status=...`/`?slug=...` params — matches Payload's
+ * rather than separate `?status=...`/`?slug=...` params, matches Payload's
  * own REST convention (`?where[status][equals]=published`, here flattened
  * to one param since Hono has no built-in bracket-notation query parser)
  * and keeps this route's query shape extensible without new params per
- * filterable column. Only `status`/`slug` are accepted — see
+ * filterable column. Only `status`/`slug` are accepted, see
  * `WhereCondition`'s own doc comment in `content-queries.ts`.
  */
 const listQuerySchema = z.object({
@@ -217,36 +217,36 @@ function isAdmin(session: SessionLike | undefined): boolean {
 
 /**
  * Content CRUD, factored out as a plain Hono app rather than something a
- * consumer hand-writes — `createBaseConfigRoute()` mounts this at the
+ * consumer hand-writes: `createBaseConfigRoute()` mounts this at the
  * *root* of the API (`.route('/', createContentRoute({db, cache}))`), not
- * under a `/content` prefix — so a collection's real REST address is
+ * under a `/content` prefix, so a collection's real REST address is
  * `/api/<slug>` (`/api/pages`, `/api/posts`) and a global's is
  * `/api/globals/<slug>`, matching Payload's own REST shape exactly.
  *
- * **Takes only `db` — nothing else.** Every collection/global is its own
+ * **Takes only `db`, nothing else.** Every collection/global is its own
  * real table now (see `content-schema.ts`), but this route never checks a
  * JS-side registry to know which slugs are real: it just calls straight
  * into `content-queries.ts`, and a slug with no matching table surfaces as
  * `UnknownTableError`, caught by the `onError` handler below and turned
  * into a 404. `GET /globals` (list every global) is the one operation that
- * genuinely needs to enumerate *which* slugs exist — `listGlobalSlugs()`
+ * genuinely needs to enumerate *which* slugs exist: `listGlobalSlugs()`
  * answers that by asking the live database directly (which tables have a
  * `data` column but no `status` column), not a registry. No consumer-side
  * file needs to exist, change, or be passed in for any of this to work.
  *
  * `:collection`/`:id` are wildcard path segments living alongside the
- * literal `/globals` routes in the same app — **registered first,
+ * literal `/globals` routes in the same app, **registered first,
  * deliberately** (see the chain below): Hono's router resolves an
  * ambiguous match (`/globals` could be `/:collection` with `collection:
- * 'globals'`) by registration order, not by static-vs-dynamic priority —
+ * 'globals'`) by registration order, not by static-vs-dynamic priority,
  * confirmed empirically, not assumed. This does mean `globals` is a
- * reserved collection slug — the same constraint Payload itself has around
+ * reserved collection slug, the same constraint Payload itself has around
  * its own reserved top-level paths.
  *
  * **Every route is chained off a single expression, never a bare
  * `app.get(...)` statement.** Hono's RPC type inference (`hc<AppType>()`)
  * only accumulates a route's type information through the *return value*
- * of `.get()`/`.post()`/etc — see `www/src/lib/route.ts`'s own doc comment
+ * of `.get()`/`.post()`/etc, see `www/src/lib/route.ts`'s own doc comment
  * for why this matters for a consumer's typed RPC client.
  *
  * **Reads are public, writes are admin-only.** Matches how real REST CMS
@@ -254,7 +254,7 @@ function isAdmin(session: SessionLike | undefined): boolean {
  * mutations aren't. An authenticated admin session sees drafts too (needed
  * to edit them before publishing); anyone else only ever sees
  * `status: 'published'` documents. Globals have no draft/published concept
- * (no `status` column) — `GET` on them is unconditionally public.
+ * (no `status` column): `GET` on them is unconditionally public.
  *
  * **`cache` (optional) fronts single-document/single-global public reads,
  * by `id` or by `slug`, plus the aggregate globals list**, see
@@ -262,11 +262,11 @@ function isAdmin(session: SessionLike | undefined): boolean {
  * covers. A plain filtered/paginated document list is still never cached,
  * no single natural cache key the way one document does.
  *
- * **`hooks`/`endpoints` (both optional)** — see `CollectionHooks`'/
+ * **`hooks`/`endpoints` (both optional)**, see `CollectionHooks`'/
  * `ContentEndpoint`'s own doc comments. `endpoints` are mounted first,
  * ahead of every built-in route, via a `reduce()` (a plugin's endpoint list
  * is only known at runtime, so it can't be part of the single static
- * chained expression the built-in routes are — meaning custom endpoints
+ * chained expression the built-in routes are, meaning custom endpoints
  * aren't part of `ContentRouteType`'s own RPC-inferred shape, which is
  * fine: nothing in this package's own admin UI calls a plugin's endpoint
  * through the typed client, only a public page's plain `fetch()` does).
@@ -397,7 +397,7 @@ export function createContentRoute({
 		.get('/:collection/:id', async (c) => {
 			const { collection, id } = c.req.param()
 			const publishedOnly = !isAdmin(c.get('session'))
-			// Only the genuinely public path ever touches the cache — an admin
+			// Only the genuinely public path ever touches the cache: an admin
 			// request needs to see drafts, which this cache never stores.
 			if (cache && publishedOnly) {
 				const cached = await cache.get(documentCacheKey(collection, id))
@@ -456,7 +456,7 @@ export function createContentRoute({
 					fields
 				})
 				if (!row) return c.json({ error: 'Not found' }, 404)
-				// Invalidate rather than recompute-and-repopulate here — covers
+				// Invalidate rather than recompute-and-repopulate here: covers
 				// publish, unpublish, and a plain draft edit alike (the next
 				// public read repopulates correctly either way, including
 				// caching nothing at all if the doc isn't publicly visible).

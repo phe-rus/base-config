@@ -1,23 +1,23 @@
 import {
 	registerKeyword,
 	useGlobalKeywordSuggestions
-} from '../../db/collections'
-import { RelationshipField } from './relationship-field'
+} from '../../../db/collections'
+import { RelationshipField } from '../Relationship'
 
 type RelationsFieldProps = {
-	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */
+	/** See the note on `CollectionFieldsProps['form']` in `../types.ts`, same reasoning applies here. */
 	form: any
 	name: string
 	excludeId?: string
 }
 
 /**
- * A list of "relation groups" — each one either a hand-picked set of posts
+ * A list of "relation groups", each one either a hand-picked set of posts
  * or a keyword filter. Used by both pages and posts: a page uses this to
  * pull in a set of posts to display, a post uses it the same way but can
  * also have several groups, each labeled as its own category.
  *
- * The keyword-filter mode only records the filter criteria for now — actually
+ * The keyword-filter mode only records the filter criteria for now, actually
  * resolving "which posts currently match" needs documents to be queryable,
  * which isn't true yet (Phase A has no persistence layer, see the plan).
  */
@@ -42,7 +42,7 @@ export function RelationsField({ form, name, excludeId }: RelationsFieldProps) {
 	)
 }
 
-/** One relation group's fields on their own — reused directly by the `relatedPosts` content block (see `blocks/related-posts.tsx`), where a block *is* a single group rather than a picker over an array of them. */
+/** One relation group's fields on their own, reused directly by the `relatedPosts` content block (see `blocks/RelatedPosts/index.tsx`), where a block *is* a single group rather than a picker over an array of them. */
 export function RelationGroupFields({
 	form,
 	path,

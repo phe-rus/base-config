@@ -8,7 +8,7 @@ import { cn } from '../../../lib/utils'
 import { type AnyFieldApi, useSelector } from '@tanstack/react-form'
 import type { PropsWithChildren } from 'react'
 
-/** The `✦` marker shown next to a required field's label — shared by `FieldShell`'s own label rendering and any field that hand-rolls its own label (e.g. `Checkbox`, `Switch`). */
+/** The `✦` marker shown next to a required field's label, shared by `FieldShell`'s own label rendering and any field that hand-rolls its own label (e.g. `Checkbox`, `Switch`). */
 export function RequiredMark() {
 	return <span className='text-[5px]! text-destructive ml-1'>✦</span>
 }
@@ -23,7 +23,7 @@ type FieldShellProps = PropsWithChildren<{
 	className?: string
 }>
 
-/** Field chrome (label/description/error) shared by every field. Named to avoid colliding with `useFieldContext`/`fieldContext` (from `@tanstack/react-form`, re-exported in `forms/context.ts`) — this is a component, not a context. */
+/** Field chrome (label/description/error) shared by every field. Named to avoid colliding with `useFieldContext`/`fieldContext` (from `@tanstack/react-form`, re-exported in `forms/context.ts`): this is a component, not a context. */
 export function FieldShell({
 	label,
 	description,

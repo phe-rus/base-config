@@ -23,7 +23,7 @@ type UploadHookResult = {
 	}
 }
 
-/** The actual upload implementation (talks to the app's storage API) lives in the consuming app, not this package — inject it here instead of importing it. */
+/** The actual upload implementation (talks to the app's storage API) lives in the consuming app, not this package: inject it here instead of importing it. */
 export type UseUploadHook = (config: UploadHookConfig) => UploadHookResult
 
 type MediaProps = BaseFieldProps & {

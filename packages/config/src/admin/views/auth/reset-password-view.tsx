@@ -10,7 +10,7 @@ import { AuthBanner } from './auth-banner'
 
 type ResetPasswordViewProps = {
 	title?: string
-	/** Defaults to `getAdminConfig()?.adminIcon` — see `LoginView`'s own doc comment. */
+	/** Defaults to `getAdminConfig()?.adminIcon`, see `LoginView`'s own doc comment. */
 	icon?: string
 	loginHref?: string
 	forgotPasswordHref?: string
@@ -30,9 +30,9 @@ const resetPasswordSchema = z
 	})
 
 /**
- * The other half of `ForgotPasswordView` — reads the `token` from the
+ * The other half of `ForgotPasswordView`: reads the `token` from the
  * emailed reset link's own `?token=` query param directly via
- * `useSearch({strict: false})` (no `validateSearch` on the mounting route —
+ * `useSearch({strict: false})` (no `validateSearch` on the mounting route,
  * this is the one search param the whole admin auth flow needs, and a full
  * zod-validated route search schema was more ceremony than the value
  * warranted) and calls `authClient.resetPassword({newPassword, token})`.
@@ -52,7 +52,7 @@ export function ResetPasswordView({
 		mutationFn: async (newPassword: string) => {
 			if (!authClient) {
 				throw new Error(
-					'ResetPasswordView was rendered but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
+					'ResetPasswordView was rendered but no `auth` was passed to baseConfig(): see BaseConfigProps["auth"].'
 				)
 			}
 			if (!token) {
@@ -61,7 +61,7 @@ export function ResetPasswordView({
 			return unwrap(await authClient.resetPassword({ newPassword, token }))
 		},
 		onSuccess: () => {
-			t.success('Success', { description: 'Password reset — sign in below' })
+			t.success('Success', { description: 'Password reset, sign in below' })
 			navigate({ to: '/admin/login', replace: true })
 		},
 		onError: (error) => {

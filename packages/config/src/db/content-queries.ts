@@ -8,11 +8,11 @@ import {
 } from './table-name'
 
 /**
- * Structural, not `typeof someConcreteClient` — a consumer only ever hands
+ * Structural, not `typeof someConcreteClient`: a consumer only ever hands
  * this package `drizzle(env.DB, {logger: false})`
  * (see `www/db/db.ts`), nothing more. Bindings are the one thing
  * this package can never resolve itself (same `env`-isolation reason
- * `ignite()` never reads `env` on its own either) — everything downstream
+ * `ignite()` never reads `env` on its own either), everything downstream
  * of that one client lives here instead of being re-implemented per
  * consumer.
  */
@@ -47,18 +47,18 @@ export type UpdateDocumentInput = {
 	title?: string
 	slug?: string
 	status?: DocumentStatus
-	/** Only the fields that actually changed — merged into `data`, never a whole-document overwrite. Same diff-before-send shape as the real `users` collection's own `onUpdate`. */
+	/** Only the fields that actually changed, merged into `data`, never a whole-document overwrite. Same diff-before-send shape as the real `users` collection's own `onUpdate`. */
 	fields?: Record<string, unknown>
 }
 
 /**
- * Deliberately narrow — only the columns every collection table always has
+ * Deliberately narrow: only the columns every collection table always has
  * (`status`, `slug`) can be filtered on. Payload's own `where` language
  * reaches into arbitrary document fields because Postgres/Mongo can
  * index/query into those; every collection field beyond the fixed columns
  * still lives in one opaque `data` JSON blob (see `content-schema.ts`'s own
  * doc comment for why), and querying *into* that would mean per-field JSON
- * path expressions with no index backing them. Not implemented — a real
+ * path expressions with no index backing them. Not implemented, a real
  * gap, not a hidden one. `equals` is the only operator for the same
  * reason: no need to build a `contains`/`greater_than`/etc. dispatcher for
  * a two-field allowlist.
@@ -69,11 +69,11 @@ export type WhereCondition = {
 }
 
 export type ReadOptions = {
-	/** Restricts to `status: 'published'` — set for an unauthenticated/non-admin request, since a draft is never meant to be publicly readable. Omit (or `false`) for an admin request, which needs to see drafts too, e.g. to edit them before publishing. */
+	/** Restricts to `status: 'published'`, set for an unauthenticated/non-admin request, since a draft is never meant to be publicly readable. Omit (or `false`) for an admin request, which needs to see drafts too, e.g. to edit them before publishing. */
 	publishedOnly?: boolean
-	/** Top-level column filters only — see `WhereCondition`'s own doc comment. */
+	/** Top-level column filters only, see `WhereCondition`'s own doc comment. */
 	where?: WhereCondition
-	/** Omit to fetch every matching row unpaginated (what every internal caller, e.g. `createContentCollection`'s local mirror, wants) — only set this from a real paginated caller like `base.find()`. */
+	/** Omit to fetch every matching row unpaginated (what every internal caller, e.g. `createContentCollection`'s local mirror, wants), only set this from a real paginated caller like `base.find()`. */
 	limit?: number
 	/** 1-indexed, same convention as Payload's own `find()`. Ignored unless `limit` is also set. */
 	page?: number
@@ -91,13 +91,13 @@ export type PaginatedResult<T> = {
 
 /**
  * Thrown when a query targets a collection/global slug with no matching
- * table — `content-route.ts` catches this specifically and turns it into a
+ * table: `content-route.ts` catches this specifically and turns it into a
  * 404, never a 500. Deliberately *not* resolved by checking a JS-side
  * registry (`collectionsBySlug`/`globalsBySlug`) first: that registry only
  * populates as a side effect of a consumer's `base.config.ts` actually
  * being imported, and dev-mode SSR (Vite lazily loads server modules per
  * route) can genuinely serve the very first API request before anything
- * has imported it — confirmed empirically, not a theoretical gap. The
+ * has imported it, confirmed empirically, not a theoretical gap. The
  * database itself always knows which tables exist, regardless of import
  * order, so that's the actual source of truth here.
  */
@@ -111,20 +111,20 @@ export class UnknownTableError extends Error {
 /**
  * **Every collection/global is its own real table now (see
  * `content-schema.ts`), and this package still can't import a consumer's
- * generated table objects** — they don't exist at library-compile-time,
+ * generated table objects**, they don't exist at library-compile-time,
  * and there is no library→consumer file path that isn't "a library
  * reaching into one specific app," which this package refuses to do
  * anywhere else either. Rather than ask a consumer to pass generated table
  * objects in (real, but avoidable, extra wiring), every function here
  * takes the collection/global's own `slug` as a plain string and builds
- * raw, safely-identifier-quoted SQL against it directly — `quoteIdent`
+ * raw, safely-identifier-quoted SQL against it directly: `quoteIdent`
  * only checks the string is a *safe SQL identifier shape*; `dbGet`/`dbAll`/
  * `dbRun` below are what actually confirm the table exists, by letting
  * SQLite's own "no such table" error surface as `UnknownTableError`.
  *
  * One real, disclosed cost of raw SQL over Drizzle's typed table API:
  * `$onUpdate()`/column defaults that are *Drizzle-side* JS behavior (not
- * real SQL, e.g. `updatedAt`'s auto-bump on update) don't fire for free —
+ * real SQL, e.g. `updatedAt`'s auto-bump on update) don't fire for free,
  * every write below sets `updatedAt` explicitly. Real SQL-level defaults
  * (`createdAt`'s own `DEFAULT (...)` clause) still apply automatically,
  * since those live in the table's actual schema, not in Drizzle's JS layer.
@@ -138,9 +138,9 @@ function quoteIdent(name: string): string {
 
 /**
  * Drizzle wraps D1's real error in its own `DrizzleQueryError`, whose own
- * top-level `.message` is just "Failed query: ..." — the actual "no such
+ * top-level `.message` is just "Failed query: ...", the actual "no such
  * table" text lives on `.cause` (sometimes nested two levels: D1's driver
- * wraps its own error a second time) — confirmed empirically against a
+ * wraps its own error a second time), confirmed empirically against a
  * real `DrizzleQueryError` before trusting a single-level message check.
  * Walks the whole `cause` chain rather than assuming a fixed depth.
  */
@@ -307,7 +307,7 @@ export async function createDocument(
 }
 
 /**
- * Only writes what changed — fixed columns (`title`/`slug`/`status`) are
+ * Only writes what changed: fixed columns (`title`/`slug`/`status`) are
  * included in `SET` only when provided, and `fields` gets merged into the
  * existing `data` blob rather than replacing it outright.
  */
@@ -364,11 +364,11 @@ export async function getGlobal(
 }
 
 /**
- * Insert-or-merge — a global's first write creates its one row outright
+ * Insert-or-merge: a global's first write creates its one row outright
  * (no prior `data` to merge into); every write after that merges `fields`
  * into the existing row, same pattern as `updateDocument`. A global's own
- * table only ever has one row (see `content-schema.ts`'s `globalTableSource`
- * — no `id`/primary key at all), so there's no `WHERE` needed to target it.
+ * table only ever has one row (see `content-schema.ts`'s `globalTableSource`,
+ * no `id`/primary key at all), so there's no `WHERE` needed to target it.
  */
 export async function upsertGlobal(
 	db: ContentDatabase,
@@ -399,7 +399,7 @@ export async function upsertGlobal(
 /**
  * Every real global's own table, discovered directly from the live
  * database rather than a JS-side registry (see `UnknownTableError`'s own
- * doc comment for why) — a table counts as a global if it has a `data`
+ * doc comment for why): a table counts as a global if it has a `data`
  * column but no `status` column (every collection table always has one,
  * every global table never does; see `content-schema.ts`). System tables
  * (`sqlite_%`, `d1_%`, `_cf_%`) are excluded, and now that this D1

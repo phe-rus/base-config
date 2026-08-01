@@ -15,7 +15,7 @@ import path from 'node:path'
  * exactly one place this lookup needs to live.
  *
  * Returns `''` (never exits) when `.wrangler` doesn't exist yet or has no
- * matching file — a genuinely fresh project has no local D1 state at all
+ * matching file, a genuinely fresh project has no local D1 state at all
  * until something (e.g. `wrangler d1 migrations apply --local`) creates it
  * for the first time, and `drizzle-kit generate` (the only drizzle-kit
  * command this package's own scripts ever invoke) never actually needs a

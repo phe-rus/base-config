@@ -13,14 +13,14 @@ type JSONFieldProps = BaseFieldProps & {
 
 /**
  * The field's own value is the *parsed* JSON (`unknown`, matching
- * Payload's own JSON field — the real difference from `Code`, which
+ * Payload's own JSON field, the real difference from `Code`, which
  * always saves a plain string, see that field's own doc comment), but the
- * editor edits text — so this keeps its own local `text` state, separate
+ * editor edits text, so this keeps its own local `text` state, separate
  * from the committed value, and only calls `handleChange` on blur with
  * genuinely valid JSON. Typing something momentarily invalid never
  * corrupts the real field value; it just shows a parse error until the
  * text is valid again. Shares `CodeEditor` (`components/code-editor.tsx`)
- * with `Code` — same real editor, just fixed to the `json` language and
+ * with `Code`: same real editor, just fixed to the `json` language and
  * with no language toggle at all (JSON is the only thing this field is
  * ever for).
  */

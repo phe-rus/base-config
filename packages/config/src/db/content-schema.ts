@@ -1,27 +1,27 @@
 /**
- * Not a fixed schema anymore — a *generator*. This file used to export two
+ * Not a fixed schema anymore, a *generator*. This file used to export two
  * static tables (`documents`/`globals`) that every collection/global
- * shared, discriminated by a `collection` column — one shared table meant
+ * shared, discriminated by a `collection` column, one shared table meant
  * adding a new collection never needed a migration, at the cost of every
  * field beyond `title`/`slug`/`status` living in one opaque `data` JSON
  * blob with no real per-collection structure.
  *
  * Every collection and global now gets its own real table instead,
  * generated from whatever the consumer actually has registered (see
- * `cli.ts`) — the same "generate, then migrate" shape `AUTH` already has.
+ * `cli.ts`), the same "generate, then migrate" shape `AUTH` already has.
  * This module only emits the TypeScript *source* for a consumer's
  * `db/schemas/content.ts`; nothing in the library builds a live Drizzle
- * table from it directly — `content-queries.ts` takes a `tablesBySlug`
+ * table from it directly, `content-queries.ts` takes a `tablesBySlug`
  * registry (the consumer's own generated file) as a parameter instead of
  * importing a fixed table.
  *
  * Each table still keeps a single `data` JSON column for everything beyond
- * the fixed columns, deliberately — giving every individual *field* its
+ * the fixed columns, deliberately: giving every individual *field* its
  * own real SQL column would need a field-type → SQL-column mapper (and
  * real normalization for composite types like `blocks`/`array`/`relations`,
  * which don't flatten into a scalar column at all) and would reintroduce
  * migration friction on every field edit, not just when a collection is
- * added or removed. What changes here is real separation per collection —
+ * added or removed. What changes here is real separation per collection,
  * not full per-field typing.
  */
 
@@ -38,7 +38,7 @@ export type ContentTableEntry = {
 }
 
 // A plain (non-template) string so it can be interpolated into the
-// generated source below without fighting nested-backtick escaping —
+// generated source below without fighting nested-backtick escaping,
 // this literal `sql\`...\`` text is exactly what should appear in the
 // output file, verbatim.
 const TIMESTAMP_DEFAULT =
@@ -46,7 +46,7 @@ const TIMESTAMP_DEFAULT =
 
 /**
  * Every collection/global slug becomes a real SQL table name (and a JS
- * variable name in the generated file) — kept to a safe, boring identifier
+ * variable name in the generated file), kept to a safe, boring identifier
  * shape on purpose, since there's no escaping/quoting story for a table
  * name here (Drizzle takes it as a plain string, SQLite takes it as a bare
  * identifier).
@@ -54,7 +54,7 @@ const TIMESTAMP_DEFAULT =
 function assertSafeIdentifier(slug: string): void {
 	if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(slug)) {
 		throw new Error(
-			`"${slug}" isn't a safe SQL table name (lowercase letters/digits/hyphens only, starting with a letter) — every collection/global slug becomes a real table now.`
+			`"${slug}" isn't a safe SQL table name (lowercase letters/digits/hyphens only, starting with a letter): every collection/global slug becomes a real table now.`
 		)
 	}
 }
@@ -95,11 +95,11 @@ function globalTableSource(slug: string): string {
 /**
  * Builds the full generated schema file's source: one `sqliteTable` per
  * entry, `collectionTablesBySlug`/`globalTablesBySlug` lookups keyed by the
- * *real* slug (not the camelCased variable name — `content-route.ts`
+ * *real* slug (not the camelCased variable name, `content-route.ts`
  * resolves a collection/global at runtime by the string it's actually
  * called with, and needs to know which of the two a slug belongs to), and
  * `contentRelations` (`defineRelationsPart` is still required even with
- * zero real relations — this rc of drizzle-orm's own requirement,
+ * zero real relations, this rc of drizzle-orm's own requirement,
  * unchanged from before).
  */
 export function buildContentSchemaSource(entries: ContentTableEntry[]): string {

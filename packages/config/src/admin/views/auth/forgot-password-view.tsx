@@ -10,11 +10,11 @@ import { AuthBanner } from './auth-banner'
 
 type ForgotPasswordViewProps = {
 	title?: string
-	/** Defaults to `getAdminConfig()?.adminIcon` — see `LoginView`'s own doc comment. */
+	/** Defaults to `getAdminConfig()?.adminIcon`, see `LoginView`'s own doc comment. */
 	icon?: string
 	loginHref?: string
 	/**
-	 * The path the emailed reset link ultimately lands on — passed straight
+	 * The path the emailed reset link ultimately lands on, passed straight
 	 * through to `authClient.requestPasswordReset({redirectTo})`. Defaults
 	 * to the matching sibling route (`ResetPasswordView`'s own).
 	 */
@@ -25,10 +25,10 @@ const forgotPasswordSchema = z.object({ email: z.email() })
 
 /**
  * One `email` field, calling `authClient.requestPasswordReset(...)`
- * directly — see `LoginView`'s own doc comment for the general boundary
+ * directly, see `LoginView`'s own doc comment for the general boundary
  * this draws around better-auth. Always shows the same confirmation
  * message regardless of whether the email actually exists (standard
- * practice — never reveals account existence).
+ * practice, never reveals account existence).
  */
 export function ForgotPasswordView({
 	title = 'Forgot password',
@@ -43,7 +43,7 @@ export function ForgotPasswordView({
 		mutationFn: async (email: string) => {
 			if (!authClient) {
 				throw new Error(
-					'ForgotPasswordView was rendered but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
+					'ForgotPasswordView was rendered but no `auth` was passed to baseConfig(): see BaseConfigProps["auth"].'
 				)
 			}
 			return unwrap(

@@ -36,15 +36,15 @@ export type CodeEditorProps = {
 	editable?: boolean
 	className?: string
 	'aria-invalid'?: boolean
-	/** Current language mode — also drives the corner language select when `languages` is given. Defaults to TypeScript. */
+	/** Current language mode; also drives the corner language select when `languages` is given. Defaults to TypeScript. */
 	language?: CodeEditorLanguage
 	/**
-	 * The corner language select's own options — omit (or pass `[]`) to hide
+	 * The corner language select's own options: omit (or pass `[]`) to hide
 	 * the toggle entirely and just render a fixed-language editor. Defaults
 	 * to the same 5 languages this app's `code` block already exposes
-	 * (`@baseconfig/core`'s `collections/blocks/code.tsx`), not because this
+	 * (`@baseconfig/core`'s `collections/blocks/Code/index.tsx`), not because this
 	 * component only supports those, but because that's the one real
-	 * consumer so far — pass a different list for a different caller.
+	 * consumer so far; pass a different list for a different caller.
 	 */
 	languages?: CodeEditorLanguageOption[]
 	onLanguageChange?: (language: CodeEditorLanguage) => void
@@ -66,18 +66,18 @@ function languageExtension(language: CodeEditorLanguage | undefined) {
 }
 
 /**
- * Referenced by CSS custom property, not a Tailwind class — CodeMirror's
+ * Referenced by CSS custom property, not a Tailwind class: CodeMirror's
  * own `EditorView.theme()` injects a real stylesheet, not JSX `className`
  * props, so it can't reach Tailwind's utility classes directly, hence
  * `color-mix()` standing in for Tailwind's own `/<opacity>` suffix syntax
- * (`bg-input/35`, `border-border/35` — the same translucent-surface
+ * (`bg-input/35`, `border-border/35`, the same translucent-surface
  * convention `Input`/`Textarea`/etc. already use everywhere else in this
  * design system, applied here the same way). Uses the consumer's own
  * design tokens (`--input`/`--border`/`--foreground`/etc, whatever they
  * resolve to) rather than a canned CodeMirror theme, same "theming is the
- * consumer's job" stance as every other `packages/ui` component — see this
+ * consumer's job" stance as every other `packages/ui` component; see this
  * package's own CLAUDE.md. No focus ring/border-color change on
- * `.cm-focused` — deliberately quiet, matches this app's own restrained
+ * `.cm-focused`: deliberately quiet, matches this app's own restrained
  * focus treatment elsewhere rather than a bespoke glow just for this field.
  */
 const editorTheme = EditorView.theme({
@@ -113,10 +113,10 @@ const editorTheme = EditorView.theme({
 
 /**
  * A real CodeMirror 6 editor with an optional language toggle sitting
- * inline at its own top-right corner — a self-contained, form-agnostic
+ * inline at its own top-right corner: a self-contained, form-agnostic
  * component (plain `value`/`onChange`, no `useFieldState()`/form context
  * dependency) so it's reusable anywhere, not just as `@baseconfig/ui/forms`'
- * own `Code` field (that field is a thin wrapper around this one — see
+ * own `Code` field (that field is a thin wrapper around this one; see
  * `forms/fields/Code/index.tsx`).
  */
 export function CodeEditor({

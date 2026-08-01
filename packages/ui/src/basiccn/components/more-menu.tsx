@@ -71,7 +71,7 @@ export const MoreMenu: FC<MoreMenuProps> = ({ editor, onPinChange }) => {
 				<IconDots className='dualTone' />
 			</PopoverTrigger>
 			{/* Same bubble-menu-bar look as the primary row (pill, backdrop-blur,
-			    dividers) — this is a second bar, not a settings card. */}
+			    dividers): this is a second bar, not a settings card. */}
 			<PopoverContent
 				align='end'
 				sideOffset={8}

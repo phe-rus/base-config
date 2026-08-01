@@ -36,10 +36,10 @@ type RenderViewListProps = {
 type RenderViewBreadcrumbSegment = { name: string; path: string }
 
 type RenderViewBreadcrumbProps = {
-	/** Label for the root segment (before any path segments) — e.g. "Storage". */
+	/** Label for the root segment (before any path segments), e.g. "Storage". */
 	rootLabel: string
 	path: string
-	/** Pre-computed by the caller (e.g. `pathSegmentsOf`, `fields/storage-client.ts`) — kept out of this file so `RenderView` stays free of any one domain's utilities. */
+	/** Pre-computed by the caller (e.g. `pathSegmentsOf`, `fields/storage-client.ts`), kept out of this file so `RenderView` stays free of any one domain's utilities. */
 	segments: RenderViewBreadcrumbSegment[]
 	onNavigate: (path: string) => void
 }
@@ -70,7 +70,7 @@ type RenderViewComponent = ((props: RenderViewProps) => ReactNode) & {
 }
 
 /**
- * The reusable chrome behind every top-level admin view — a compound
+ * The reusable chrome behind every top-level admin view: a compound
  * component (`RenderView` itself is the outer page container; `.Header`,
  * `.List`, `.NotFound`, `.Breadcrumb`, `.FolderCard`, `.FileCard` are named
  * sub-pieces), all pulled out after `Dashboard`/`Storage`/`CollectionTable`/
@@ -93,7 +93,7 @@ export const RenderView: RenderViewComponent = ({
 	)
 }
 
-/** A plain title + arbitrary content block — e.g.
+/** A plain title + arbitrary content block, e.g.
  * `Dashboard`'s own welcome heading.
  * */
 RenderView.Header = ({ title, actions, children }: RenderViewHeaderProps) => {
@@ -109,7 +109,7 @@ RenderView.Header = ({ title, actions, children }: RenderViewHeaderProps) => {
 }
 
 /** A single muted message in the tighter `gap-2`
- * container — the "unknown slug"/"nothing found"
+ * container: the "unknown slug"/"nothing found"
  * fallback every dispatched view falls back to.
  * */
 RenderView.NotFound = ({ children }: RenderViewNotFoundProps) => {
@@ -120,7 +120,7 @@ RenderView.NotFound = ({ children }: RenderViewNotFoundProps) => {
 	)
 }
 
-/** A titled grid of link cards — `Dashboard`'s
+/** A titled grid of link cards, `Dashboard`'s
  * "Collections"/"Preferences" sections, generalized
  *  since both were the exact same markup mapped over
  * different data.
@@ -156,7 +156,7 @@ RenderView.List = ({ title, items }: RenderViewListProps) => {
 	)
 }
 
-/** A path breadcrumb — root segment plus
+/** A path breadcrumb: root segment plus
  * one clickable crumb per path segment,
  * current segment shown as plain text. Currently
  * only `Storage` uses this, but the shape (a navigable
@@ -208,7 +208,7 @@ RenderView.Breadcrumb = ({
 	)
 }
 
-/** A folder row in Storage's grid — name
+/** A folder row in Storage's grid: name
  * (opens it) + a hover-revealed delete
  * button.
  * */
@@ -249,7 +249,7 @@ RenderView.FolderCard = ({
 	)
 }
 
-/** A file row in Storage's grid — image
+/** A file row in Storage's grid: image
  * preview (or a placeholder) linking out
  * to the file, name/size, and a hover-revealed
  * delete button.

@@ -2,8 +2,8 @@ import { Button } from '@baseconfig/ui/components/button'
 import { cn } from '@baseconfig/ui/lib/utils'
 import { ArrayField } from '@baseconfig/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
-import { appearanceValues } from '../types'
-import { LinkModeFields } from './links-field'
+import { appearanceValues } from '../../types'
+import { LinkModeFields } from '../Links'
 
 const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
 	label: value[0].toUpperCase() + value.slice(1),
@@ -11,12 +11,12 @@ const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
 }))
 
 type NavMenuFieldProps = {
-	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */
+	/** See the note on `CollectionFieldsProps['form']` in `../types.ts`, same reasoning applies here. */
 	form: any
 	name: string
 	label?: string
 	description?: string
-	/** New items start flagged as a mega menu (grouped columns) instead of a plain link — e.g. the footer, which is always column groups. */
+	/** New items start flagged as a mega menu (grouped columns) instead of a plain link, e.g. the footer, which is always column groups. */
 	startAsMegaMenu?: boolean
 }
 
@@ -31,11 +31,11 @@ function newItem(startAsMegaMenu?: boolean) {
 }
 
 /**
- * A navigation menu — every item is a link by default (reference an existing
+ * A navigation menu, every item is a link by default (reference an existing
  * page/post/policy, or a hand-typed URL), and can be flagged "Mega menu"
  * instead, which trades the link fields for either grouped columns (default)
  * or one flat list. Dispatched by the generic renderer for a `type: 'menu'`
- * field (see `renderer.tsx`) — a collection/global author never imports this
+ * field (see `renderer.tsx`), a collection/global author never imports this
  * directly, just declares `{name, type: 'menu', label, description,
  * startAsMegaMenu?}` in its `fields` array (see
  * `hooks/config/globals/topbar.ts`/`footer.ts`).
@@ -44,7 +44,7 @@ export function NavMenuField({
 	form,
 	name,
 	label = 'Navigation items',
-	description = 'A link by default (reference a page/post/policy, or a custom URL) — flag "Mega menu" to turn it into a dropdown instead.',
+	description = 'A link by default (reference a page/post/policy, or a custom URL); flag "Mega menu" to turn it into a dropdown instead.',
 	startAsMegaMenu
 }: NavMenuFieldProps) {
 	return (
@@ -108,7 +108,7 @@ function NavItemFields({ form, path }: { form: any; path: string }) {
 	)
 }
 
-/** The link's own mode (reference vs custom URL) + `to` + "open in new tab" — reused for a top-level link item and for every link inside a mega menu's flat list/columns. When `disabled`, `to` still renders but can't be edited, and the mode/reference/open-in-new-tab controls are hidden entirely (a mega menu item has no link of its own). The real logic (everything but this `disabled` display-only case) lives in the shared `LinkModeFields` (`links-field.tsx`) — this is a thin wrapper. */
+/** The link's own mode (reference vs custom URL) + `to` + "open in new tab", reused for a top-level link item and for every link inside a mega menu's flat list/columns. When `disabled`, `to` still renders but can't be edited, and the mode/reference/open-in-new-tab controls are hidden entirely (a mega menu item has no link of its own). The real logic (everything but this `disabled` display-only case) lives in the shared `LinkModeFields` (`links-field.tsx`), this is a thin wrapper. */
 function NavLinkModeFields({
 	form,
 	path,
@@ -129,7 +129,7 @@ function NavLinkModeFields({
 	return <LinkModeFields form={form} name={path} />
 }
 
-/** One link entry inside a mega menu's flat list or a column's list — same fields as a top-level link (minus appearance/mega-menu, which only apply at the item level). */
+/** One link entry inside a mega menu's flat list or a column's list, same fields as a top-level link (minus appearance/mega-menu, which only apply at the item level). */
 function NavMenuLinkFields({ form, path }: { form: any; path: string }) {
 	return (
 		<div className='flex flex-col gap-3'>
@@ -141,7 +141,7 @@ function NavMenuLinkFields({ form, path }: { form: any; path: string }) {
 	)
 }
 
-/** A mega menu item's own body — the link fields are irrelevant here (`to` stays visible but disabled), so this only ever shows the category toggle and either grouped columns or one flat list. */
+/** A mega menu item's own body: the link fields are irrelevant here (`to` stays visible but disabled), so this only ever shows the category toggle and either grouped columns or one flat list. */
 function MegaMenuFields({ form, path }: { form: any; path: string }) {
 	return (
 		<>

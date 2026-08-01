@@ -9,7 +9,7 @@ export interface SlashMenuListProps {
 
 export interface SlashMenuListRef {
 	/** `event` is the native DOM `KeyboardEvent` from `@tiptap/suggestion`'s
-	 * `onKeyDown`, not React's synthetic `KeyboardEvent` — the suggestion
+	 * `onKeyDown`, not React's synthetic `KeyboardEvent`: the suggestion
 	 * plugin intercepts the raw ProseMirror `keydown` before React ever
 	 * sees it. */
 	onKeyDown: (props: { event: KeyboardEvent }) => boolean
@@ -17,7 +17,7 @@ export interface SlashMenuListRef {
 
 /**
  * Mounted imperatively by `plugins/slash.ts` via tiptap's `ReactRenderer` +
- * `@tiptap/suggestion`'s `mount()` — not rendered declaratively as a normal
+ * `@tiptap/suggestion`'s `mount()`, not rendered declaratively as a normal
  * JSX child in `editor.tsx`. `onKeyDown` is exposed via `useImperativeHandle`
  * because the suggestion plugin intercepts editor keydowns (arrow/enter) and
  * forwards them here before ProseMirror ever sees them.

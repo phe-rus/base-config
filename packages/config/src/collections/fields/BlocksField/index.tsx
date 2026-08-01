@@ -11,17 +11,17 @@ import {
 import { ArrayField } from '@baseconfig/ui/forms'
 import { cn } from '@baseconfig/ui/lib/utils'
 import { IconBox, IconPlus } from '@tabler/icons-react'
-import { blocksBySlug } from '../blocks'
+import { blocksBySlug } from '../../blocks'
 
 type BlocksFieldProps = {
-	/** See the note on `CollectionFieldsProps['form']` in `../types.ts` — same reasoning applies here. */
+	/** See the note on `CollectionFieldsProps['form']` in `../types.ts`, same reasoning applies here. */
 	form: any
 	name: string
 	label?: string
 	description?: string
-	/** Block slugs to omit from the "Add block" menu — used by `grid.tsx` to cap itself at one level of nesting. */
+	/** Block slugs to omit from the "Add block" menu, used by `grid.tsx` to cap itself at one level of nesting. */
 	exclude?: string[]
-	/** See `BlockFieldsProps`' own doc comment (`../blocks/types.ts`) — passed straight through to every block's own `Fields`. */
+	/** See `BlockFieldsProps`' own doc comment (`../../blocks/shared/types.ts`), passed straight through to every block's own `Fields`. */
 	uploadFolder?: string
 	id?: string
 }

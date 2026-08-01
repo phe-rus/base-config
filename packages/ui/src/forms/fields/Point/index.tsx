@@ -10,7 +10,7 @@ type PointProps = BaseFieldProps & {
 	className?: string
 }
 
-/** One field value, `{lat, lng}` — two coupled numeric inputs, not two separate fields, so the pair always commits together. */
+/** One field value, `{lat, lng}`: two coupled numeric inputs, not two separate fields, so the pair always commits together. */
 export const Point = ({
 	label,
 	description,

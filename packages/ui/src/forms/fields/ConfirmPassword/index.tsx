@@ -7,7 +7,7 @@ type ConfirmPasswordProps = BaseFieldProps & {
 }
 
 /**
- * Renders exactly like `Password` — the "must match the other password
+ * Renders exactly like `Password`: the "must match the other password
  * field" rule isn't this component's job. It only ever sees its own
  * field's value (see `Password`'s own doc comment on why cross-field reads
  * aren't in scope here); a consumer's own schema validates the match with

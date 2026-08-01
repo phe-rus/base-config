@@ -6,12 +6,12 @@ import { z } from 'zod'
 import {
 	StorageWidget,
 	type StorageWidgetTriggerProps
-} from '../../admin/widgets/storage-widget'
-import { uploadValueSchema } from '../../fields/schema'
-import { uploadFile } from '../../fields/upload'
-import { LinksField } from '../fields/links-field'
-import { linksSchema, type LinkItemValue } from '../types'
-import type { BlockConfig, BlockFieldsProps } from './types'
+} from '../../../admin/widgets/storage-widget'
+import { uploadValueSchema } from '../../../fields/schema'
+import { uploadFile } from '../../../fields/upload'
+import { LinksField } from '../../fields/Links'
+import { linksSchema, type LinkItemValue } from '../../types'
+import type { BlockConfig, BlockFieldsProps } from '../shared/types'
 
 export const bannerBlockSchema = z.object({
 	blockType: z.literal('banner'),
@@ -53,7 +53,7 @@ function BannerBlockFields({ form, path, uploadFolder, id }: BlockFieldsProps) {
 	)
 }
 
-/** Same disclosed SSR-hydration-only gap as `richtext.tsx`'s own `RichTextBlockRender` — see that function's own doc comment for the full explanation. */
+/** Same disclosed SSR-hydration-only gap as `richtext.tsx`'s own `RichTextBlockRender`, see that function's own doc comment for the full explanation. */
 function BannerBlockRender({ data }: { data: Record<string, unknown> }) {
 	const content = data.content as BasiccnContent | undefined
 	const image = data.image as { url: string } | undefined

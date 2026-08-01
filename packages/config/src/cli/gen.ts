@@ -1,5 +1,5 @@
 /**
- * `bun x base gen (--local | --remote) [--skip-auth] [--yes|-y] [flags]` —
+ * `bun x base gen (--local | --remote) [--skip-auth] [--yes|-y] [flags]`,
  * the generic auth/content schema-gen + migrate orchestrator every consumer
  * previously hand-rolled as their own `scripts/gen.script.ts` (`www`,
  * `templates/basics` each had a near-identical copy). Spawns the same four
@@ -11,7 +11,7 @@
  * `--yes` was passed (e.g. for CI).
  *
  * Defaults match this package's own `templates/basics` reference layout
- * (`src/config/api/auth/auth.ts`, `src/config/base.config.ts`, ...) — a
+ * (`src/config/api/auth/auth.ts`, `src/config/base.config.ts`, ...), a
  * consumer whose file layout differs (e.g. auth wiring still at
  * `src/api/auth/auth.ts`, not nested under `src/config/`) overrides just
  * that one flag, same as any other convention-over-configuration default.

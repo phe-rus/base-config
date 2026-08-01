@@ -19,9 +19,9 @@ import { useLiveQuery } from '@tanstack/react-db'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect, useState, type PropsWithChildren } from 'react'
 
-// Collections and globals share one flat URL structure — `/admin/<slug>`,
+// Collections and globals share one flat URL structure: `/admin/<slug>`,
 // `/admin/<slug>/<id>` only ever applying to a real collection document
-// (see `admin/views/provider.tsx`'s `resolveRouteView`) — so one path
+// (see `admin/views/provider.tsx`'s `resolveRouteView`), so one path
 // pattern resolves both.
 const ADMIN_PATH = /^\/admin\/([a-z-]+)(?:\/([^/]+))?/
 
@@ -42,7 +42,7 @@ type ItemSegment = {
  * Static part of the breadcrumb (collection/global name, both known from the
  * URL + registry alone) plus, when the URL points at one document, enough to
  * resolve its own segment separately. Deliberately doesn't touch
- * `useLiveQuery` here — that only happens client-side in `ItemBreadcrumb`
+ * `useLiveQuery` here: that only happens client-side in `ItemBreadcrumb`
  * below, so this hook (and the `Topbar` that calls it) stays safe to render
  * during SSR.
  */
@@ -64,7 +64,7 @@ function useBreadcrumbBase(
 		? (globalsBySlug as Record<string, (typeof globalsBySlug)['topbar']>)[slug]
 		: undefined
 
-	// `pherus` always leads the breadcrumb — it's the admin root, not tied to
+	// `pherus` always leads the breadcrumb: it's the admin root, not tied to
 	// any particular collection/global.
 	const segments: BreadcrumbSegment[] = [
 		{ key: 'pherus', label: 'pherus', href: `/${adminPath}` }
@@ -86,7 +86,7 @@ function useBreadcrumbBase(
 	return { segments, itemSegment }
 }
 
-/** Mounted-gated: `useLiveQuery` only ever runs client-side, after hydration — never during SSR, which is what was crashing (`useSyncExternalStore` needs a `getServerSnapshot` this library doesn't provide). */
+/** Mounted-gated: `useLiveQuery` only ever runs client-side, after hydration, never during SSR, which is what was crashing (`useSyncExternalStore` needs a `getServerSnapshot` this library doesn't provide). */
 function ItemBreadcrumb({
 	collection,
 	draftCollection,
@@ -114,12 +114,12 @@ function ItemBreadcrumb({
 }
 
 /**
- * A document's own local draft (`useDocument`'s write-through target — see
+ * A document's own local draft (`useDocument`'s write-through target, see
  * `db/use-document.ts`) is what actually reflects what the admin is typing
  * right now; the remote collection only ever catches up once "Publish"/
  * "Commit & push" is clicked. Reading the remote collection alone (as this
- * used to) meant a never-yet-published document — or a published one with
- * unsaved local edits on top — showed a breadcrumb stuck on "untitled"
+ * used to) meant a never-yet-published document (or a published one with
+ * unsaved local edits on top) showed a breadcrumb stuck on "untitled"
  * forever, the same remote-only gap `CollectionTable`'s list view had.
  * Prefers the draft's `slug` and falls back to the remote row's, matching
  * `useDocument`'s own `initialValue` precedence.
@@ -151,11 +151,11 @@ function ItemBreadcrumbLive({
 }
 
 /**
- * Plain, prop-driven — no session read of its own. Used to call
+ * Plain, prop-driven: no session read of its own. Used to call
  * `authClient.useSession()` directly (a real, independent reactive
  * subscription, separate from `useAdminSession()`'s TanStack Query cache),
  * which was exactly the class of bug `useAdminSession()`'s own doc comment
- * describes fixing for `ProviderView.Context`/`Dashboard` — this one spot
+ * describes fixing for `ProviderView.Context`/`Dashboard`: this one spot
  * was missed, and was still producing genuine duplicate
  * `/api/auth/get-session` traffic. `Topbar` already has `session` from its
  * own `useAdminSession()` call; threading the name down as a prop is
@@ -172,19 +172,19 @@ type TopbarProps = PropsWithChildren<{
 
 /**
  * `useAdminSession()` (`admin/functions/session-query.ts`) is the one
- * shared, deduplicated session read every admin gate uses — see its own
+ * shared, deduplicated session read every admin gate uses: see its own
  * doc comment for why this replaced a raw `authClient.useSession()` call
  * here (real, confirmed duplicate `/api/auth/get-session` traffic once
  * `ProviderView.Context`/`Dashboard` each independently subscribed too).
- * `AdminConfigContext` is provided above both branches — it's plain app
+ * `AdminConfigContext` is provided above both branches: it's plain app
  * config (`adminPath`/`adminIcon`/`socialProviders`), not chrome, and
  * `useAdminConfig()` is called unconditionally by things that render either
  * way (e.g. `Entry`'s own `navigate` fallback, still needed when it
  * dispatches to a reserved auth-screen mode with no session). No chrome at
- * all while `hasSession` is false — the reserved-`$collection` auth
+ * all while `hasSession` is false: the reserved-`$collection` auth
  * screens (resolved by `provider.tsx`) render themselves, unwrapped. A
  * session that exists but has the wrong `role` still gets a real redirect
- * to `/` — the one piece of the old loader-based guard
+ * to `/`: the one piece of the old loader-based guard
  * (`(admin)/route.tsx` used to call `adminLoader()`) that's still real
  * gating, just moved here since a `loader` can't call a hook.
  */

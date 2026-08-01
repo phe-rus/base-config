@@ -1,4 +1,4 @@
-/** Shared by every field — the props that don't vary by field type. */
+/** Shared by every field: the props that don't vary by field type. */
 export interface BaseFieldProps {
 	label?: string
 	description?: string

@@ -41,7 +41,7 @@ export function CollectionTable({
 	collection,
 	onOpen
 }: CollectionTableProps) {
-	// Gated behind a client mount *before* `useLiveQuery` is ever called —
+	// Gated behind a client mount *before* `useLiveQuery` is ever called:
 	// `CollectionTableLive` below is the only place that hook runs, and it's
 	// never rendered during SSR. Calling `useLiveQuery` unconditionally here
 	// crashed during SSR (`useSyncExternalStore` needs a `getServerSnapshot`
@@ -73,7 +73,7 @@ function CollectionTableLive({
 }: CollectionTableProps) {
 	const { data } = useLiveQuery(collection)
 
-	// `auth: true` collections (`users`) are real, server-backed accounts —
+	// `auth: true` collections (`users`) are real, server-backed accounts:
 	// they never go through the local-first draft mechanism at all (no
 	// `useDocument`, no `draftCollections` entry), so there's nothing to
 	// merge in for them. `useLiveQuery` can't be called conditionally
@@ -83,7 +83,7 @@ function CollectionTableLive({
 	const { data: draftData } = useLiveQuery(draftCollection)
 
 	// `auth: true` collections are backed by `queryCollectionOptions`, which
-	// surfaces query failures via `collection.utils` rather than throwing —
+	// surfaces query failures via `collection.utils` rather than throwing:
 	// a failed `listUsers()` call would otherwise render as a silent, empty
 	// table with no indication anything went wrong. `ContentCollection`'s own
 	// type doesn't declare `.utils` (the `localStorage`-backed variant every
@@ -100,7 +100,7 @@ function CollectionTableLive({
 	const remoteIds = new Set(data.map((row) => row.id))
 
 	// A document drafted locally but never published has no row in the real
-	// collection at all — without this, it simply never appears anywhere
+	// collection at all: without this, it simply never appears anywhere
 	// once you navigate away from it, which is what made local-first editing
 	// feel like it was silently forcing a publish. Only added when its `id`
 	// has no remote counterpart; a row that exists in both keeps showing the
@@ -121,10 +121,10 @@ function CollectionTableLive({
 	const dataColumns = config.columns ?? DEFAULT_COLUMNS
 	const filterKey = config.filterKey ?? dataColumns[0]?.key
 
-	// Purely navigational — no `collection.insert()` here. Generates a fresh
+	// Purely navigational: no `collection.insert()` here. Generates a fresh
 	// id and opens the editor for it; the document only becomes real once
 	// the admin explicitly saves it (`useDocument`'s own doc comment covers
-	// why — this used to insert a real blank row immediately on click).
+	// why: this used to insert a real blank row immediately on click).
 	const create = () => {
 		onOpen(createId())
 	}
@@ -197,8 +197,8 @@ function CollectionTableLive({
 					...dataColumns.map((column) => ({
 						accessorKey: column.key,
 						header: column.label,
-						// A plain `value || '—'` fallback treats `false` the same as
-						// "no value" — wrong specifically for boolean-valued columns,
+						// A plain `value || '-'` fallback treats `false` the same as
+						// "no value": wrong specifically for boolean-valued columns,
 						// where `false` is a real, meaningful value, not a blank.
 						cell: ({ row }: { row: { original: TableRow } }) => {
 							const value = row.original[column.key]
@@ -212,7 +212,7 @@ function CollectionTableLive({
 									</Badge>
 								)
 							}
-							return value || <span className='text-muted-foreground'>—</span>
+							return value || <span className='text-muted-foreground'>-</span>
 						}
 					})),
 					{
@@ -247,7 +247,7 @@ function CollectionTableLive({
 								className='rounded-full'
 								onClick={() => {
 									// A draft-only row (never published) has nothing to
-									// delete remotely — deleting it just removes the local
+									// delete remotely: deleting it just removes the local
 									// draft instead, the same one-click cleanup a real row
 									// already gets.
 									if (remoteIds.has(row.original.id)) {

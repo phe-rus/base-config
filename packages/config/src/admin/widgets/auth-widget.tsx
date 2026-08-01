@@ -14,10 +14,10 @@ type AuthWidgetProps = {
 }
 
 /**
- * The built-in create flow for `auth: true` collections — a real account
+ * The built-in create flow for `auth: true` collections: a real account
  * can't start blank the way every other collection's "Create new" does
  * (better-auth's `createUser` needs email+password upfront). Calls
- * `createRealUser()` directly rather than `collection.insert()` — see that
+ * `createRealUser()` directly rather than `collection.insert()`, see that
  * function's own doc comment for why (a client-generated id would never
  * match the id better-auth assigns the account server-side).
  */
@@ -62,7 +62,7 @@ export function AuthWidget({ collection, onCreated }: AuthWidgetProps) {
 			open={open}
 			onOpenChange={setOpen}
 			title='New user'
-			description='Creates a real account immediately — the password is set now, not a placeholder to fill in later.'
+			description='Creates a real account immediately, the password is set now, not a placeholder to fill in later.'
 			trigger={
 				<DrawerTrigger
 					className={cn(buttonVariants({ size: 'xs', variant: 'secondary' }))}

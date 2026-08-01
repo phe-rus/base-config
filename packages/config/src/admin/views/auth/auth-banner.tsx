@@ -7,8 +7,8 @@ type AuthBannerProps = {
 }
 
 /**
- * The icon/title/description header shared by `LoginView`/`CreateAccountView`
- * — `icon` is a plain URL (e.g. a consumer's own `config.adminIcon`, see
+ * The icon/title/description header shared by `LoginView`/`CreateAccountView`:
+ * `icon` is a plain URL (e.g. a consumer's own `config.adminIcon`, see
  * `AdminSettings`), not hardcoded to any one site's favicon.
  */
 export function AuthBanner({ title, icon, description }: AuthBannerProps) {

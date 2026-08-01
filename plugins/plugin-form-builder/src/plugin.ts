@@ -4,7 +4,7 @@ import { formBuilderEndpoints } from './endpoints'
 import { formSubmissionsCollection } from './form-submissions-collection'
 import { formsCollection } from './forms-collection'
 
-/** One outgoing email, right before it's actually handled — see `beforeEmail`'s own doc comment below. */
+/** One outgoing email, right before it's actually handled: see `beforeEmail`'s own doc comment below. */
 export type FormBuilderEmail = {
 	to: string
 	from: string
@@ -40,10 +40,10 @@ export type FormBuilderPluginOptions = {
 	/**
 	 * Matches Payload's own `beforeEmail` hook shape exactly: called with
 	 * every interpolated email about to be handled for one submission,
-	 * returns the (possibly transformed) list — e.g. to wrap `html` in a
+	 * returns the (possibly transformed) list, e.g. to wrap `html` in a
 	 * shared template. Must stay pure/isomorphic-safe like any other Tier-1
 	 * hook (see `CollectionHooks`' own doc comment, `@baseconfig/core`'s
-	 * `base.types.ts`) — it only ever transforms data that's already been
+	 * `base.types.ts`): it only ever transforms data that's already been
 	 * computed, it doesn't send anything itself.
 	 */
 	beforeEmail?: (
@@ -55,9 +55,9 @@ export type FormBuilderPluginOptions = {
 	/**
 	 * **An extension point only, not implemented in this pass.** Payload's
 	 * own form-builder pairs this with a real `payment` field type
-	 * (`basePrice`/`priceConditions`) and a price-calculation utility — this
+	 * (`basePrice`/`priceConditions`) and a price-calculation utility; this
 	 * package has neither yet (a real payment integration is a materially
-	 * bigger, separate feature — real money, real compliance surface). The
+	 * bigger, separate feature: real money, real compliance surface). The
 	 * option exists so a consumer can already configure it, matching
 	 * Payload's real API surface, without this package pretending it's
 	 * wired up: `formBuilderEndpoints()` never calls this today.

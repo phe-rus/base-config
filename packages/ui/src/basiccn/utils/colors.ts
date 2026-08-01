@@ -40,7 +40,7 @@ const hues: {
 /**
  * Solid mid-tone colors for the `Color` mark (inline `style="color: …"`).
  * Chosen at ~55-78% oklch lightness so a single palette stays legible on
- * both light and dark editor backgrounds — the same tradeoff every rich
+ * both light and dark editor backgrounds, the same tradeoff every rich
  * text editor with absolute text colors makes.
  */
 export const textColors: Swatch[] = [
@@ -52,7 +52,7 @@ export const textColors: Swatch[] = [
 ]
 
 /**
- * `Highlight` mark backgrounds — each is a `color-mix()` at ~30-40% opacity
+ * `Highlight` mark backgrounds: each is a `color-mix()` at ~30-40% opacity
  * (same trick `typeset.css`'s own `mark` rule uses) rather than a solid
  * pastel, so `color: inherit` text stays readable in both themes instead
  * of going light-on-light in dark mode.

@@ -1,9 +1,9 @@
-// The public entry point of `@baseconfig/core` — this is what a consuming app
+// The public entry point of `@baseconfig/core`: this is what a consuming app
 // (e.g. `www/src/hooks/config`) imports to author a collection/global/the
 // root config: `defineCollection`/`defineGlobal`/`baseConfig` plus the
 // declarative vocabulary (`FieldConfig`/`TabConfig`) they take as input.
 // Everything else in this package (`admin/`, `collections/`, `fields/`'s
-// schema/renderer internals) is implementation — reachable by its own
+// schema/renderer internals) is implementation, reachable by its own
 // subpath when something genuinely needs it directly (e.g. a route
 // importing `Topbar` from `@baseconfig/core/admin/views/topbar`), but not part of
 // this authoring surface.

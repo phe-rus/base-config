@@ -15,11 +15,11 @@ interface AddBlockButtonProps {
 }
 
 /**
- * Sits next to the drag-handle grip (see `editor.tsx`) — a click-triggered
+ * Sits next to the drag-handle grip (see `editor.tsx`): a click-triggered
  * version of the exact same list `plugins/slash.ts` shows on `/`, grouped
  * the same way. Lives outside the bubble menu entirely, so it doesn't need
  * the `onPinChange`/`shouldShow` pinning dance `components/bubble-menus.tsx`
- * uses — that's specifically for popovers nested *inside* the
+ * uses. That's specifically for popovers nested *inside* the
  * blur-sensitive `BubbleMenu`, which this isn't.
  */
 export const AddBlockButton: FC<AddBlockButtonProps> = ({ editor }) => {

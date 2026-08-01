@@ -19,7 +19,7 @@ declare module '@tiptap/core' {
 
 /**
  * Paragraph/heading indent as a node attribute (`margin-left`), not list
- * nesting — `ListKit`'s `ListKeymap` already owns Tab/Shift-Tab for sinking
+ * nesting: `ListKit`'s `ListKeymap` already owns Tab/Shift-Tab for sinking
  * and lifting list items, so this is deliberately button-only (no keyboard
  * shortcut) to avoid fighting that binding.
  */

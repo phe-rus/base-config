@@ -16,30 +16,30 @@ type UseDocumentOptions<TData extends Record<string, unknown>> = {
 
 /**
  * **Real local-first: a document's draft lives in the browser's own
- * `localStorage` (`draftCollection`, `localStorageCollectionOptions` — see
+ * `localStorage` (`draftCollection`, `localStorageCollectionOptions`, see
  * `db/collections.ts`'s `draftCollections`/`draftGlobalsCollection`), not
  * just in-memory form state.** Every field edit writes straight through to
- * that draft — free, since it's a local write with zero backend
- * involvement — so a draft survives a reload with no explicit "Save" step
+ * that draft, free, since it's a local write with zero backend
+ * involvement, so a draft survives a reload with no explicit "Save" step
  * at all; the browser *is* the save. The **only** thing that ever touches
  * the real `/api/<collection>` backend is `publish()`, and it only ever
  * runs when a caller explicitly invokes it (a "Publish"/"Unpublish"/
- * "Commit & push" button click) — never a side effect of typing, opening a
+ * "Commit & push" button click), never a side effect of typing, opening a
  * document, or navigating away.
  *
  * Two earlier versions of this hook got "local-first" wrong in different
  * ways: (a) debounced a real `collection.update()` call 500ms after every
  * keystroke, and (b) deferred that same real call until an explicit save
- * click, but still called it for every save, not just a publish — both
+ * click, but still called it for every save, not just a publish, both
  * were real backend writes gated only by *timing*, not by whether the
  * write was actually meant to go live. This version is the first where
- * editing is never a backend call at all — confirmed by request count: an
+ * editing is never a backend call at all, confirmed by request count: an
  * open-and-edit session with no Publish click produces zero network
  * requests from this hook, period.
  *
  * When `id` has no local draft yet, one is seeded automatically on mount
  * from the remote row's data (or `defaultValues()` for a brand-new
- * document) — this *is* fine to do automatically, unlike a remote insert,
+ * document), this *is* fine to do automatically, unlike a remote insert,
  * because it's a pure `localStorage` write. `publish()` decides insert vs.
  * update against the *remote* collection by whether a real row exists at
  * call time, not by a flag a caller has to pass in.
@@ -48,7 +48,7 @@ type UseDocumentOptions<TData extends Record<string, unknown>> = {
  * until both `collection` and `draftCollection`'s own `useLiveQuery(...).isReady`
  * are true (`CollectionForm`/`GlobalForm` gate on exactly this before
  * rendering the component that actually calls `useDocument`). `useAppForm`
- * only snapshots `defaultValues` once, at first render — mounting before
+ * only snapshots `defaultValues` once, at first render, mounting before
  * either query has resolved would freeze the form at empty/default values
  * that then never get replaced once real data arrives.
  */
@@ -68,7 +68,7 @@ export function useDocument<TData extends Record<string, unknown>>({
 	// Seeds the local draft the first time this document is opened. Checked
 	// via `draftCollection.get(id)` directly rather than `draftRow` (derived
 	// from `useLiveQuery`'s own snapshot) so a StrictMode/HMR double-run of
-	// this effect can't insert the same id twice — the exact failure mode
+	// this effect can't insert the same id twice, the exact failure mode
 	// that broke an earlier version of this hook's remote auto-create.
 	useEffect(() => {
 		if (draftCollection.get(id)) return
@@ -81,7 +81,7 @@ export function useDocument<TData extends Record<string, unknown>>({
 			createdAt: remoteRow?.createdAt ?? now,
 			updatedAt: remoteRow?.updatedAt ?? now
 		})
-		// Only re-seeds when the document identity changes — `remoteRow`/
+		// Only re-seeds when the document identity changes: `remoteRow`/
 		// `defaultValues` are read for their value at that moment, not
 		// tracked as reactive dependencies (re-seeding on every remote
 		// refresh would clobber local edits with server data).
@@ -105,7 +105,7 @@ export function useDocument<TData extends Record<string, unknown>>({
 	const store = useSelector(form.store, (s) => s.values) as TData
 
 	// Write-through: every change to the form's in-memory values is mirrored
-	// into the local draft — no debounce, since a `localStorage` write is
+	// into the local draft, no debounce, since a `localStorage` write is
 	// free. Skipped until the seeding effect above has actually run.
 	useEffect(() => {
 		if (!draftCollection.get(id)) return
@@ -118,7 +118,7 @@ export function useDocument<TData extends Record<string, unknown>>({
 
 	/**
 	 * The one and only place this hook touches the network. Reads the
-	 * draft's current data and writes it to the *remote* collection —
+	 * draft's current data and writes it to the *remote* collection,
 	 * insert if no remote row exists yet, update otherwise.
 	 * `statusOverride` lets a caller change `status` in the same write as
 	 * the data (e.g. "Publish" = the current draft *and* `published` in one
@@ -150,11 +150,11 @@ export function useDocument<TData extends Record<string, unknown>>({
 		})
 	}
 
-	// "Dirty" means "the draft differs from what's actually live" — there's
+	// "Dirty" means "the draft differs from what's actually live": there's
 	// no separate saved/unsaved draft state to track anymore (the draft is
 	// always saved, to `localStorage`); this is what gates the
 	// Publish/Commit button instead. A brand-new document (no `remoteRow`)
-	// is always dirty — nothing is live yet. `deepEqual`, not
+	// is always dirty, nothing is live yet. `deepEqual`, not
 	// `JSON.stringify` equality: see that function's own doc comment for
 	// why a naive stringify comparison here previously reported "dirty"
 	// even immediately after a successful publish with no further edits.
@@ -170,12 +170,12 @@ export function useDocument<TData extends Record<string, unknown>>({
 			updatedAt: draftRow?.updatedAt ?? new Date().toISOString()
 		} as const)
 
-	// Whether anything has ever actually been published for this id — lets a
+	// Whether anything has ever actually been published for this id, lets a
 	// caller distinguish "brand-new, never-published draft" (nothing to fall
 	// back to if local changes are discarded) from "published elsewhere, but
 	// this browser has local, unpublished edits on top of it" (discarding
 	// those edits means reverting to `remoteRow.data`, not deleting anything).
-	// `isDirty` alone can't tell these apart — it's `true` in both cases.
+	// `isDirty` alone can't tell these apart, it's `true` in both cases.
 	const hasRemoteRow = Boolean(remoteRow)
 
 	return { form, row, publish, isDirty, hasRemoteRow }

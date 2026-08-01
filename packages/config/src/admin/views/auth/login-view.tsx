@@ -16,14 +16,14 @@ export type LoginFormValues = {
 
 type LoginViewProps = {
 	title?: string
-	/** Defaults to `getAdminConfig()?.adminIcon` (set once via `baseConfig({config: {adminIcon}})`) — pass explicitly only to override that app-wide default for this one screen. Omit both for no icon. */
+	/** Defaults to `getAdminConfig()?.adminIcon` (set once via `baseConfig({config: {adminIcon}})`), pass explicitly only to override that app-wide default for this one screen. Omit both for no icon. */
 	icon?: string
 	createAccountHref?: string
 	forgotPasswordHref?: string
 	termsHref?: string
 	privacyHref?: string
 	/**
-	 * Defaults to `getAdminConfig()?.socialProviders` — not introspectable
+	 * Defaults to `getAdminConfig()?.socialProviders`, not introspectable
 	 * from the client object (social providers are configured server-side,
 	 * with real secrets, and better-auth's client has no "list configured
 	 * providers" endpoint), so a consumer states them once in `baseConfig()`'s
@@ -89,7 +89,7 @@ export function LoginView({
 		mutationFn: async (value: LoginFormValues) => {
 			if (!authClient) {
 				throw new Error(
-					'LoginView was rendered but no `auth` was passed to baseConfig() — see BaseConfigProps["auth"].'
+					'LoginView was rendered but no `auth` was passed to baseConfig(): see BaseConfigProps["auth"].'
 				)
 			}
 			const result = await authClient.signIn.email({

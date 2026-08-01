@@ -3,12 +3,12 @@ import { z } from 'zod'
 import {
 	StorageWidget,
 	type StorageWidgetTriggerProps
-} from '../../admin/widgets/storage-widget'
-import { uploadValueSchema } from '../../fields/schema'
-import { uploadFile } from '../../fields/upload'
-import type { BlockConfig, BlockFieldsProps } from './types'
+} from '../../../admin/widgets/storage-widget'
+import { uploadValueSchema } from '../../../fields/schema'
+import { uploadFile } from '../../../fields/upload'
+import type { BlockConfig, BlockFieldsProps } from '../shared/types'
 
-/** No `alt`/`caption` — the real upload value (`uploadValueSchema`'s own `name`/`url`/`size`) already covers what those stood in for; this block is just an image. */
+/** No `alt`/`caption`: the real upload value (`uploadValueSchema`'s own `name`/`url`/`size`) already covers what those stood in for; this block is just an image. */
 export const mediaBlockSchema = z.object({
 	blockType: z.literal('media'),
 	image: uploadValueSchema.optional()

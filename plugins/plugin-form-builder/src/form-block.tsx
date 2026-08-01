@@ -40,7 +40,7 @@ type Option = { label: string; value: string; slug: string }
 
 /**
  * A small, self-contained picker rather than `@baseconfig/core`'s own shared
- * `RelationshipField` — that component's `targetType` is typed to *this
+ * `RelationshipField`: that component's `targetType` is typed to *this
  * app's own* closed `CollectionSlug` union, which a plugin package can't
  * add `'forms'` to (see `@baseconfig/core`'s own `collections/types.ts` doc
  * history). `getContentCollection('forms')` is the plain-string-keyed
@@ -63,7 +63,7 @@ function useFormOptions(): Option[] {
 	)
 }
 
-/** Calls `useFieldState()` itself, same as `@baseconfig/ui/forms`'s own field components (`Input`, etc.) — the `form.AppField` render-prop below just renders this, rather than calling the hook inline. */
+/** Calls `useFieldState()` itself, same as `@baseconfig/ui/forms`'s own field components (`Input`, etc.); the `form.AppField` render-prop below just renders this, rather than calling the hook inline. */
 function FormReferencePicker({ options }: { options: Option[] }) {
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
 		useFieldState<FormReference | undefined>()
@@ -107,7 +107,7 @@ function FormReferencePicker({ options }: { options: Option[] }) {
 }
 
 /**
- * Embeds a `forms` document into a page's own `blocks` field — only picks
+ * Embeds a `forms` document into a page's own `blocks` field: only picks
  * *which* form to show; the actual public rendering is `FormBlockRender`
  * below.
  */
@@ -129,12 +129,12 @@ type Confirmation = {
 }
 
 /**
- * The plugin's own public-facing piece — a plain, uncontrolled-by-`useAppForm`
+ * The plugin's own public-facing piece: a plain, uncontrolled-by-`useAppForm`
  * HTML form (there's no admin form context on a public page, unlike every
  * other field/block in this system), built from the referenced `forms`
  * document's own `fields` config and POSTing straight to
  * `formBuilderEndpoints`' own `POST /api/forms/:id/submit` (see
- * `endpoints.ts`) — plain `fetch`, not a typed RPC client, since that
+ * `endpoints.ts`). It uses plain `fetch`, not a typed RPC client, since that
  * endpoint is a Tier-2 `EndpointFactory` addition, never part of the
  * static `BaseConfigRouteType` a generated client could type against.
  */

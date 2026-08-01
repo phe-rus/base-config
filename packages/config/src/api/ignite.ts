@@ -10,7 +10,7 @@ import { timeout } from 'hono/timeout'
 export type IgniteOptions = {
 	enabled?: boolean
 	/**
-	 * This package never reads `env`/runtime bindings itself — the consumer
+	 * This package never reads `env`/runtime bindings itself: the consumer
 	 * resolves its own environment (exactly as it already does for anything
 	 * else server-only) and passes the result in.
 	 */
@@ -20,12 +20,12 @@ export type IgniteOptions = {
 	requestTimeoutMs?: number
 	/**
 	 * Hono's `etag()` unconditionally hashes every response body and 304s a
-	 * matching `If-None-Match` — regardless of `Cache-Control`, and
+	 * matching `If-None-Match`, regardless of `Cache-Control`, and
 	 * regardless of whether the calling client (e.g. an auth client that
 	 * deliberately bypasses the HTTP cache for session/permission data) ever
 	 * intended to reuse a cached body. For an API surface that's mostly
 	 * dynamic (auth, admin data, per-request info), that silently replays
-	 * stale responses as if they were fresh. Off by default — opt in only
+	 * stale responses as if they were fresh. Off by default; opt in only
 	 * for routes that genuinely serve stable, cacheable content.
 	 */
 	etag?: boolean
@@ -33,7 +33,7 @@ export type IgniteOptions = {
 
 /**
  * A reusable Hono app factory, generic over a consumer's own `Env`
- * (`{Bindings, Variables}`) — the direct library-side counterpart to what
+ * (`{Bindings, Variables}`), the direct library-side counterpart to what
  * `www/src/api/io.ts` used to hand-roll on its own, matching Hono's own
  * `createFactory<Env>()` convention (one generic, not separate `Bindings`/
  * `Variables` type params). Call once per app to get a `factory`/`ignite`

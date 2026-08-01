@@ -23,16 +23,16 @@ import { uploadFile } from './upload'
 /**
  * The four field types that resolve to an app-specific component rather than
  * a generic form primitive (same reasoning as `FieldSchemaResolvers` in
- * `schema.ts`) — the consumer passes its real `MetaFields`/`RelationsField`/
+ * `schema.ts`), the consumer passes its real `MetaFields`/`RelationsField`/
  * `BlocksField`/`RelationshipField` in here rather than this file importing
  * them directly, so `baseConfig` stays reusable across a different app's
- * different collections/blocks. `upload` isn't here — every `upload` field is
+ * different collections/blocks. `upload` isn't here: every `upload` field is
  * backed by the single `uploadFile` in `./upload.ts` automatically, so no
  * collection ever wires its own upload mechanics again.
  *
  * Generic over `TCollectionSlug` so `relationship.targetType` can match the
  * consumer's real `RelationshipField` component (whose `targetType` prop is
- * its own concrete slug union, not a bare `string`) — same pattern as
+ * its own concrete slug union, not a bare `string`), same pattern as
  * `TabConfig<TCollectionSlug, TBlockSlug>`.
  */
 export type FieldRenderers<TCollectionSlug extends string = string> = {
@@ -67,7 +67,7 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 	}>
 }
 
-/** A stable React key for a container field (`row`/`collapsible`/`group`/`tabs`/`ui`) — none of these have a `name` to key off, so `prefix` + the field's own position stands in instead. Safe as an index key specifically because `fields`/`tabs` arrays are hand-authored config, never a runtime-reorderable list (unlike `ArrayField`'s own dynamic items). */
+/** A stable React key for a container field (`row`/`collapsible`/`group`/`tabs`/`ui`): none of these have a `name` to key off, so `prefix` + the field's own position stands in instead. Safe as an index key specifically because `fields`/`tabs` arrays are hand-authored config, never a runtime-reorderable list (unlike `ArrayField`'s own dynamic items). */
 function containerKey(prefix: string | undefined, index: number): string {
 	return prefix ? `${prefix}.__field_${index}` : `__field_${index}`
 }
@@ -83,18 +83,18 @@ function renderField(
 	id: string,
 	renderers: FieldRenderers<any>,
 	/**
-	 * The owning collection/global's own `slug` — every one gets its own
+	 * The owning collection/global's own `slug`, every one gets its own
 	 * storage folder automatically. An `upload` field's own `prefix` (see
-	 * `UploadFieldConfig`) nests under it, after the document's own `id` —
-	 * e.g. `pages/<id>/<prefix>/<filename>` — so two different documents'
+	 * `UploadFieldConfig`) nests under it, after the document's own `id`,
+	 * e.g. `pages/<id>/<prefix>/<filename>`, so two different documents'
 	 * uploads never collide on filename.
 	 */
 	uploadFolder?: string,
-	/** This field's own position in its parent `fields`/`tabs` array — only consumed by the container branches below, for `containerKey`. */
+	/** This field's own position in its parent `fields`/`tabs` array, only consumed by the container branches below, for `containerKey`. */
 	index = 0
 ) {
 	// Container types (`row`/`collapsible`/`group`/`tabs`-as-field/`ui`) have
-	// no `name` of their own — they fan out into their own `fields`/`tabs`
+	// no `name` of their own, they fan out into their own `fields`/`tabs`
 	// (or, for `ui`, render a bare component) rather than binding one
 	// `form.AppField` path. Handled before `const name = ...` below so
 	// `field.name` is never accessed on one of these.
@@ -222,7 +222,7 @@ function renderField(
 	const name = prefix ? `${prefix}.${field.name}` : field.name
 
 	// `meta`/`relations` (as currently implemented) hardcode their own
-	// paths/props rather than taking an arbitrary `name` — they're rendered
+	// paths/props rather than taking an arbitrary `name`, they're rendered
 	// directly, not wrapped in `form.AppField`.
 	if (field.type === 'meta') {
 		const Meta = renderers.meta
@@ -418,6 +418,93 @@ function renderField(
 								disabled={field.disabled}
 							/>
 						)
+					case 'email':
+						return (
+							<f.Email
+								label={field.label}
+								placeholder={field.placeholder}
+								description={field.description}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
+					case 'number':
+						return (
+							<f.Number
+								label={field.label}
+								placeholder={field.placeholder}
+								description={field.description}
+								min={field.min}
+								max={field.max}
+								step={field.step}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
+					case 'password':
+						return (
+							<f.Password
+								label={field.label}
+								placeholder={field.placeholder}
+								description={field.description}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
+					case 'confirmPassword':
+						return (
+							<f.ConfirmPassword
+								label={field.label}
+								placeholder={field.placeholder}
+								description={field.description}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
+					case 'hidden':
+						return (
+							<f.Hidden required={field.required} disabled={field.disabled} />
+						)
+					case 'code':
+						return (
+							<f.Code
+								label={field.label}
+								placeholder={field.placeholder}
+								description={field.description}
+								language={field.language}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
+					case 'json':
+						return (
+							<f.JSON
+								label={field.label}
+								placeholder={field.placeholder}
+								description={field.description}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
+					case 'slug':
+						return (
+							<f.Slug
+								label={field.label}
+								placeholder={field.placeholder}
+								description={field.description}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
+					case 'point':
+						return (
+							<f.Point
+								label={field.label}
+								description={field.description}
+								required={field.required}
+								disabled={field.disabled}
+							/>
+						)
 					case 'upload': {
 						const uploadPrefix = [uploadFolder, id, field.prefix]
 							.filter(Boolean)
@@ -452,7 +539,7 @@ function renderField(
 
 /**
  * Turns a plain `FieldConfig[]` into a real `Fields` component with no tab
- * chrome at all — for globals (`footer`, `topbar`), which render their
+ * chrome at all: for globals (`footer`, `topbar`), which render their
  * field(s) directly rather than inside `Tabs`.
  */
 export function createFlatFieldsRenderer<
@@ -461,7 +548,7 @@ export function createFlatFieldsRenderer<
 >(
 	fields: FieldConfig<TCollectionSlug, TBlockSlug>[],
 	renderers: FieldRenderers<TCollectionSlug> = {},
-	/** The owning global's own `slug` — see `renderField`'s `uploadFolder` param. */
+	/** The owning global's own `slug`, see `renderField`'s `uploadFolder` param. */
 	uploadFolder?: string
 ): FC<CollectionFieldsProps> {
 	return function GeneratedFlatFields({ form, id }: CollectionFieldsProps) {
@@ -484,14 +571,14 @@ export function createFlatFieldsRenderer<
 }
 
 /**
- * Turns a declarative `TabConfig[]` into a real `Fields` component — the
+ * Turns a declarative `TabConfig[]` into a real `Fields` component: the
  * same `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` chrome every collection
  * uses, dispatching each field by type. A direct leaf field's `name` is
- * written relative to its own tab (see `withTabPrefix`) — `tab: 'post'`
+ * written relative to its own tab (see `withTabPrefix`): `tab: 'post'`
  * with a field named `'content'` resolves to the real path `post.content`.
  * A container field (`row`/`collapsible`/`group`/`tabs`-as-field/`ui`) is
  * rendered with the tab's own plain prefix instead (`tab.flat ? undefined :
- * tab.tab`) — it has no `name` for `withTabPrefix`'s shorthand to apply to,
+ * tab.tab`), it has no `name` for `withTabPrefix`'s shorthand to apply to,
  * see `flattenTabFields`'s own doc comment (`fields/schema.ts`) for why
  * this deliberately doesn't try to extend that shorthand through a
  * container.
@@ -502,7 +589,7 @@ export function createFieldsRenderer<
 >(
 	tabs: TabConfig<TCollectionSlug, TBlockSlug>[],
 	renderers: FieldRenderers<TCollectionSlug> = {},
-	/** The owning collection's own `slug` — see `renderField`'s `uploadFolder` param. */
+	/** The owning collection's own `slug`, see `renderField`'s `uploadFolder` param. */
 	uploadFolder?: string
 ): FC<CollectionFieldsProps> {
 	return function GeneratedFields({ form, id }: CollectionFieldsProps) {

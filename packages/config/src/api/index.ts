@@ -1,4 +1,4 @@
-// The Hono-scaffolding barrel — a consumer wires up its own API entry
+// The Hono-scaffolding barrel: a consumer wires up its own API entry
 // against these exports instead of reaching into individual files under
 // `api/*`.
 

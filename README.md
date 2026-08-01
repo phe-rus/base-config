@@ -53,6 +53,22 @@ Create your own fields, blocks, endpoints, hooks, and plugins without fighting t
 
 ### Quick Start
 
+Starting a brand new project:
+
+```bash
+bunx @baseconfig/cli my-app
+```
+
+Follow the prompts (project name, D1/R2/KV resource names), then:
+
+```bash
+cd my-app
+bun run local   # generate schemas + migrate a local D1
+bun run dev
+```
+
+Adding baseConfig to an existing TanStack Start project instead:
+
 ```bash
 bun add @baseconfig/core @baseconfig/ui hono drizzle-orm better-auth
 ```
@@ -79,6 +95,19 @@ That's it.
 - Dashboard - Covered in admin/$.ts catch all
 
 All running from the same Cloudflare Worker.
+
+## Roadmap
+
+**Done**: ~19 field types (text, textarea, richtext, checkbox, switch, date, keywords, upload, select, radio, email, number, password, confirmPassword, hidden, code, json, slug, point), plus the composite types (array, blocks, relationship, relations, meta, menu, links) and layout-only types (row, collapsible, group, tabs-as-field, ui); real D1-backed content persistence, one table per collection/global; local-first drafting (edits live in `localStorage` until published); 7 built-in page blocks (richtext, media, cta, banner, grid, code, relatedPosts); a plugin system (`endpointFactories`/`hooks`/`blocks`) with a reference plugin (`@baseconfig/plugin-form-builder`); an R2-backed media library; a project-scaffolding CLI (`@baseconfig/cli`).
+
+**Not built yet**:
+- `join` field (virtual, reverse-relationship queries)
+- Field-level `unique`/`index` (blocked on every field currently living in one opaque `data` JSON column rather than its own SQL column)
+- Field-level conditional visibility (show/hide a field based on a sibling field's value)
+- `virtual` fields (computed, not stored)
+- Field-level `validate`/`hooks`/`access`
+- A sidebar layout option for the document editor
+- Local API parity for consumer-side server code (in-process content queries with no HTTP round-trip, for use from server functions/loaders)
 
 <div align="center">
   <h2 style="margin-top: 50px; margin-bottom: 15px; font-weight: 500;">Technologies we use & love</h2>

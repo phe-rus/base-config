@@ -45,7 +45,7 @@ type SessionLike = { user: { role?: string | null } }
 type HandlerEnv = { Variables: { session?: SessionLike | null } }
 
 /**
- * The exact slice of a `betterAuth()` server instance this needs —
+ * The exact slice of a `betterAuth()` server instance this needs,
  * structural, not `typeof auth` itself, same trade-off
  * `db/collections.ts`'s `BetterAuthAdminClient` already makes so this
  * package never depends on `better-auth` directly. `handler` serves
@@ -62,26 +62,26 @@ export type AuthServerLike = {
 
 /**
  * Every real Cloudflare platform binding `createHandler()` needs, grouped
- * under one key — separates "raw platform bindings only the consumer's own
+ * under one key: separates "raw platform bindings only the consumer's own
  * `env` can resolve" from the behavioral config sitting alongside it
  * (`auth`, `cors`). `r2`/`kv` are named after the Cloudflare *product*
  * (matching how `env` itself groups bindings), not the internal role each
- * plays — see `BaseConfigRouteBindings`' own `bucket`/`cache` doc comments
+ * plays, see `BaseConfigRouteBindings`' own `bucket`/`cache` doc comments
  * (`api/route.ts`) for what each is actually used for.
  */
 export type CreateHandlerBindings = {
-	/** The consumer's own R2 bucket binding (e.g. `env.MEDIA`) — see `createStorageRoute`'s own doc comment (`api/storage-route.ts`). */
+	/** The consumer's own R2 bucket binding (e.g. `env.MEDIA`), see `createStorageRoute`'s own doc comment (`api/storage-route.ts`). */
 	r2: BaseConfigRouteBindings['bucket']
-	/** The consumer's own KV binding for the public-read cache — see `ContentRouteBindings['cache']`'s own doc comment (`content-route.ts`). Omit for no caching. */
+	/** The consumer's own KV binding for the public-read cache, see `ContentRouteBindings['cache']`'s own doc comment (`content-route.ts`). Omit for no caching. */
 	kv?: BaseConfigRouteBindings['cache']
-	/** Relaxes some of `ignite()`'s own production-only security headers (HSTS, etc.) — not a binding itself, grouped here anyway since it's part of the same "environment facts only the consumer's own `env` can answer" bundle. */
+	/** Relaxes some of `ignite()`'s own production-only security headers (HSTS, etc.); not a binding itself, grouped here anyway since it's part of the same "environment facts only the consumer's own `env` can answer" bundle. */
 	isdev?: boolean
 }
 
 export type CreateHandlerOptions = {
-	/** The consumer's own `drizzle(env.DB, ...)` instance — see `createContentRoute`'s own doc comment (`content-route.ts`). */
+	/** The consumer's own `drizzle(env.DB, ...)` instance, see `createContentRoute`'s own doc comment (`content-route.ts`). */
 	db: BaseConfigRouteBindings['db']
-	/** The consumer's own `betterAuth()` instance — see `AuthServerLike`'s own doc comment for why this stays structural. */
+	/** The consumer's own `betterAuth()` instance, see `AuthServerLike`'s own doc comment for why this stays structural. */
 	auth: AuthServerLike
 	/** See `CreateHandlerBindings`' own doc comment. */
 	bindings: CreateHandlerBindings
@@ -94,9 +94,9 @@ export type CreateHandlerOptions = {
 	 * default, so omitting it doesn't skip CORS entirely the way it used to.
 	 */
 	cors?: (origin: string) => string
-	/** See `ContentRouteBindings['hooks']`'s own doc comment (`content-route.ts`) — Tier-2, binding-capable hooks, merged with the isomorphic Tier-1 map every registered collection/global already contributed. */
+	/** See `ContentRouteBindings['hooks']`'s own doc comment (`content-route.ts`): Tier-2, binding-capable hooks, merged with the isomorphic Tier-1 map every registered collection/global already contributed. */
 	hooks?: BaseConfigRouteBindings['hooks']
-	/** See `ContentEndpoint`'s own doc comment (`content-route.ts`) — Tier-2 endpoints, merged with whatever every registered plugin's own `EndpointFactory` already contributed. */
+	/** See `ContentEndpoint`'s own doc comment (`content-route.ts`): Tier-2 endpoints, merged with whatever every registered plugin's own `EndpointFactory` already contributed. */
 	endpoints?: BaseConfigRouteBindings['endpoints']
 	requestTimeoutMs?: number
 	etag?: boolean

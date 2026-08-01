@@ -3,9 +3,9 @@ import { Preview } from '@baseconfig/ui/basiccn/preview'
 import { buttonVariants } from '@baseconfig/ui/components/button'
 import { IconClick } from '@tabler/icons-react'
 import { z } from 'zod'
-import { LinksField } from '../fields/links-field'
-import { linksSchema, type LinkItemValue } from '../types'
-import type { BlockConfig, BlockFieldsProps } from './types'
+import { LinksField } from '../../fields/Links'
+import { linksSchema, type LinkItemValue } from '../../types'
+import type { BlockConfig, BlockFieldsProps } from '../shared/types'
 
 export const ctaBlockSchema = z.object({
 	blockType: z.literal('cta'),
@@ -26,7 +26,7 @@ function CtaBlockFields({ form, path }: BlockFieldsProps) {
 	)
 }
 
-/** Same disclosed SSR-hydration-only gap as `richtext.tsx`'s own `RichTextBlockRender` — see that function's own doc comment for the full explanation (tiptap's `Preview` needs a real DOM, so this content is absent from server-rendered HTML until client JS hydrates). */
+/** Same disclosed SSR-hydration-only gap as `richtext.tsx`'s own `RichTextBlockRender`, see that function's own doc comment for the full explanation (tiptap's `Preview` needs a real DOM, so this content is absent from server-rendered HTML until client JS hydrates). */
 function CtaBlockRender({ data }: { data: Record<string, unknown> }) {
 	const content = data.content as BasiccnContent | undefined
 	const links = Array.isArray(data.links) ? (data.links as LinkItemValue[]) : []
