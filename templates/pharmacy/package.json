@@ -13,8 +13,8 @@
 		"remote": "bun x base gen --remote"
 	},
 	"dependencies": {
-		"@baseconfig/core": "0.0.10",
-		"@baseconfig/ui": "0.0.10",
+		"@baseconfig/core": "0.0.11",
+		"@baseconfig/ui": "0.0.11",
 		"@better-auth/drizzle-adapter": "1.7.0-rc.2",
 		"@fontsource-variable/geist": "^5.3.0",
 		"@hono/zod-validator": "^0.9.0",
