@@ -1,6 +1,6 @@
 {
 	"name": "@baseconfig/cli",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"description": "Scaffold a new baseConfig app: bunx @baseconfig/cli my-app.",
 	"license": "MIT",
 	"repository": {
