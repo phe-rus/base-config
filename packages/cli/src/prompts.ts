@@ -66,7 +66,9 @@ async function resolveName(
 	return answer
 }
 
-async function resolveTemplateList(): Promise<Awaited<ReturnType<typeof listTemplates>>> {
+async function resolveTemplateList(): Promise<
+	Awaited<ReturnType<typeof listTemplates>>
+> {
 	const templates = await listTemplates()
 	if (templates.length === 0) {
 		throw new Error(
@@ -102,7 +104,11 @@ async function resolveTemplate(flags: CliFlags): Promise<string> {
 
 	const answer = await select({
 		message: 'Template',
-		options: templates.map((t) => ({ value: t.id, label: t.label, hint: t.hint }))
+		options: templates.map((t) => ({
+			value: t.id,
+			label: t.label,
+			hint: t.hint
+		}))
 	})
 	if (isCancel(answer)) onCancel()
 	return answer
@@ -130,7 +136,12 @@ export async function runPrompts(
 
 	const name = await resolveName(flags, positional)
 	const template = await resolveTemplate(flags)
-	const d1Name = await resolveResourceName('D1 database name', flags.d1, name, flags.yes)
+	const d1Name = await resolveResourceName(
+		'D1 database name',
+		flags.d1,
+		name,
+		flags.yes
+	)
 	const r2Name = await resolveResourceName(
 		'R2 bucket name',
 		flags.r2,

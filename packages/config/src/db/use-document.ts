@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import type { z } from 'zod'
 import type { ContentCollection, DraftCollection } from './collections'
 import { deepEqual } from './deep-equal'
+import { pruneDataToKnownPaths } from './prune'
 
 type UseDocumentOptions<TData extends Record<string, unknown>> = {
 	collection: ContentCollection
@@ -12,6 +13,22 @@ type UseDocumentOptions<TData extends Record<string, unknown>> = {
 	id: string
 	schema: z.ZodTypeAny
 	defaultValues: () => TData
+	/**
+	 * The collection/global's current real field paths (`fields/schema.ts`'s
+	 * `knownFieldPaths`, computed by the caller, e.g. `collection-form.tsx`,
+	 * from its own `config.tabs`/`config.fields`, plus `title`/`slug` for a
+	 * regular collection since those aren't part of the field tree itself,
+	 * see `withBaseFields`). When provided, the form's initial values (and,
+	 * via the existing write-through effect below, the draft's own stored
+	 * data) are reconciled against it the moment a document is opened: any
+	 * stored key that no longer corresponds to a real field (renamed/removed
+	 * since this document was last saved, see `db/prune.ts`'s own doc
+	 * comment) is dropped before it ever reaches the form, so an editor
+	 * never shows or keeps re-saving a field that's no longer part of the
+	 * schema. Omit to skip reconciliation entirely (this hook's original
+	 * behavior, still the default for any caller that hasn't opted in).
+	 */
+	knownFieldPaths?: string[]
 }
 
 /**
@@ -57,7 +74,8 @@ export function useDocument<TData extends Record<string, unknown>>({
 	draftCollection,
 	id,
 	schema,
-	defaultValues
+	defaultValues,
+	knownFieldPaths
 }: UseDocumentOptions<TData>) {
 	const { data: remoteData } = useLiveQuery(collection)
 	const remoteRow = remoteData.find((r) => r.id === id)
@@ -88,9 +106,21 @@ export function useDocument<TData extends Record<string, unknown>>({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [id, draftCollection])
 
-	const initialValue = (draftRow?.data ??
+	const rawInitialValue = (draftRow?.data ??
 		remoteRow?.data ??
 		defaultValues()) as TData
+
+	// Reconciles against the current schema *before* `useAppForm` below ever
+	// sees it: `useAppForm`'s `defaultValues` is a one-time snapshot at first
+	// render, so this can't happen in an effect (an effect would run too
+	// late, after the form has already snapshotted the un-pruned shape).
+	// This alone is also what reconciles the *draft* itself, no separate
+	// write needed: the write-through effect further down already mirrors
+	// `store` (seeded from this already-pruned value) back into
+	// `draftCollection` on every render, including the first.
+	const initialValue = knownFieldPaths
+		? (pruneDataToKnownPaths(rawInitialValue, knownFieldPaths) as TData)
+		: rawInitialValue
 
 	const form = useAppForm({
 		defaultValues: initialValue,

@@ -3,21 +3,28 @@
 /**
  * `@baseconfig/core`'s own CLI. Two forms:
  *
- * - `bun x base --config=<path> --output=<path>`, generates a consumer's
- *   own copy of the content schema, matching `auth:gen`'s own `bun x
- *   auth@rc generate --config=... --output=...` invocation shape exactly:
- *   `--config` points at the consumer's own `base.config.ts` (whatever file
- *   calls `baseConfig({...})`), same as `auth:gen`'s `--config` points at
- *   whatever file calls `betterAuth({...})`. No consumer-side
- *   restructuring needed, importing that file for its side effect is
- *   enough. `baseConfig()` already calls `registerBaseConfig()`
+ * - `bun x base --config=<path> --output=<path> [--types-output=<path>]`,
+ *   generates a consumer's own copy of the content schema, matching
+ *   `auth:gen`'s own `bun x auth@rc generate --config=... --output=...`
+ *   invocation shape exactly: `--config` points at the consumer's own
+ *   `base.config.ts` (whatever file calls `baseConfig({...})`), same as
+ *   `auth:gen`'s `--config` points at whatever file calls `betterAuth({...})`.
+ *   No consumer-side restructuring needed, importing that file for its side
+ *   effect is enough. `baseConfig()` already calls `registerBaseConfig()`
  *   (`collections/registry.ts`) unconditionally, populating
  *   `collectionsBySlug`/`globalsBySlug`, this CLI reads that *same*
  *   passive registry directly afterward. `auth: true` collections and
  *   `custom: true` globals are skipped: better-auth owns the former, the
  *   latter never has a document to persist at all (see `content-schema.ts`'s
  *   own doc comment for why every remaining entry still gets a single
- *   `data` JSON column rather than one real SQL column per field).
+ *   `data` JSON column rather than one real SQL column per field). Alongside
+ *   the SQL schema, this also writes a second generated file (default
+ *   `src/config/base.types.ts`, see `db/content-types-schema.ts`), one real
+ *   TS interface per collection/global plus the `declare module
+ *   '@baseconfig/core'` augmentation that gives `base.find({collection:
+ *   ...})` (`db/content-client.ts`) real autocomplete/typed `.data`,
+ *   mirroring Payload's own `payload generate:types` + `declare module
+ *   'payload'` mechanism.
  * - `bun x base gen (--local | --remote) [...]`, the full schema-gen +
  *   migrate orchestrator (see `cli/gen.ts`), replacing the near-identical
  *   `scripts/gen.script.ts` every consumer used to hand-roll for itself.
@@ -28,6 +35,8 @@ import { runGen } from './cli/gen'
 import { collectionsBySlug, globalsBySlug } from './collections/registry'
 import type { ContentTableEntry } from './db/content-schema'
 import { buildContentSchemaSource } from './db/content-schema'
+import type { ContentTypeEntry } from './db/content-types-schema'
+import { buildContentTypesSource } from './db/content-types-schema'
 
 const [subcommand, ...rest] = process.argv.slice(2)
 
@@ -41,25 +50,40 @@ async function generateSchema(argv: string[]) {
 	const args = parseArgs(argv)
 
 	if (!args.output || !args.config) {
-		console.error('Usage: bun x base --config=<path> --output=<path>')
+		console.error(
+			'Usage: bun x base --config=<path> --output=<path> [--types-output=<path>]'
+		)
 		process.exit(1)
 	}
 
 	const configPath = path.resolve(process.cwd(), args.config)
 	const outPath = path.resolve(process.cwd(), args.output)
+	const typesOutPath = path.resolve(
+		process.cwd(),
+		args['types-output'] ?? 'src/config/base.types.ts'
+	)
 
 	// Side-effect only: evaluating the consumer's `base.config.ts` is what
 	// calls `baseConfig({...})`, which populates `collectionsBySlug`/
 	// `globalsBySlug` below.
 	await import(configPath)
 
+	const registeredCollections = Object.values(collectionsBySlug).filter(
+		(collection) => !collection.auth
+	)
+	const registeredGlobals = Object.values(globalsBySlug).filter(
+		(global) => !global.custom
+	)
+
 	const entries: ContentTableEntry[] = [
-		...Object.values(collectionsBySlug)
-			.filter((collection) => !collection.auth)
-			.map((collection) => ({ slug: collection.slug, isGlobal: false })),
-		...Object.values(globalsBySlug)
-			.filter((global) => !global.custom)
-			.map((global) => ({ slug: global.slug, isGlobal: true }))
+		...registeredCollections.map((collection) => ({
+			slug: collection.slug,
+			isGlobal: false
+		})),
+		...registeredGlobals.map((global) => ({
+			slug: global.slug,
+			isGlobal: true
+		}))
 	]
 
 	if (entries.length === 0) {
@@ -78,6 +102,31 @@ async function generateSchema(argv: string[]) {
 	console.log(
 		`Generated ${path.relative(process.cwd(), outPath)} (${entries.length} table${entries.length === 1 ? '' : 's'})`
 	)
+
+	// Same `entries` walk, carrying each collection/global's raw `tabs`/
+	// `fields` (retained on the registered config since Tier 1, see
+	// `base.types.ts`'s `CollectionConfig['tabs']`/`GlobalConfig['fields']`)
+	// so `buildContentTypesSource` can derive a real per-collection TS shape,
+	// mirroring the SQL schema generated just above.
+	const typeEntries: ContentTypeEntry[] = [
+		...registeredCollections.map((collection) => ({
+			slug: collection.slug,
+			isGlobal: false,
+			tabs: collection.tabs
+		})),
+		...registeredGlobals.map((global) => ({
+			slug: global.slug,
+			isGlobal: true,
+			fields: global.fields
+		}))
+	]
+
+	const generatedTypes = buildContentTypesSource(typeEntries)
+
+	mkdirSync(path.dirname(typesOutPath), { recursive: true })
+	writeFileSync(typesOutPath, generatedTypes)
+
+	console.log(`Generated ${path.relative(process.cwd(), typesOutPath)}`)
 }
 
 function parseArgs(argv: string[]): Record<string, string> {

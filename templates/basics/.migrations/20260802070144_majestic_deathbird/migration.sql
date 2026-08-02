@@ -1,0 +1,1 @@
+ALTER TABLE `cn-settings` RENAME TO `cn-keywords`;

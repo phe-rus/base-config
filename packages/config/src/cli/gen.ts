@@ -58,7 +58,7 @@ export async function runGen(argv: string[]): Promise<void> {
 
 	if (isLocal === isRemote) {
 		console.error(
-			'Usage: bun x base gen (--local | --remote) [--skip-auth] [--yes] [--d1=DB] [--auth-config=...] [--auth-output=...] [--config=...] [--content-output=...] [--drizzle-config=...]'
+			'Usage: bun x base gen (--local | --remote) [--skip-auth] [--yes] [--d1=DB] [--auth-config=...] [--auth-output=...] [--config=...] [--content-output=...] [--types-output=...] [--drizzle-config=...]'
 		)
 		process.exit(1)
 	}
@@ -72,6 +72,8 @@ export async function runGen(argv: string[]): Promise<void> {
 	const baseConfigPath = (flags.config as string) ?? 'src/config/base.config.ts'
 	const contentSchemaOutput =
 		(flags['content-output'] as string) ?? 'db/schemas/content.ts'
+	const contentTypesOutput =
+		(flags['types-output'] as string) ?? 'src/config/base.types.ts'
 	const drizzleConfigPath =
 		(flags['drizzle-config'] as string) ?? 'drizzle.config.ts'
 
@@ -89,7 +91,8 @@ export async function runGen(argv: string[]): Promise<void> {
 		'x',
 		'base',
 		`--config=${baseConfigPath}`,
-		`--output=${contentSchemaOutput}`
+		`--output=${contentSchemaOutput}`,
+		`--types-output=${contentTypesOutput}`
 	]
 	const DB_GEN = [
 		'bun',

@@ -19,7 +19,9 @@ export async function fetchLatestVersion(packageName: string): Promise<string> {
 
 	const data = (await response.json()) as { version?: string }
 	if (!data.version) {
-		throw new Error(`npm registry response for "${packageName}" had no version field`)
+		throw new Error(
+			`npm registry response for "${packageName}" had no version field`
+		)
 	}
 
 	return data.version

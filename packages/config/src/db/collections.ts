@@ -1,5 +1,14 @@
 import { collectionsBySlug } from '../collections/registry'
-import type { CollectionSlug } from '../collections/types'
+import type {
+	CollectionConfig,
+	CollectionSlug,
+	GlobalConfig
+} from '../collections/types'
+import {
+	expandFields,
+	flattenTabFields,
+	knownFieldPaths
+} from '../fields/schema'
 import {
 	createCollection,
 	localStorageCollectionOptions,
@@ -97,11 +106,23 @@ export type UpdateOptions = {
 	data: UpdateDocumentBody
 }
 export type DeleteOptions = { collection: string; id: string }
+/**
+ * `knownPaths` is always computed by the caller (`pruneDocument` below),
+ * never left for the server to derive: see `content-route.ts`'s own
+ * `pruneSchema` doc comment for why.
+ */
+export type PruneOptions = {
+	collection: string
+	id: string
+	knownPaths: string[]
+}
 export type FindGlobalOptions = { slug: string }
 export type UpdateGlobalOptions = {
 	slug: string
 	data: Record<string, unknown>
 }
+/** Same idea as `PruneOptions`, for a global. */
+export type PruneGlobalOptions = { slug: string; knownPaths: string[] }
 
 /**
  * The exact shape `hc<TypeRouter>()`'s own client produces for
@@ -144,6 +165,12 @@ export type ContentRpcClient = Record<
 			$delete: (args: {
 				param: { collection: string; id: string }
 			}) => Promise<JsonClientResponse>
+			prune: {
+				$post: (args: {
+					param: { collection: string; id: string }
+					json: { knownPaths: string[] }
+				}) => Promise<JsonClientResponse>
+			}
 		}
 	>
 > & {
@@ -157,6 +184,12 @@ export type ContentRpcClient = Record<
 				param: { slug: string }
 				json: Record<string, unknown>
 			}) => Promise<JsonClientResponse>
+			prune: {
+				$post: (args: {
+					param: { slug: string }
+					json: { knownPaths: string[] }
+				}) => Promise<JsonClientResponse>
+			}
 		}
 	>
 }
@@ -183,9 +216,13 @@ export type ContentApiClient = {
 	create: (options: CreateOptions) => Promise<ContentDocumentRow>
 	update: (options: UpdateOptions) => Promise<ContentDocumentRow>
 	delete: (options: DeleteOptions) => Promise<void>
+	/** See `PruneOptions`'s own doc comment; backs the admin UI's explicit "Prune" action, never called from a normal create/update/publish flow. */
+	prune: (options: PruneOptions) => Promise<ContentDocumentRow>
 	listGlobals: () => Promise<ContentGlobalRow[]>
 	findGlobal: (options: FindGlobalOptions) => Promise<ContentGlobalRow | null>
 	updateGlobal: (options: UpdateGlobalOptions) => Promise<ContentGlobalRow>
+	/** Same idea as `prune` above, for a global. */
+	pruneGlobal: (options: PruneGlobalOptions) => Promise<ContentGlobalRow>
 }
 
 /**
@@ -258,6 +295,13 @@ export function createContentApiClient(
 				param: { collection, id }
 			})
 		},
+		prune: async ({ collection, id, knownPaths }) => {
+			const res = await client[':collection'][':id'].prune.$post({
+				param: { collection, id },
+				json: { knownPaths }
+			})
+			return unwrapJson(res)
+		},
 		listGlobals: async () => {
 			const res = await client.globals.$get()
 			return unwrapJson(res)
@@ -270,6 +314,13 @@ export function createContentApiClient(
 			const res = await client.globals[':slug'].$patch({
 				param: { slug },
 				json: data
+			})
+			return unwrapJson(res)
+		},
+		pruneGlobal: async ({ slug, knownPaths }) => {
+			const res = await client.globals[':slug'].prune.$post({
+				param: { slug },
+				json: { knownPaths }
 			})
 			return unwrapJson(res)
 		}
@@ -790,6 +841,45 @@ export const contentCollections: Record<CollectionSlug, ContentCollection> =
 		get: (_target, slug: string) => getContentCollection(slug)
 	})
 
+/**
+ * The admin UI's explicit "Prune" action (`collection-form.tsx`), never
+ * called from a normal create/update/publish flow: reconciles a document's
+ * *remote* stored `data` down to only `collectionConfig`'s current real
+ * field paths (see `db/prune.ts`'s own doc comment for why this needs to
+ * exist, and why it's a deliberate full-replace rather than the merge every
+ * other write here uses). `knownPaths` is computed from `collectionConfig.tabs`
+ * (retained on every registered collection since this package's own Tier 1
+ * type-safety work, see `base.types.ts`), not re-derived from the registry a
+ * second time, since the caller already has the config in hand. Writes the
+ * pruned row straight into `contentCollections[slug]`'s own cache afterward
+ * (`collection.utils.writeUpdate`), same "the mutation's own response is
+ * already authoritative, no follow-up GET" pattern every other write here
+ * follows.
+ */
+export async function pruneDocument(
+	collectionConfig: CollectionConfig,
+	id: string
+): Promise<void> {
+	const { client } = requireContentDataSource()
+	const paths = knownFieldPaths(flattenTabFields(collectionConfig.tabs ?? []))
+	const pruned = await client.prune({
+		collection: collectionConfig.slug,
+		id,
+		knownPaths: paths
+	})
+	// See `createRealUser`'s own identical cast for why: `.utils.writeUpdate`
+	// is only typed on the `collection` param `queryCollectionOptions`'s own
+	// `onUpdate` callback receives, not on the plain `ContentCollection`
+	// object `createCollection(...)` itself returns.
+	;(
+		getContentCollection(collectionConfig.slug) as unknown as {
+			utils: {
+				writeUpdate: (row: DocumentRow<Record<string, unknown>>) => void
+			}
+		}
+	).utils.writeUpdate(toDocumentRow(pruned))
+}
+
 export type DraftCollection = ReturnType<typeof createDraftCollection>
 
 /**
@@ -930,6 +1020,23 @@ function createLazyCollection<T extends object>(factory: () => T): T {
 export const globalsCollection: ContentCollection = createLazyCollection(
 	createGlobalsCollection
 )
+
+/** Same idea as `pruneDocument` above, for a global, called from `global-form.tsx`'s own "Prune" action. */
+export async function pruneGlobal(globalConfig: GlobalConfig): Promise<void> {
+	const { client } = requireContentDataSource()
+	const paths = knownFieldPaths(expandFields(globalConfig.fields ?? []))
+	const pruned = await client.pruneGlobal({
+		slug: globalConfig.slug,
+		knownPaths: paths
+	})
+	;(
+		globalsCollection as unknown as {
+			utils: {
+				writeUpdate: (row: DocumentRow<Record<string, unknown>>) => void
+			}
+		}
+	).utils.writeUpdate(toGlobalDocumentRow(pruned))
+}
 
 /**
  * The `localStorage`-backed draft counterpart to `globalsCollection` above,

@@ -1,9 +1,11 @@
 import type { GlobalConfig, GlobalSlug } from '../../../collections/types'
 import {
 	draftGlobalsCollection,
-	globalsCollection
+	globalsCollection,
+	pruneGlobal
 } from '../../../db/collections'
 import { useDocument } from '../../../db/use-document'
+import { expandFields, knownFieldPaths } from '../../../fields/schema'
 import { DocumentHeader } from './document-header'
 import { Button } from '@baseconfig/ui/components/button'
 import { t } from '@baseconfig/ui/components/sonner'
@@ -48,12 +50,13 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 	// still the one and only action that ever reaches the real
 	// `/api/globals/<slug>` backend, edits themselves stay purely local
 	// (see `useDocument`'s own doc comment).
-	const { form, row, publish, isDirty } = useDocument({
+	const { form, row, publish, isDirty, hasRemoteRow } = useDocument({
 		collection: globalsCollection,
 		draftCollection: draftGlobalsCollection,
 		id,
 		schema: config.schema,
-		defaultValues: config.defaultValues
+		defaultValues: config.defaultValues,
+		knownFieldPaths: knownFieldPaths(expandFields(config.fields ?? []))
 	})
 
 	return (
@@ -67,25 +70,47 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 				createdAt={row.createdAt}
 				updatedAt={row.updatedAt}
 				actions={
-					<Button
-						size='xs'
-						variant='secondary'
-						disabled={!isDirty}
-						title={isDirty ? undefined : 'No changes to publish'}
-						onClick={async () => {
-							try {
-								await publish()?.isPersisted.promise
-								t.success('Success', { description: 'Published.' })
-							} catch (error) {
-								t.error(error instanceof Error ? error.name : 'Error', {
-									description:
-										error instanceof Error ? error.message : String(error)
-								})
-							}
-						}}
-					>
-						Publish
-					</Button>
+					<>
+						{hasRemoteRow && (
+							<Button
+								size='xs'
+								variant='outline'
+								title="Reconcile this global's stored data with the current schema, dropping any field that's since been renamed or removed"
+								onClick={async () => {
+									try {
+										await pruneGlobal(config)
+										t.success('Success', { description: 'Pruned.' })
+									} catch (error) {
+										t.error(error instanceof Error ? error.name : 'Error', {
+											description:
+												error instanceof Error ? error.message : String(error)
+										})
+									}
+								}}
+							>
+								Prune
+							</Button>
+						)}
+						<Button
+							size='xs'
+							variant='secondary'
+							disabled={!isDirty}
+							title={isDirty ? undefined : 'No changes to publish'}
+							onClick={async () => {
+								try {
+									await publish()?.isPersisted.promise
+									t.success('Success', { description: 'Published.' })
+								} catch (error) {
+									t.error(error instanceof Error ? error.name : 'Error', {
+										description:
+											error instanceof Error ? error.message : String(error)
+									})
+								}
+							}}
+						>
+							Publish
+						</Button>
+					</>
 				}
 			/>
 

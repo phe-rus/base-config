@@ -12,10 +12,10 @@ assignees: ''
 - [ ] `@baseconfig/ui`
 - [ ] `@baseconfig/plugin-form-builder`
 - [ ] `@baseconfig/cli`
-- [ ] `templates/basics` (or your own app scaffolded from it)
+- [ ] `templates/basics` / `templates/pharmacy` (or your own app scaffolded from either)
 
 **Version(s)**
-e.g. `@baseconfig/core@0.0.7`
+e.g. `@baseconfig/core@0.0.10`
 
 **Describe the bug**
 A clear and concise description of what's broken.

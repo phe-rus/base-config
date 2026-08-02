@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import { pruneDataToKnownPaths } from './prune'
 import {
 	contentTableName,
 	isContentTableName,
@@ -339,6 +340,35 @@ export async function updateDocument(
 	return row ? toDocumentRow(row) : undefined
 }
 
+/**
+ * The one deliberate exception to "every write merges rather than replaces"
+ * (see `updateDocument`'s own doc comment): reconciles a document's stored
+ * `data` down to only `knownPaths` (`fields/schema.ts`'s `knownFieldPaths`,
+ * computed by the caller from the collection's *current* `tabs`) and writes
+ * that back as a full replace, not a merge, an explicit, admin-triggered
+ * "Prune" action (`content-route.ts`), never something a normal
+ * create/update/publish flow does on its own. See `db/prune.ts`'s own doc
+ * comment for why this needs to exist at all.
+ */
+export async function pruneDocument(
+	db: ContentDatabase,
+	collection: string,
+	id: string,
+	knownPaths: string[]
+): Promise<DocumentRow | undefined> {
+	const existing = await getDocument(db, collection, id)
+	if (!existing) return undefined
+
+	const pruned = pruneDataToKnownPaths(existing.data, knownPaths)
+	const table = sql.raw(quoteIdent(contentTableName(collection)))
+	const row = await dbGet<RawDocumentRow>(
+		db,
+		sql`UPDATE ${table} SET data = ${JSON.stringify(pruned)}, updatedAt = ${Date.now()} WHERE id = ${id} RETURNING *`,
+		collection
+	)
+	return row ? toDocumentRow(row) : undefined
+}
+
 export async function deleteDocument(
 	db: ContentDatabase,
 	collection: string,
@@ -394,6 +424,25 @@ export async function upsertGlobal(
 		slug
 	)
 	return toGlobalRow(row as RawGlobalRow)
+}
+
+/** Same idea as `pruneDocument` above, for a global. */
+export async function pruneGlobal(
+	db: ContentDatabase,
+	slug: string,
+	knownPaths: string[]
+): Promise<GlobalRow | undefined> {
+	const existing = await getGlobal(db, slug)
+	if (!existing) return undefined
+
+	const pruned = pruneDataToKnownPaths(existing.data, knownPaths)
+	const table = sql.raw(quoteIdent(contentTableName(slug)))
+	const row = await dbGet<RawGlobalRow>(
+		db,
+		sql`UPDATE ${table} SET data = ${JSON.stringify(pruned)}, updatedAt = ${Date.now()} RETURNING *`,
+		slug
+	)
+	return row ? toGlobalRow(row) : undefined
 }
 
 /**

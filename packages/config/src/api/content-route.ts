@@ -10,6 +10,8 @@ import {
 	getGlobal,
 	listDocuments,
 	listGlobalSlugs,
+	pruneDocument,
+	pruneGlobal,
 	UnknownTableError,
 	updateDocument,
 	upsertGlobal
@@ -177,6 +179,22 @@ const updateDocumentSchema = z.object({
 })
 
 const upsertGlobalSchema = z.record(z.string(), z.unknown())
+
+/**
+ * `knownPaths` is computed client-side (`fields/schema.ts`'s
+ * `knownFieldPaths`, from the collection/global's own *currently
+ * registered* `tabs`/`fields`) and sent as part of the request rather than
+ * this route consulting `collectionsBySlug`/`globalsBySlug` itself:
+ * deliberately keeps this route registry-free (see its own doc comment, and
+ * `listGlobalSlugs`' doc comment in `content-queries.ts` for the real dev-mode
+ * SSR race a registry-based check here would reopen), and Prune is already
+ * an authenticated, admin-only, deliberately destructive action, the same
+ * trust boundary a hand-edited `update` PATCH already crosses. `.min(1)`
+ * guards against ever writing an *empty* allowlist (which would prune every
+ * field, not just orphaned ones) from a client bug or a genuinely-empty
+ * config, either way not something this route should silently allow.
+ */
+const pruneSchema = z.object({ knownPaths: z.array(z.string()).min(1) })
 
 /**
  * `where` arrives as a JSON-encoded query string (`?where={"status":{"equals":"published"}}`)
@@ -357,6 +375,19 @@ export function createContentRoute({
 				return c.json(result)
 			}
 		)
+		.post(
+			'/globals/:slug/prune',
+			adminOnly,
+			zValidator('json', pruneSchema),
+			async (c) => {
+				const slug = c.req.param('slug')
+				const { knownPaths } = c.req.valid('json')
+				const row = await pruneGlobal(db, slug, knownPaths)
+				if (!row) return c.json({ error: 'Not found' }, 404)
+				if (cache) await cache.delete(globalCacheKey(slug))
+				return c.json({ slug, ...row })
+			}
+		)
 		.get('/:collection', zValidator('query', listQuerySchema), async (c) => {
 			const collection = c.req.param('collection')
 			const publishedOnly = !isAdmin(c.get('session'))
@@ -471,6 +502,30 @@ export function createContentRoute({
 				}
 				if (collectionHooks?.afterChange) {
 					await collectionHooks.afterChange(row, ctx)
+				}
+				return c.json(row)
+			}
+		)
+		.post(
+			'/:collection/:id/prune',
+			adminOnly,
+			zValidator('json', pruneSchema),
+			async (c) => {
+				const { collection, id } = c.req.param()
+				const { knownPaths } = c.req.valid('json')
+
+				const existing = cache
+					? await getDocument(db, collection, id)
+					: undefined
+
+				const row = await pruneDocument(db, collection, id, knownPaths)
+				if (!row) return c.json({ error: 'Not found' }, 404)
+
+				if (cache) {
+					await cache.delete(documentCacheKey(collection, id))
+					if (existing?.slug) {
+						await cache.delete(slugCacheKey(collection, existing.slug))
+					}
 				}
 				return c.json(row)
 			}

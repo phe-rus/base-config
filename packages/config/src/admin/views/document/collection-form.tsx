@@ -2,11 +2,13 @@ import { slugify } from '../../../collections/slug'
 import type { CollectionConfig } from '../../../collections/types'
 import {
 	draftCollections,
+	pruneDocument,
 	publishKeywordPool,
 	withBaseFields,
 	type ContentCollection
 } from '../../../db/collections'
 import { useDocument } from '../../../db/use-document'
+import { flattenTabFields, knownFieldPaths } from '../../../fields/schema'
 import { useAdminConfig } from '../../functions/context'
 import { DocumentHeader } from './document-header'
 import { Button } from '@baseconfig/ui/components/button'
@@ -46,6 +48,26 @@ async function runPublish(
 		t.success('Success', {
 			description: statusOverride === 'published' ? 'Published.' : 'Saved.'
 		})
+	} catch (error) {
+		t.error(error instanceof Error ? error.name : 'Error', {
+			description: error instanceof Error ? error.message : String(error)
+		})
+	}
+}
+
+/**
+ * The one explicit "Prune" action (see `db/prune.ts`'s own doc comment):
+ * reconciles this document's *remote* stored data down to only the
+ * collection's current real fields, dropping anything left over from a
+ * field that's since been renamed/removed from config. Deliberately
+ * separate from `runPublish` above, an ordinary publish never touches
+ * structure this way (see that file's own doc comment for why this is a
+ * distinct action rather than something Publish does automatically).
+ */
+async function runPrune(config: CollectionConfig, id: string) {
+	try {
+		await pruneDocument(config, id)
+		t.success('Success', { description: 'Pruned.' })
 	} catch (error) {
 		t.error(error instanceof Error ? error.name : 'Error', {
 			description: error instanceof Error ? error.message : String(error)
@@ -102,6 +124,16 @@ function CollectionFormLive({ config, collection, id }: CollectionFormProps) {
 function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 	const schema = withBaseFields(config.schema)
 	const useAsTitle = config.admin?.useAsTitle
+	// Not computed for `auth: true` collections: a real user document's
+	// `data` can carry a consumer's own `additionalFields` (see
+	// `RealUserRow`'s own doc comment, `db/collections.ts`) that aren't
+	// necessarily declared in `config.tabs`, and pruning doesn't apply to
+	// `users` at all (no JSON blob, no "Prune" button, see below), so
+	// there's nothing to gain and a real risk of stripping legitimate data
+	// from the edit form if this ran for that collection too.
+	const documentKnownFieldPaths = config.auth
+		? undefined
+		: ['title', 'slug', ...knownFieldPaths(flattenTabFields(config.tabs ?? []))]
 	const { form, row, publish, isDirty, hasRemoteRow } = useDocument({
 		collection,
 		draftCollection: draftCollections[config.slug],
@@ -109,7 +141,8 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 		schema,
 		defaultValues: () =>
 			({ title: '', slug: '', ...config.defaultValues() }) as BaseData &
-				Record<string, unknown>
+				Record<string, unknown>,
+		knownFieldPaths: documentKnownFieldPaths
 	})
 	const slugTouched = useRef(!!(row.data as BaseData | undefined)?.slug)
 	const { adminPath } = useAdminConfig()
@@ -218,6 +251,16 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 							{isDirty && (
 								<Button size='xs' variant='outline' onClick={discardDraft}>
 									{hasRemoteRow ? 'Revert changes' : 'Discard draft'}
+								</Button>
+							)}
+							{hasRemoteRow && (
+								<Button
+									size='xs'
+									variant='outline'
+									title="Reconcile this document's stored data with the current schema, dropping any field that's since been renamed or removed"
+									onClick={() => runPrune(config, id)}
+								>
+									Prune
 								</Button>
 							)}
 							{row.status === 'published' && (

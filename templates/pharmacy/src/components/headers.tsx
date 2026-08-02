@@ -6,7 +6,10 @@ import { Link } from '@tanstack/react-router'
 export const Headers = () => {
 	return (
 		<header
-			className={cn('sticky top-0 border-b border-border/35', 'bg-background')}
+			className={cn(
+				'sticky top-0 border-b border-border/35 z-55',
+				'bg-background'
+			)}
 		>
 			<section
 				className={cn(
@@ -15,15 +18,25 @@ export const Headers = () => {
 				)}
 			>
 				<div className='flex items-center'>
-					<h2>{`What are we building today?`}</h2>
+					<Link to='/'>Duis id turpis</Link>
 				</div>
 
 				<nav className='flex items-center gap-2'>
-					<Link to='/'>Shop</Link>
-					<Button size='icon-sm' variant='secondary' className='rounded-full'>
+					<Link to='/shop' className='text-sm!'>
+						Shop
+					</Link>
+					<Button
+						size='icon-sm'
+						className='rounded-full'
+						render={<Link to='/admin' />}
+					>
 						<IconUser />
 					</Button>
-					<Button size='icon-sm' variant='secondary' className='rounded-full'>
+					<Button
+						size='icon-sm'
+						className='rounded-full'
+						render={<Link to='/shop' />}
+					>
 						<IconShoppingBag />
 					</Button>
 				</nav>

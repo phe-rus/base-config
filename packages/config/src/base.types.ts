@@ -4,6 +4,7 @@ import type { z } from 'zod'
 import type { BlockConfig } from './collections/blocks/shared/types'
 import type { BetterAuthAdminClient } from './db/collections'
 import type { EndpointFactory } from './api/content-route'
+import type { FieldConfig, TabConfig } from './fields/types'
 
 // `@baseconfig/core`'s own root shape, independent of any one consumer's actual
 // values. A consuming app (e.g. `www/src/config/base.config.ts`) imports
@@ -224,6 +225,15 @@ export type BaseConfig<TSlug extends string> = {
 export type CollectionConfig<TSlug extends string = string> =
 	BaseConfig<TSlug> & {
 		/**
+		 * The raw `tabs` a consumer passed to `defineCollection()`, retained
+		 * (not just consumed to build `schema`/`defaultValues`/`Fields` and
+		 * discarded) specifically so a build-time generator can walk a
+		 * registered collection's real field tree, e.g. to emit a per-collection
+		 * TypeScript document interface (see `db/content-types-schema.ts`).
+		 * Never read by anything at request-handling time, introspection-only.
+		 */
+		tabs: TabConfig<string, string>[]
+		/**
 		 * A literal Tailwind class (e.g. `'bg-olive-400/35'`) for the collection's
 		 * type dot. Kept as a full class so it stays visible to Tailwind's
 		 * static scanner.
@@ -295,6 +305,49 @@ export type CollectionConfig<TSlug extends string = string> =
 		admin?: { useAsTitle?: string }
 	}
 
+/**
+ * Two independent, deliberately empty interfaces a consumer's own generated
+ * `src/config/base.types.ts` augments via `declare module '@baseconfig/core'`,
+ * mirroring Payload's own `declare module 'payload' { interface
+ * GeneratedTypes extends Config {} }`. Confirmed empirically before writing
+ * this: TypeScript's interface-merging rules require every declaration of
+ * the same property to share an identical type, so these have to start
+ * with zero properties, not a placeholder like `Record<string, unknown>`
+ * (that would conflict the moment a consumer's own augmentation tries to
+ * add concrete `posts`/`products` keys). Two separate interfaces, not one
+ * `{collections: {}, globals: {}}` wrapper, for the same reason: a
+ * wrapper's own nested property would hit the identical conflict.
+ *
+ * A consumer never touches these two directly, `db/content-types-schema.ts`
+ * (the generator) emits the actual `declare module` block, and
+ * `db/content-client.ts`'s `base` object is the only thing that reads them.
+ */
+export interface GeneratedCollectionTypes {}
+export interface GeneratedGlobalTypes {}
+
+/** A registered collection's real slug, once a consumer's own generated `src/config/base.types.ts` has augmented `GeneratedCollectionTypes`. Falls back to a plain `string` (today's behavior) when nothing has augmented it yet, so an un-generated consumer keeps compiling exactly as before. */
+export type GeneratedCollectionSlug =
+	keyof GeneratedCollectionTypes extends never
+		? string
+		: keyof GeneratedCollectionTypes
+
+/** Same fallback shape as `GeneratedCollectionSlug`, for globals. */
+export type GeneratedGlobalSlug = keyof GeneratedGlobalTypes extends never
+	? string
+	: keyof GeneratedGlobalTypes
+
+/** A collection's real per-field document shape once generated; `Record<string, unknown>` (today's behavior) for any slug that isn't a known key yet, covering both "nothing generated" and, defensively, a slug the generator doesn't recognize. */
+export type GeneratedCollectionDoc<TSlug extends string> =
+	TSlug extends keyof GeneratedCollectionTypes
+		? GeneratedCollectionTypes[TSlug]
+		: Record<string, unknown>
+
+/** Same fallback shape as `GeneratedCollectionDoc`, for globals. */
+export type GeneratedGlobalDoc<TSlug extends string> =
+	TSlug extends keyof GeneratedGlobalTypes
+		? GeneratedGlobalTypes[TSlug]
+		: Record<string, unknown>
+
 /** Globals (Top bar, Footer, …) are singletons: same shape as a collection minus the table/list. */
 export type GlobalConfig<TSlug extends string = string> = BaseConfig<TSlug> & {
 	/**
@@ -308,4 +361,13 @@ export type GlobalConfig<TSlug extends string = string> = BaseConfig<TSlug> & {
 	 * one place that reads this flag.
 	 */
 	custom?: boolean
+	/**
+	 * The raw `fields` a consumer passed to `defineGlobal({fields: ...})`,
+	 * retained the same way `CollectionConfig['tabs']` is, for the same
+	 * build-time-introspection reason. Absent for a `custom: true` global
+	 * (there's no field list at all, `component` replaces it), same
+	 * "unused placeholder" treatment `schema`/`defaultValues` already get
+	 * in that case.
+	 */
+	fields?: FieldConfig<string, string>[]
 }

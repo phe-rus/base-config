@@ -163,6 +163,7 @@ export function defineCollection<TSlug extends string = CollectionSlug>(
 	return {
 		slug: definition.slug,
 		label: definition.label ?? labelFromSlug(definition.slug),
+		tabs: definition.tabs,
 		path: definition.path,
 		auth: definition.auth,
 		admin: definition.admin,
@@ -231,6 +232,7 @@ export function defineGlobal<TSlug extends string = GlobalSlug>(
 	return {
 		slug: definition.slug,
 		label: definition.label ?? labelFromSlug(definition.slug),
+		fields: definition.fields,
 		hooks: definition.hooks,
 		schema: fieldsToSchema(definition.fields, schemaResolvers),
 		defaultValues: () => deriveDefaultValues(definition.fields),

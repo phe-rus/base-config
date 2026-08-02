@@ -3,9 +3,9 @@ import { getBaseURL } from '@/lib/getURL'
 import { authClient } from '@/config/api/auth/authClient'
 import { getContext } from '@/utils/query'
 import { posts } from './collections/posts'
-import { settings } from './globals/settings'
 import { storage } from './globals/storage'
 import { users } from './collections/users'
+import { keywords } from './globals/keywords'
 
 export default baseConfig({
 	hostDomain: getBaseURL(),
@@ -17,5 +17,5 @@ export default baseConfig({
 		adminIcon: '/icon.png'
 	},
 	collections: [users, posts],
-	globals: [settings, storage]
+	globals: [keywords, storage]
 })

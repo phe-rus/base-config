@@ -98,16 +98,22 @@ All running from the same Cloudflare Worker.
 
 ## Roadmap
 
-**Done**: ~19 field types (text, textarea, richtext, checkbox, switch, date, keywords, upload, select, radio, email, number, password, confirmPassword, hidden, code, json, slug, point), plus the composite types (array, blocks, relationship, relations, meta, menu, links) and layout-only types (row, collapsible, group, tabs-as-field, ui); real D1-backed content persistence, one table per collection/global; local-first drafting (edits live in `localStorage` until published); 7 built-in page blocks (richtext, media, cta, banner, grid, code, relatedPosts); a plugin system (`endpointFactories`/`hooks`/`blocks`) with a reference plugin (`@baseconfig/plugin-form-builder`); an R2-backed media library; a project-scaffolding CLI (`@baseconfig/cli`).
-
-**Not built yet**:
-- `join` field (virtual, reverse-relationship queries)
-- Field-level `unique`/`index` (blocked on every field currently living in one opaque `data` JSON column rather than its own SQL column)
-- Field-level conditional visibility (show/hide a field based on a sibling field's value)
-- `virtual` fields (computed, not stored)
-- Field-level `validate`/`hooks`/`access`
-- A sidebar layout option for the document editor
-- Local API parity for consumer-side server code (in-process content queries with no HTTP round-trip, for use from server functions/loaders)
+- [x] ~19 field types (text, textarea, richtext, checkbox, switch, date, keywords, upload, select, radio, email, number, password, confirmPassword, hidden, code, json, slug, point), plus composite types (array, blocks, relationship, relations, meta, menu, links) and layout-only types (row, collapsible, group, tabs-as-field, ui)
+- [x] Real D1-backed content persistence, one table per collection/global
+- [x] Local-first drafting (edits live in `localStorage` until published)
+- [x] 7 built-in page blocks (richtext, media, cta, banner, grid, code, relatedPosts)
+- [x] Plugin system (`endpointFactories`/`hooks`/`blocks`) with a reference plugin (`@baseconfig/plugin-form-builder`)
+- [x] R2-backed media library
+- [x] Project-scaffolding CLI (`@baseconfig/cli`), with two reference templates (`basics`, a minimal end-to-end app; `pharmacy`, a fuller e-commerce-style example)
+- [x] Generated per-collection/global TypeScript types (`base.types.ts`), giving `base.find`/`findByID`/`findGlobal` full type safety
+- [x] Field pruning: reconciles stored data against the current schema, dropping anything left over from a renamed/removed field (an explicit admin "Prune" action, plus automatic reconciliation of local drafts)
+- [ ] `join` field (virtual, reverse-relationship queries)
+- [ ] Field-level `unique`/`index` (blocked on every field currently living in one opaque `data` JSON column rather than its own SQL column)
+- [ ] Field-level conditional visibility (show/hide a field based on a sibling field's value)
+- [ ] `virtual` fields (computed, not stored)
+- [ ] Field-level `validate`/`hooks`/`access`
+- [ ] A sidebar layout option for the document editor
+- [ ] Local API parity for consumer-side server code (in-process content queries with no HTTP round-trip, for use from server functions/loaders)
 
 <div align="center">
   <h2 style="margin-top: 50px; margin-bottom: 15px; font-weight: 500;">Technologies we use & love</h2>

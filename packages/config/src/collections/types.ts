@@ -26,6 +26,9 @@ export const metaSchema = z.object({
 	keywords: z.array(z.string()).optional()
 })
 
+/** Plain TS shape of `metaSchema`, the `type: 'meta'` field's real value. */
+export type MetaValue = z.infer<typeof metaSchema>
+
 /** One selected relationship, see `RelationshipValue` in `fields/Relationship/index.tsx`, the actual source of this shape. */
 export const relationshipValueSchema = z.object({
 	id: z.string(),
@@ -47,6 +50,9 @@ export const relationsSchema = z.array(
 		keywords: z.array(z.string()).optional()
 	})
 )
+
+/** Plain TS shape of `relationsSchema`, the `type: 'relations'` field's real value. */
+export type RelationsValue = z.infer<typeof relationsSchema>
 
 /** shadcn's own `Button` variants (`shared/ui/src/components/button.tsx`), reused so a nav item/link can be styled like a real button. */
 export const appearanceValues = [
@@ -132,8 +138,14 @@ export const navMenuItemSchema = z.object({
 	links: z.array(navMenuLinkSchema).optional()
 })
 
+/** Plain TS shape of `navMenuItemSchema`, one item of a `type: 'menu'` field's real value. */
+export type NavMenuItemValue = z.infer<typeof navMenuItemSchema>
+
 /** The shape a `type: 'menu'` field's value actually is, see `NavMenuField` (`fields/NavMenu/index.tsx`). Bare array (not wrapped in `{items: [...]}`), same as `blocksSchema`, the field itself resolves directly to this value. */
 export const navMenuSchema = z.array(navMenuItemSchema)
+
+/** Plain TS shape of `navMenuSchema`, the `type: 'menu'` field's real value. */
+export type NavMenuValue = z.infer<typeof navMenuSchema>
 
 // This app's own binding of the generic `../base.types.ts` shapes to its
 // concrete slug unions above.

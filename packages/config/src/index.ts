@@ -14,10 +14,26 @@ export type {
 	BaseConfigProps,
 	CollectionFieldsProps,
 	CollectionHooks,
+	GeneratedCollectionDoc,
+	GeneratedCollectionSlug,
+	GeneratedCollectionTypes,
+	GeneratedGlobalDoc,
+	GeneratedGlobalSlug,
+	GeneratedGlobalTypes,
 	HookContext,
 	Plugin
 } from './base.types'
 export type { FieldConfig, TabConfig } from './fields/types'
+export type {
+	LinkItemValue,
+	LinkValue,
+	MetaValue,
+	NavMenuItemValue,
+	NavMenuValue,
+	RelationsValue
+} from './collections/types'
+export type { UploadValue } from './fields/schema'
+export type { RelationshipValue } from './collections/fields/Relationship'
 export { BlockRenderer, registerBlocks } from './collections/blocks'
 export type {
 	BlockConfig,
@@ -42,6 +58,10 @@ export type {
 	UpdateGlobalOptions,
 	UpdateOptions
 } from './db/collections'
+export type {
+	TypedDocumentRow,
+	TypedGlobalRow
+} from './db/content-client'
 export { base } from './db/content-client'
 export {
 	createDocument,

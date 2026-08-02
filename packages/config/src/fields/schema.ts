@@ -9,6 +9,9 @@ export const uploadValueSchema = z.object({
 	size: z.number()
 })
 
+/** Plain TS shape of `uploadValueSchema`, an `upload`-type field's real value. */
+export type UploadValue = z.infer<typeof uploadValueSchema>
+
 /**
  * The four composite field types (`meta`/`relations`/`blocks`/`menu`) resolve
  * to an app-specific schema that this framework-side module has no business
@@ -88,7 +91,7 @@ function dotJoin(prefix: string | undefined, name: string): string {
  * name), which is exactly what happens when `deriveDefaultValues` is
  * called on `flattenTabFields`'s own output in `define.ts`.
  */
-function expandFields(
+export function expandFields(
 	fields: FieldConfig<any, any>[],
 	prefix?: string
 ): LeafFieldConfig[] {
@@ -250,6 +253,23 @@ export function tabsToSchema(
 	resolvers: FieldSchemaResolvers = {}
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
 	return fieldsToSchema(flattenTabFields(tabs), resolvers)
+}
+
+/**
+ * The flat list of a collection/global's real, *current* field paths
+ * (`flattenTabFields`/`expandFields`'s own already-resolved dotted `name`s),
+ * the source of truth a "prune" operation (`db/prune.ts`) compares a
+ * document's stored `data` against: any key reachable in stored data but not
+ * in this list no longer corresponds to any field in the current config
+ * (renamed/removed since that data was last written) and gets dropped.
+ * `array`/`blocks`/`relations`/`menu`/`links`/`meta`/`relationship`/`upload`
+ * fields are leaves here (see `expandFields`'s own doc comment for exactly
+ * which types recurse vs. resolve to one path), so this only ever
+ * reconciles top-level/nested-group structure, never an array item's own
+ * internal shape, a deliberate v1 scope decision, not an oversight.
+ */
+export function knownFieldPaths(fields: LeafFieldConfig[]): string[] {
+	return fields.map((field) => field.name)
 }
 
 type ValueTree = { [key: string]: unknown }

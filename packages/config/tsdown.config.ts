@@ -32,7 +32,8 @@ export default defineConfig((inlineConfig) => ({
 			'@tanstack/react-router',
 			'@tanstack/react-query',
 			'@tanstack/react-store',
-			'@tanstack/query-db-collection'
+			'@tanstack/query-db-collection',
+			'@tanstack/query-core'
 		]
 	}
 }))
