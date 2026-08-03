@@ -1,4 +1,4 @@
-import { createHandler, createLocalAPI } from '@baseconfig/core/api'
+import { createHandler } from '@baseconfig/core/api'
 import { contentdb } from '@db/db'
 import { auth } from './auth/auth'
 import { env } from './lib/envs'
