@@ -10,8 +10,12 @@
 
 export { baseConfig, defineCollection, defineGlobal } from './define'
 export type {
+	Access,
+	AccessArgs,
+	AccessUser,
 	AdminSettings,
 	BaseConfigProps,
+	CollectionAccess,
 	CollectionFieldsProps,
 	CollectionHooks,
 	GeneratedCollectionDoc,
@@ -20,8 +24,10 @@ export type {
 	GeneratedGlobalDoc,
 	GeneratedGlobalSlug,
 	GeneratedGlobalTypes,
+	GlobalAccess,
 	HookContext,
-	Plugin
+	Plugin,
+	ReadAccess
 } from './base.types'
 export type { FieldConfig, TabConfig } from './fields/types'
 export type {
@@ -96,4 +102,4 @@ export type {
 	EndpointFactory,
 	EndpointFactoryBindings
 } from './api/content-route'
-export { collectHooks } from './collections/registry'
+export { collectAccess, collectHooks } from './collections/registry'

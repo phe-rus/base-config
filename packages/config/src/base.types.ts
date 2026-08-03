@@ -4,6 +4,7 @@ import type { z } from 'zod'
 import type { BlockConfig } from './collections/blocks/shared/types'
 import type { BetterAuthAdminClient } from './db/collections'
 import type { EndpointFactory } from './api/content-route'
+import type { WhereCondition } from './db/content-queries'
 import type { FieldConfig, TabConfig } from './fields/types'
 
 // `@baseconfig/core`'s own root shape, independent of any one consumer's actual
@@ -61,6 +62,89 @@ export type CollectionHooks = {
 		doc: Record<string, unknown>,
 		ctx: HookContext
 	) => void | Promise<void>
+}
+
+/**
+ * The one piece of a real request an access function gets to see, modeled on
+ * Payload's own `AccessArgs<T>` (https://payloadcms.com/docs/access-control/overview):
+ * `req.user` is whatever `session.user` the caller had (or `undefined` for an
+ * anonymous request/an in-process Local API call with no `user` passed),
+ * `id`/`data` are only present for a single-document operation (update/delete
+ * by id, or a create/update's incoming body), never for a list read. Kept
+ * generic over `TUser` rather than hardcoding this package's own
+ * `{role?: string | null}` shape, the same way `CollectionHooks`' own
+ * `data`/`doc` params stay a plain `Record<string, unknown>`, since this
+ * package has no opinion on what a consumer's real user object looks like
+ * beyond the one field (`role`) it already reads today.
+ */
+export type AccessArgs<TUser = AccessUser> = {
+	req: { user?: TUser | null }
+	id?: string
+	data?: Record<string, unknown>
+}
+
+/** The default shape this package's own access checks are written against: whatever `session.user.role` already is today (`'admin' | 'user' | null`, see `content-route.ts`'s former `SessionLike`), left open to extra consumer-added fields via the index signature rather than closed to exactly this. */
+export type AccessUser = { role?: string | null } & Record<string, unknown>
+
+/**
+ * Modeled on Payload's own `Access<T>` type
+ * (https://payloadcms.com/docs/access-control/overview): a function run per
+ * operation, per collection/global, returning whether it's allowed.
+ * Boolean-only here (`create`/`update`/`delete`/`admin`), unlike `ReadAccess`
+ * below: none of the canonical examples this was modeled on (`anyone`,
+ * `authenticated`) narrow *which* rows a write applies to, only whether it's
+ * allowed at all. Row-level write scoping (Payload's own write-side `Where`
+ * return, e.g. "can only update rows you own") would need re-fetching the
+ * existing row and checking it against a returned `Where`, a separate,
+ * bigger piece not built here.
+ */
+export type Access<TUser = AccessUser> = (
+	args: AccessArgs<TUser>
+) => boolean | Promise<boolean>
+
+/**
+ * Same idea as `Access`, for `read` alone: a `read` access function can also
+ * return a `WhereCondition` (see `db/content-queries.ts`'s own doc comment
+ * for why that type is deliberately narrow, status/slug equality only) to
+ * scope *which* documents are visible rather than an all-or-nothing boolean,
+ * Payload's own `authenticatedOrPublished` pattern
+ * (https://payloadcms.com/docs/access-control/overview#authenticatedorpublished):
+ * a logged-in user sees everything, an anonymous one is scoped down to
+ * `{status: {equals: 'published'}}`. `content-route.ts` passes this straight
+ * through as `ReadOptions['accessWhere']`.
+ */
+export type ReadAccess<TUser = AccessUser> = (
+	args: AccessArgs<TUser>
+) => boolean | WhereCondition | Promise<boolean | WhereCondition>
+
+/**
+ * A collection's own access control, modeled on Payload's collection-level
+ * `access` (https://payloadcms.com/docs/access-control/collections):
+ * `admin`/`create`/`read`/`update`/`delete`, each independently optional.
+ * **Unset means open, not denied**: matches Payload's own documented
+ * default (an operation with no `access` function allows everyone), not a
+ * "safe by default, deny unless configured" choice, deliberately, since a
+ * consumer is expected to state real access (`authenticated`, etc.) on every
+ * collection that needs it, the same way Payload's own generated templates
+ * always do, rather than this package guessing a default that's wrong for
+ * half of them either way. `content-route.ts` is the one place these
+ * actually get called; a Local API call (`api/local-api.ts`) can bypass this
+ * entirely via `overrideAccess`, mirroring Payload's own Local API default.
+ */
+export type CollectionAccess<TUser = AccessUser> = {
+	/** Whether this collection is usable from the admin UI at all for this user. Declared for parity; not yet enforced anywhere (the admin panel's own session guard is a separate, coarser, already-existing gate, see `admin/CLAUDE.md`). */
+	admin?: Access<TUser>
+	create?: Access<TUser>
+	read?: ReadAccess<TUser>
+	update?: Access<TUser>
+	delete?: Access<TUser>
+}
+
+/** Same idea as `CollectionAccess`, for a global: no `create`/`delete`, a global's own table always has exactly one row (see `content-queries.ts`'s `upsertGlobal`). */
+export type GlobalAccess<TUser = AccessUser> = {
+	admin?: Access<TUser>
+	read?: ReadAccess<TUser>
+	update?: Access<TUser>
 }
 
 /**
@@ -303,6 +387,8 @@ export type CollectionConfig<TSlug extends string = string> =
 		 * columns to show/edit `name` directly instead of a synthetic title.
 		 */
 		admin?: { useAsTitle?: string }
+		/** Pure, isomorphic-safe per-operation access control, see `CollectionAccess`'s own doc comment. Omit for open (every operation allowed to everyone), same as Payload's own default. */
+		access?: CollectionAccess
 	}
 
 /**
@@ -370,4 +456,6 @@ export type GlobalConfig<TSlug extends string = string> = BaseConfig<TSlug> & {
 	 * in that case.
 	 */
 	fields?: FieldConfig<string, string>[]
+	/** Same idea as `CollectionConfig['access']`, see `GlobalAccess`'s own doc comment for what's different for a global. */
+	access?: GlobalAccess
 }

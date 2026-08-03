@@ -1,7 +1,11 @@
 import { Hono } from 'hono'
 import type { MiddlewareHandler } from 'hono'
 import { getAdminConfig } from '../admin/functions/config-registry'
-import { collectEndpointFactories, collectHooks } from '../collections/registry'
+import {
+	collectAccess,
+	collectEndpointFactories,
+	collectHooks
+} from '../collections/registry'
 import { createIgnite } from './ignite'
 import { createBaseConfigRoute } from './route'
 import type { BaseConfigRouteBindings } from './route'
@@ -96,6 +100,8 @@ export type CreateHandlerOptions = {
 	cors?: (origin: string) => string
 	/** See `ContentRouteBindings['hooks']`'s own doc comment (`content-route.ts`): Tier-2, binding-capable hooks, merged with the isomorphic Tier-1 map every registered collection/global already contributed. */
 	hooks?: BaseConfigRouteBindings['hooks']
+	/** Same idea as `hooks` above, for access control: Tier-2 override merged with `collectAccess()`'s own Tier-1 map. A slug present in both wins entirely from this param, same disclosed per-slug (not per-operation) merge behavior `hooks` already has. */
+	access?: BaseConfigRouteBindings['access']
 	/** See `ContentEndpoint`'s own doc comment (`content-route.ts`): Tier-2 endpoints, merged with whatever every registered plugin's own `EndpointFactory` already contributed. */
 	endpoints?: BaseConfigRouteBindings['endpoints']
 	requestTimeoutMs?: number
@@ -122,13 +128,14 @@ export type CreateHandlerOptions = {
  * deployment's own CORS/origin policy, e.g. which domains are allowed,
  * that this package has no way to know on its own).
  *
- * **Merges `hooks` with `collectHooks()`'s own Tier-1 map** (`collections/registry.ts`)
- * before passing either down: a plain shallow merge, per-slug; if the same
- * slug has hooks from both tiers, the Tier-2 entry passed here wins
- * *entirely* for that slug (not a per-hook-function merge), a real,
- * disclosed limitation, not a hidden one; a slug needing both a pure
- * config-level hook and a binding-capable one should just define both
- * inside the one Tier-2 entry instead of splitting them.
+ * **Merges `hooks`/`access` with `collectHooks()`/`collectAccess()`'s own
+ * Tier-1 maps** (`collections/registry.ts`) before passing either down: a
+ * plain shallow merge, per-slug; if the same slug has hooks or access from
+ * both tiers, the Tier-2 entry passed here wins *entirely* for that slug
+ * (not a per-hook-function/per-operation merge), a real, disclosed
+ * limitation, not a hidden one; a slug needing both a pure config-level
+ * hook/access rule and a binding-capable one should just define both inside
+ * the one Tier-2 entry instead of splitting them.
  *
  * **Also invokes every registered `EndpointFactory`** (`collectEndpointFactories()`,
  * `collections/registry.ts`) with `{db}`, merging the results with the
@@ -151,6 +158,7 @@ export function createHandler({
 	bindings,
 	cors,
 	hooks,
+	access,
 	endpoints,
 	requestTimeoutMs,
 	etag
@@ -168,6 +176,7 @@ export function createHandler({
 	}
 
 	const mergedHooks = { ...collectHooks(), ...hooks }
+	const mergedAccess = { ...collectAccess(), ...access }
 	const factoryEndpoints = collectEndpointFactories().flatMap((factory) =>
 		factory({ db })
 	)
@@ -190,6 +199,7 @@ export function createHandler({
 					bucket: bindings.r2,
 					cache: bindings.kv,
 					hooks: mergedHooks,
+					access: mergedAccess,
 					endpoints: mergedEndpoints
 				})
 			)

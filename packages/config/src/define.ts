@@ -33,8 +33,10 @@ import {
 } from './collections/types'
 import type {
 	BaseConfigProps,
+	CollectionAccess,
 	CollectionConfig as BaseCollectionConfig,
 	CollectionHooks,
+	GlobalAccess,
 	GlobalConfig as BaseGlobalConfig
 } from './base.types'
 import type { FieldConfig, TabConfig } from './fields/types'
@@ -140,6 +142,8 @@ type CollectionDefinition<TSlug extends string> = {
 	tabs: TabConfig<string, string>[]
 	/** Pure, isomorphic-safe lifecycle hooks, see `CollectionHooks`' own doc comment (`base.types.ts`). */
 	hooks?: CollectionHooks
+	/** Pure, isomorphic-safe per-operation access control, see `CollectionAccess`'s own doc comment (`base.types.ts`). Omit for open (every operation allowed to everyone). */
+	access?: CollectionAccess
 }
 
 /**
@@ -173,6 +177,7 @@ export function defineCollection<TSlug extends string = CollectionSlug>(
 		filterKey: definition.filterKey,
 		color: definition.color,
 		hooks: definition.hooks,
+		access: definition.access,
 		schema: tabsToSchema(definition.tabs, schemaResolvers),
 		defaultValues: () => deriveDefaultValues(flattenTabFields(definition.tabs)),
 		Fields: createFieldsRenderer(
@@ -191,6 +196,8 @@ type GlobalDefinition<TSlug extends string> =
 			fields: FieldConfig<string, string>[]
 			component?: never
 			hooks?: CollectionHooks
+			/** Pure, isomorphic-safe per-operation access control, see `GlobalAccess`'s own doc comment (`base.types.ts`). Omit for open. */
+			access?: GlobalAccess
 	  }
 	| {
 			slug: TSlug
@@ -206,6 +213,8 @@ type GlobalDefinition<TSlug extends string> =
 			component: FC<any>
 			fields?: never
 			hooks?: never
+			/** Not meaningful here: a `custom: true` global has no `content-route.ts` endpoint at all (same reason `hooks` is forbidden above it), nothing to gate. */
+			access?: never
 	  }
 
 /**
@@ -234,6 +243,7 @@ export function defineGlobal<TSlug extends string = GlobalSlug>(
 		label: definition.label ?? labelFromSlug(definition.slug),
 		fields: definition.fields,
 		hooks: definition.hooks,
+		access: definition.access,
 		schema: fieldsToSchema(definition.fields, schemaResolvers),
 		defaultValues: () => deriveDefaultValues(definition.fields),
 		Fields: createFlatFieldsRenderer(

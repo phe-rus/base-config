@@ -107,13 +107,14 @@ All running from the same Cloudflare Worker.
 - [x] Project-scaffolding CLI (`@baseconfig/cli`), with two reference templates (`basics`, a minimal end-to-end app; `pharmacy`, a fuller e-commerce-style example)
 - [x] Generated per-collection/global TypeScript types (`base.types.ts`), giving `base.find`/`findByID`/`findGlobal` full type safety
 - [x] Field pruning: reconciles stored data against the current schema, dropping anything left over from a renamed/removed field (an explicit admin "Prune" action, plus automatic reconciliation of local drafts)
+- [x] Collection/global-level access control (Payload-style `access: {create, read, update, delete}` functions per collection, `{read, update}` per global; unset means open, matching Payload's own default)
+- [x] Local API parity: `createLocalAPI()` (`@baseconfig/core/api`), an in-process `find`/`findByID`/`create`/`update`/`delete`/`prune`/`findGlobal`/`updateGlobal`/`pruneGlobal` client for server functions/loaders in the same Worker, no HTTP round-trip, `overrideAccess` defaulting to trusted (matching Payload's own Local API)
 - [ ] `join` field (virtual, reverse-relationship queries)
 - [ ] Field-level `unique`/`index` (blocked on every field currently living in one opaque `data` JSON column rather than its own SQL column)
 - [ ] Field-level conditional visibility (show/hide a field based on a sibling field's value)
 - [ ] `virtual` fields (computed, not stored)
-- [ ] Field-level `validate`/`hooks`/`access`
+- [ ] Field-level `validate`/`hooks`/`access` (collection/global-level access is done, see above; field-level is a distinct, still-open piece)
 - [ ] A sidebar layout option for the document editor
-- [ ] Local API parity for consumer-side server code (in-process content queries with no HTTP round-trip, for use from server functions/loaders)
 
 <div align="center">
   <h2 style="margin-top: 50px; margin-bottom: 15px; font-weight: 500;">Technologies we use & love</h2>

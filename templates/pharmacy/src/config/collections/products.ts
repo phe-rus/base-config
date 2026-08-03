@@ -1,8 +1,16 @@
 import type { CollectionConfig } from '@baseconfig/core/collections/types'
 import { defineCollection } from '@baseconfig/core'
+import { authenticated } from '../access/authenticated'
+import { authenticatedOrPublished } from '../access/authenticatedOrPublished'
 
 export const products: CollectionConfig = defineCollection({
 	slug: 'products',
+	access: {
+		create: authenticated,
+		read: authenticatedOrPublished,
+		update: authenticated,
+		delete: authenticated
+	},
 	tabs: [
 		{
 			tab: 'product',

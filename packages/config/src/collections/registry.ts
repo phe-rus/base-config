@@ -1,6 +1,8 @@
 import type {
+	CollectionAccess,
 	CollectionConfig as BaseCollectionConfig,
 	CollectionHooks,
+	GlobalAccess,
 	GlobalConfig as BaseGlobalConfig
 } from '../base.types'
 import type { EndpointFactory } from '../api/content-route'
@@ -80,6 +82,29 @@ export function collectHooks(): Record<string, CollectionHooks> {
 		if (global.hooks) hooks[global.slug] = global.hooks
 	}
 	return hooks
+}
+
+/**
+ * Same bridge as `collectHooks()` above, for `access` instead: safe for the
+ * identical reason (`CollectionAccess`/`GlobalAccess` must stay pure/
+ * binding-free, see their own doc comments, `base.types.ts`). Both
+ * `content-route.ts` (per real HTTP request) and `api/local-api.ts`'s
+ * `createLocalAPI()` (per in-process call, unless `overrideAccess` skips it
+ * entirely) read this same map, so a collection's access rules can't drift
+ * between the two entry points.
+ */
+export function collectAccess(): Record<
+	string,
+	CollectionAccess | GlobalAccess
+> {
+	const access: Record<string, CollectionAccess | GlobalAccess> = {}
+	for (const collection of Object.values(collectionsBySlug)) {
+		if (collection.access) access[collection.slug] = collection.access
+	}
+	for (const global of Object.values(globalsBySlug)) {
+		if (global.access) access[global.slug] = global.access
+	}
+	return access
 }
 
 const endpointFactories: EndpointFactory[] = []

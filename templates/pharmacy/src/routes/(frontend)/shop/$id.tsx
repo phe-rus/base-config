@@ -44,7 +44,7 @@ function RouteComponent() {
 			<div
 				className={cn(
 					'flex items-center gap-px leading-tight',
-					'text-sm! lowercase'
+					'text-sm! lowercase font-light!'
 				)}
 			>
 				{arr.map((s, i) => {

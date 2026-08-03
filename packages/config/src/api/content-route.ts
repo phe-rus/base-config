@@ -1,24 +1,33 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
-import type { Context, MiddlewareHandler } from 'hono'
+import type { Context } from 'hono'
 import { z } from 'zod'
-import type { CollectionHooks, HookContext } from '../base.types'
+import type {
+	AccessUser,
+	CollectionAccess,
+	CollectionHooks,
+	GlobalAccess
+} from '../base.types'
 import {
-	createDocument,
-	deleteDocument,
+	AccessDeniedError,
+	performCreate,
+	performDelete,
+	performPrune,
+	performPruneGlobal,
+	performUpdate,
+	performUpsertGlobal,
+	resolveAccess
+} from '../db/content-operations'
+import {
 	getDocument,
 	getGlobal,
 	listDocuments,
 	listGlobalSlugs,
-	pruneDocument,
-	pruneGlobal,
-	UnknownTableError,
-	updateDocument,
-	upsertGlobal
+	UnknownTableError
 } from '../db/content-queries'
 import type { ContentDatabase } from '../db/content-queries'
 
-type SessionLike = { user: { role?: string | null } }
+type SessionLike = { user: AccessUser }
 
 type ContentRouteEnv = { Variables: { session?: SessionLike } }
 
@@ -112,11 +121,15 @@ export type ContentRouteBindings = {
 	db: ContentDatabase
 	/**
 	 * Optional public-read cache, omit for no caching at all (every read
-	 * goes straight to D1). Only ever consulted/populated for genuinely
-	 * public reads (`publishedOnly` document reads, and every global read;
-	 * globals have no draft/published concept at all); an authenticated
-	 * admin request always bypasses it, since admins need to see drafts. A
-	 * cache-aside pattern, not "populate on publish": every write
+	 * goes straight to D1). Only ever consulted/populated for a genuinely
+	 * scoped document read (`access.read` returned a `WhereCondition`, not a
+	 * plain `true`, see `resolveAccess()`'s own doc comment), and every
+	 * global read (globals have no draft/published concept at all); a
+	 * request whose `access.read` resolved to `true` (sees everything,
+	 * potentially drafts included) always bypasses it, caching that response
+	 * under a key with no per-session component would leak it to the next,
+	 * less-privileged request hitting the same key. A cache-aside pattern,
+	 * not "populate on publish": every write
 	 * (`PATCH`/`DELETE`) just invalidates the relevant key(s), and the next
 	 * public read repopulates it, simpler and harder to get subtly wrong
 	 * than trying to compute what a fresh read *would* return at write
@@ -140,6 +153,16 @@ export type ContentRouteBindings = {
 	 * `CollectionHooks`' own doc comment for what a hook may/may not do.
 	 */
 	hooks?: Record<string, CollectionHooks>
+	/**
+	 * Per-collection/global access control, keyed by slug, same Tier-1/Tier-2
+	 * merge shape as `hooks` above: `createHandler()` builds this by merging
+	 * `collectAccess()` (`collections/registry.ts`) with its own Tier-2
+	 * `access` param before ever reaching here. See `CollectionAccess`'/
+	 * `GlobalAccess`'s own doc comments (`base.types.ts`) for what a slug
+	 * with no entry here means (open, not denied) and what each operation
+	 * gets checked against.
+	 */
+	access?: Record<string, CollectionAccess | GlobalAccess>
 	/** See `ContentEndpoint`'s own doc comment. */
 	endpoints?: ContentEndpoint[]
 }
@@ -187,9 +210,9 @@ const upsertGlobalSchema = z.record(z.string(), z.unknown())
  * this route consulting `collectionsBySlug`/`globalsBySlug` itself:
  * deliberately keeps this route registry-free (see its own doc comment, and
  * `listGlobalSlugs`' doc comment in `content-queries.ts` for the real dev-mode
- * SSR race a registry-based check here would reopen), and Prune is already
- * an authenticated, admin-only, deliberately destructive action, the same
- * trust boundary a hand-edited `update` PATCH already crosses. `.min(1)`
+ * SSR race a registry-based check here would reopen), and Prune is gated by
+ * the same `access.update` check a hand-edited `update` PATCH already
+ * crosses, a deliberately destructive action, not a lesser trust boundary. `.min(1)`
  * guards against ever writing an *empty* allowlist (which would prune every
  * field, not just orphaned ones) from a client bug or a genuinely-empty
  * config, either way not something this route should silently allow.
@@ -229,10 +252,6 @@ const listQuerySchema = z.object({
 	page: z.coerce.number().int().positive().optional()
 })
 
-function isAdmin(session: SessionLike | undefined): boolean {
-	return Boolean(session && session.user.role === 'admin')
-}
-
 /**
  * Content CRUD, factored out as a plain Hono app rather than something a
  * consumer hand-writes: `createBaseConfigRoute()` mounts this at the
@@ -267,12 +286,22 @@ function isAdmin(session: SessionLike | undefined): boolean {
  * of `.get()`/`.post()`/etc, see `www/src/lib/route.ts`'s own doc comment
  * for why this matters for a consumer's typed RPC client.
  *
- * **Reads are public, writes are admin-only.** Matches how real REST CMS
- * APIs (e.g. Payload's) work: `find`/`findByID` are open by default,
- * mutations aren't. An authenticated admin session sees drafts too (needed
- * to edit them before publishing); anyone else only ever sees
- * `status: 'published'` documents. Globals have no draft/published concept
- * (no `status` column): `GET` on them is unconditionally public.
+ * **Every operation is gated by that collection/global's own `access`
+ * config** (`ContentRouteBindings['access']`, `CollectionAccess`/
+ * `GlobalAccess` in `base.types.ts`), Payload's own per-collection access
+ * model: `create`/`read`/`update`/`delete` each independently optional, and
+ * **unset means open, not denied**, matching Payload's own documented
+ * default. A collection with no `access` config at all is fully open, reads
+ * and writes both; a consumer states real access (`authenticated`,
+ * `authenticatedOrPublished`, etc, see `templates/basics`' own
+ * `src/config/access/*.ts` for the canonical examples) on whichever
+ * collections need it, the same way Payload's own generated templates
+ * always do. `read` alone can also return a `WhereCondition` instead of a
+ * plain boolean, to scope *which* documents are visible (e.g.
+ * `authenticatedOrPublished`'s `{status: {equals: 'published'}}` for an
+ * anonymous request) rather than an all-or-nothing allow/deny, see
+ * `ReadAccess`'s own doc comment. `resolveAccess()` above is what every
+ * route below actually calls.
  *
  * **`cache` (optional) fronts single-document/single-global public reads,
  * by `id` or by `slug`, plus the aggregate globals list**, see
@@ -293,13 +322,9 @@ export function createContentRoute({
 	db,
 	cache,
 	hooks,
+	access,
 	endpoints
 }: ContentRouteBindings) {
-	const adminOnly: MiddlewareHandler<ContentRouteEnv> = async (c, next) => {
-		if (!isAdmin(c.get('session'))) return c.text('Unauthorized', 401)
-		await next()
-	}
-
 	/**
 	 * Shared by both globals routes below (`GET /globals` and
 	 * `GET /globals/:slug`) so the aggregate list route benefits from the
@@ -332,6 +357,9 @@ export function createContentRoute({
 			if (error instanceof UnknownTableError) {
 				return c.json({ error: 'Not found' }, 404)
 			}
+			if (error instanceof AccessDeniedError) {
+				return c.text('Unauthorized', 401)
+			}
 			console.error(error)
 			return c.json({ error: 'Internal Server Error' }, 500)
 		})
@@ -339,9 +367,15 @@ export function createContentRoute({
 
 	const app = withEndpoints
 		.get('/globals', async (c) => {
+			const user = c.get('session')?.user
 			const slugs = await listGlobalSlugs(db)
 			const rows = await Promise.all(
 				slugs.map(async (slug) => {
+					const globalAccess = access?.[slug] as GlobalAccess | undefined
+					const allowed = await resolveAccess(globalAccess?.read, {
+						req: { user }
+					})
+					if (allowed === false) return null
 					const cached = await getCachedGlobal(slug)
 					return {
 						slug,
@@ -350,39 +384,52 @@ export function createContentRoute({
 					}
 				})
 			)
-			return c.json(rows)
+			return c.json(
+				rows.filter((row): row is NonNullable<typeof row> => row !== null)
+			)
 		})
 		.get('/globals/:slug', async (c) => {
 			const slug = c.req.param('slug')
+			const globalAccess = access?.[slug] as GlobalAccess | undefined
+			const allowed = await resolveAccess(globalAccess?.read, {
+				req: { user: c.get('session')?.user }
+			})
+			if (allowed === false) return c.json({ error: 'Not found' }, 404)
 			return c.json(await getCachedGlobal(slug))
 		})
 		.patch(
 			'/globals/:slug',
-			adminOnly,
 			zValidator('json', upsertGlobalSchema),
 			async (c) => {
 				const slug = c.req.param('slug')
-				const globalHooks = hooks?.[slug]
-				const ctx: HookContext = { slug, operation: 'update' }
-				let fields = c.req.valid('json')
-				if (globalHooks?.beforeChange) {
-					fields = await globalHooks.beforeChange(fields, ctx)
-				}
-				const row = await upsertGlobal(db, slug, fields)
+				const globalAccess = access?.[slug] as GlobalAccess | undefined
+				const fields = c.req.valid('json')
+				const row = await performUpsertGlobal(db, slug, fields, globalAccess, {
+					hooks: hooks?.[slug],
+					user: c.get('session')?.user,
+					overrideAccess: false
+				})
 				if (cache) await cache.delete(globalCacheKey(slug))
-				const result = { slug, ...row }
-				if (globalHooks?.afterChange) await globalHooks.afterChange(result, ctx)
-				return c.json(result)
+				return c.json({ slug, ...row })
 			}
 		)
 		.post(
 			'/globals/:slug/prune',
-			adminOnly,
 			zValidator('json', pruneSchema),
 			async (c) => {
 				const slug = c.req.param('slug')
+				const globalAccess = access?.[slug] as GlobalAccess | undefined
 				const { knownPaths } = c.req.valid('json')
-				const row = await pruneGlobal(db, slug, knownPaths)
+				const row = await performPruneGlobal(
+					db,
+					slug,
+					knownPaths,
+					globalAccess,
+					{
+						user: c.get('session')?.user,
+						overrideAccess: false
+					}
+				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
 				if (cache) await cache.delete(globalCacheKey(slug))
 				return c.json({ slug, ...row })
@@ -390,7 +437,24 @@ export function createContentRoute({
 		)
 		.get('/:collection', zValidator('query', listQuerySchema), async (c) => {
 			const collection = c.req.param('collection')
-			const publishedOnly = !isAdmin(c.get('session'))
+			const collectionAccess = access?.[collection] as
+				| CollectionAccess
+				| undefined
+			const readResult = await resolveAccess(collectionAccess?.read, {
+				req: { user: c.get('session')?.user }
+			})
+			if (readResult === false) {
+				return c.json({
+					docs: [],
+					totalDocs: 0,
+					limit: 0,
+					page: 1,
+					totalPages: 1,
+					hasNextPage: false,
+					hasPrevPage: false
+				})
+			}
+			const accessWhere = readResult === true ? undefined : readResult
 			const { where, limit, page } = c.req.valid('query')
 
 			// The one list shape a public page-by-slug lookup actually makes
@@ -398,10 +462,12 @@ export function createContentRoute({
 			// a public URL resolves to a document by slug, never by id, so
 			// this is the query that actually needs caching for a page to load
 			// fast; a plain unfiltered/paginated list has no single cache key
-			// the way one slug lookup does, so it stays uncached.
+			// the way one slug lookup does, so it stays uncached. Only a
+			// genuinely scoped (non-`true`) read is ever cacheable, see
+			// `ContentRouteBindings['cache']`'s own doc comment.
 			const slug = where?.slug?.equals
 			const cacheableSlugLookup =
-				cache && publishedOnly && slug && !where?.status && !limit && !page
+				cache && accessWhere && slug && !where?.status && !limit && !page
 
 			if (cacheableSlugLookup) {
 				const cached = await cache.get(slugCacheKey(collection, slug))
@@ -409,8 +475,8 @@ export function createContentRoute({
 			}
 
 			const result = await listDocuments(db, collection, {
-				publishedOnly,
 				where,
+				accessWhere,
 				limit,
 				page
 			})
@@ -427,52 +493,62 @@ export function createContentRoute({
 		})
 		.get('/:collection/:id', async (c) => {
 			const { collection, id } = c.req.param()
-			const publishedOnly = !isAdmin(c.get('session'))
-			// Only the genuinely public path ever touches the cache: an admin
-			// request needs to see drafts, which this cache never stores.
-			if (cache && publishedOnly) {
+			const collectionAccess = access?.[collection] as
+				| CollectionAccess
+				| undefined
+			const readResult = await resolveAccess(collectionAccess?.read, {
+				req: { user: c.get('session')?.user },
+				id
+			})
+			if (readResult === false) return c.json({ error: 'Not found' }, 404)
+			const accessWhere = readResult === true ? undefined : readResult
+
+			// Only a genuinely scoped (non-`true`) read ever touches the cache:
+			// a `true` result can see everything, including drafts, and this
+			// cache has no per-session key component to safely store that under.
+			if (cache && accessWhere) {
 				const cached = await cache.get(documentCacheKey(collection, id))
 				if (cached) return c.json(JSON.parse(cached))
 			}
-			const row = await getDocument(db, collection, id, { publishedOnly })
+			const row = await getDocument(db, collection, id, { accessWhere })
 			if (!row) return c.json({ error: 'Not found' }, 404)
-			if (cache && publishedOnly) {
+			if (cache && accessWhere) {
 				await cache.put(documentCacheKey(collection, id), JSON.stringify(row))
 			}
 			return c.json(row)
 		})
 		.post(
 			'/:collection',
-			adminOnly,
 			zValidator('json', createDocumentSchema),
 			async (c) => {
 				const collection = c.req.param('collection')
-				const collectionHooks = hooks?.[collection]
-				const ctx: HookContext = { slug: collection, operation: 'create' }
+				const collectionAccess = access?.[collection] as
+					| CollectionAccess
+					| undefined
 				const body = c.req.valid('json')
-				const data = collectionHooks?.beforeChange
-					? await collectionHooks.beforeChange(body.data, ctx)
-					: body.data
-				const row = await createDocument(db, collection, { ...body, data })
-				if (collectionHooks?.afterChange) {
-					await collectionHooks.afterChange(row, ctx)
-				}
+				const row = await performCreate(
+					db,
+					collection,
+					body,
+					collectionAccess,
+					{
+						hooks: hooks?.[collection],
+						user: c.get('session')?.user,
+						overrideAccess: false
+					}
+				)
 				return c.json(row, 201)
 			}
 		)
 		.patch(
 			'/:collection/:id',
-			adminOnly,
 			zValidator('json', updateDocumentSchema),
 			async (c) => {
 				const { collection, id } = c.req.param()
-				const collectionHooks = hooks?.[collection]
-				const ctx: HookContext = { slug: collection, operation: 'update' }
+				const collectionAccess = access?.[collection] as
+					| CollectionAccess
+					| undefined
 				const body = c.req.valid('json')
-				const fields =
-					collectionHooks?.beforeChange && body.fields
-						? await collectionHooks.beforeChange(body.fields, ctx)
-						: body.fields
 
 				// Read the slug this document had *before* the write, in case
 				// this update renames it: a slug change needs its old cache
@@ -482,10 +558,18 @@ export function createContentRoute({
 					? await getDocument(db, collection, id)
 					: undefined
 
-				const row = await updateDocument(db, collection, id, {
-					...body,
-					fields
-				})
+				const row = await performUpdate(
+					db,
+					collection,
+					id,
+					body,
+					collectionAccess,
+					{
+						hooks: hooks?.[collection],
+						user: c.get('session')?.user,
+						overrideAccess: false
+					}
+				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
 				// Invalidate rather than recompute-and-repopulate here: covers
 				// publish, unpublish, and a plain draft edit alike (the next
@@ -500,25 +584,34 @@ export function createContentRoute({
 						await cache.delete(slugCacheKey(collection, row.slug))
 					}
 				}
-				if (collectionHooks?.afterChange) {
-					await collectionHooks.afterChange(row, ctx)
-				}
 				return c.json(row)
 			}
 		)
 		.post(
 			'/:collection/:id/prune',
-			adminOnly,
 			zValidator('json', pruneSchema),
 			async (c) => {
 				const { collection, id } = c.req.param()
+				const collectionAccess = access?.[collection] as
+					| CollectionAccess
+					| undefined
 				const { knownPaths } = c.req.valid('json')
 
 				const existing = cache
 					? await getDocument(db, collection, id)
 					: undefined
 
-				const row = await pruneDocument(db, collection, id, knownPaths)
+				const row = await performPrune(
+					db,
+					collection,
+					id,
+					knownPaths,
+					collectionAccess,
+					{
+						user: c.get('session')?.user,
+						overrideAccess: false
+					}
+				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
 
 				if (cache) {
@@ -530,12 +623,19 @@ export function createContentRoute({
 				return c.json(row)
 			}
 		)
-		.delete('/:collection/:id', adminOnly, async (c) => {
+		.delete('/:collection/:id', async (c) => {
 			const { collection, id } = c.req.param()
+			const collectionAccess = access?.[collection] as
+				| CollectionAccess
+				| undefined
+
 			// Same reasoning as the PATCH handler above: read the slug before
 			// deleting, since there's nothing left to read it from afterward.
 			const existing = cache ? await getDocument(db, collection, id) : undefined
-			await deleteDocument(db, collection, id)
+			await performDelete(db, collection, id, collectionAccess, {
+				user: c.get('session')?.user,
+				overrideAccess: false
+			})
 			if (cache) {
 				await cache.delete(documentCacheKey(collection, id))
 				if (existing?.slug) {

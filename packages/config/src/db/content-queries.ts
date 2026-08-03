@@ -74,6 +74,16 @@ export type ReadOptions = {
 	publishedOnly?: boolean
 	/** Top-level column filters only, see `WhereCondition`'s own doc comment. */
 	where?: WhereCondition
+	/**
+	 * A `read` access function's own returned scoping (`base.types.ts`'s
+	 * `ReadAccess`, e.g. `authenticatedOrPublished`'s `{status: {equals:
+	 * 'published'}}` for an anonymous caller), kept as a separate field from
+	 * `where` rather than merged into it: both get AND'd into the same
+	 * conditions list below, so an access-required `status: 'published'`
+	 * alongside a caller-requested `status: 'draft'` correctly yields zero
+	 * rows instead of one silently overwriting the other.
+	 */
+	accessWhere?: WhereCondition
 	/** Omit to fetch every matching row unpaginated (what every internal caller, e.g. `createContentCollection`'s local mirror, wants), only set this from a real paginated caller like `base.find()`. */
 	limit?: number
 	/** 1-indexed, same convention as Payload's own `find()`. Ignored unless `limit` is also set. */
@@ -236,6 +246,12 @@ export async function listDocuments(
 	if (options?.where?.slug) {
 		conditions.push(sql`slug = ${options.where.slug.equals}`)
 	}
+	if (options?.accessWhere?.status) {
+		conditions.push(sql`status = ${options.accessWhere.status.equals}`)
+	}
+	if (options?.accessWhere?.slug) {
+		conditions.push(sql`slug = ${options.accessWhere.slug.equals}`)
+	}
 	const whereSql =
 		conditions.length > 0
 			? sql` WHERE ${sql.join(conditions, sql` AND `)}`
@@ -280,6 +296,18 @@ export async function getDocument(
 	const table = sql.raw(quoteIdent(contentTableName(collection)))
 	const conditions: SQL[] = [sql`id = ${id}`]
 	if (options?.publishedOnly) conditions.push(sql`status = 'published'`)
+	if (options?.where?.status) {
+		conditions.push(sql`status = ${options.where.status.equals}`)
+	}
+	if (options?.where?.slug) {
+		conditions.push(sql`slug = ${options.where.slug.equals}`)
+	}
+	if (options?.accessWhere?.status) {
+		conditions.push(sql`status = ${options.accessWhere.status.equals}`)
+	}
+	if (options?.accessWhere?.slug) {
+		conditions.push(sql`slug = ${options.accessWhere.slug.equals}`)
+	}
 
 	const row = await dbGet<RawDocumentRow>(
 		db,

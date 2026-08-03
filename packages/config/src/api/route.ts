@@ -1,5 +1,9 @@
 import { Hono } from 'hono'
-import type { CollectionHooks } from '../base.types'
+import type {
+	CollectionAccess,
+	CollectionHooks,
+	GlobalAccess
+} from '../base.types'
 import type { ContentDatabase } from '../db/content-queries'
 import { createContentRoute } from './content-route'
 import type { ContentEndpoint, KVNamespaceLike } from './content-route'
@@ -15,6 +19,8 @@ export type BaseConfigRouteBindings = {
 	cache?: KVNamespaceLike
 	/** See `createContentRoute`'s `ContentRouteBindings['hooks']`. */
 	hooks?: Record<string, CollectionHooks>
+	/** See `createContentRoute`'s `ContentRouteBindings['access']`. */
+	access?: Record<string, CollectionAccess | GlobalAccess>
 	/** See `ContentEndpoint`'s own doc comment (`content-route.ts`). */
 	endpoints?: ContentEndpoint[]
 }
@@ -55,6 +61,7 @@ export function createBaseConfigRoute(bindings: BaseConfigRouteBindings) {
 				db: bindings.db,
 				cache: bindings.cache,
 				hooks: bindings.hooks,
+				access: bindings.access,
 				endpoints: bindings.endpoints
 			})
 		)

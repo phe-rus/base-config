@@ -20,19 +20,13 @@ function RouteComponent() {
 				<p
 					className={cn(
 						'font-mono text-sm border rounded-none p-12',
-						'bg-amber-500/5 text-primary!',
-						'border-black text-center'
+						'bg-olive-500/5 text-primary!',
+						'border-olive text-center'
 					)}
 				>
 					Nullam ornare at augue vel placerat. Duis id turpis non magna
 					pellentesque sodales nec nec lectus. Nullam at velit vel lacus mollis
-					rhoncus id eget neque. Nullam pulvinar pharetra lacus, eget semper ex
-					molestie a.
-					<br />
-					<br />
-					Vestibulum in commodo risus. Duis pretium viverra mauris, ac gravida
-					nisi iaculis nec. Ut nec nulla facilisis, posuere metus vitae,
-					facilisis felis.
+					rhoncus id eget neque.
 				</p>
 			</section>
 
