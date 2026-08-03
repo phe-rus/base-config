@@ -8,9 +8,9 @@ export interface Pages {
 		image?: UploadValue
 		content?: BasiccnContent
 		links?: {
-		label?: string
-		href?: string
-	}[]
+			label?: string
+			href?: string
+		}[]
 	}
 	content?: unknown[]
 	metadata?: MetaValue

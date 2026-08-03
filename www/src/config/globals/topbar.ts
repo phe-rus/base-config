@@ -2,16 +2,16 @@ import type { GlobalConfig } from '@baseconfig/core/collections/types'
 import { defineGlobal } from '@baseconfig/core'
 
 export const topbar: GlobalConfig = defineGlobal({
-    slug: 'topbar',
-    label: 'Top bar',
-    fields: [
-        {
-            name: 'items',
-            type: 'menu',
-            label: 'Navigation items',
-            relationTo: ['pages', 'docs'],
-            description:
-                'Simple links, a single dropdown list, or a full multi-column mega menu.'
-        }
-    ]
+	slug: 'topbar',
+	label: 'Top bar',
+	fields: [
+		{
+			name: 'items',
+			type: 'menu',
+			label: 'Navigation items',
+			relationTo: ['pages', 'docs'],
+			description:
+				'Simple links, a single dropdown list, or a full multi-column mega menu.'
+		}
+	]
 })

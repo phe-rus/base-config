@@ -61,7 +61,9 @@
 			"!**/.db.sqlite",
 			"**/wrangler-configuration.d.ts",
 			"!**/worker-configuration.d.ts",
-			"!**/src/routeTree.gen.ts"
+			"!**/src/routeTree.gen.ts",
+			"!**/db/schemas/content.ts",
+			"!**/src/config/base.types.ts"
 		]
 	},
 	"formatter": {
