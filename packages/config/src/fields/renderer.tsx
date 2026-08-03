@@ -49,7 +49,7 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 	relationship?: FC<{
 		label?: string
 		description?: string
-		targetType?: TCollectionSlug
+		targetType?: TCollectionSlug | TCollectionSlug[]
 		excludeId?: string
 	}>
 	menu?: FC<{
@@ -58,12 +58,14 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 		label?: string
 		description?: string
 		startAsMegaMenu?: boolean
+		relationTo?: TCollectionSlug | TCollectionSlug[]
 	}>
 	links?: FC<{
 		form: any
 		name: string
 		label?: string
 		description?: string
+		relationTo?: TCollectionSlug | TCollectionSlug[]
 	}>
 }
 
@@ -263,6 +265,7 @@ function renderField(
 				label={field.label}
 				description={field.description}
 				startAsMegaMenu={field.startAsMegaMenu}
+				relationTo={field.relationTo}
 			/>
 		) : null
 	}
@@ -276,6 +279,7 @@ function renderField(
 				name={name}
 				label={field.label}
 				description={field.description}
+				relationTo={field.relationTo}
 			/>
 		) : null
 	}
@@ -289,9 +293,7 @@ function renderField(
 					<Relationship
 						label={field.label}
 						description={field.description}
-						targetType={
-							Array.isArray(field.relationTo) ? undefined : field.relationTo
-						}
+						targetType={field.relationTo}
 						excludeId={id}
 					/>
 				)}

@@ -815,22 +815,43 @@ function createUsersCollection() {
 const contentCollectionCache = new Map<string, ContentCollection>()
 
 /**
+ * A stand-in for a slug nothing registered in this consumer app's
+ * `collectionsBySlug` (e.g. a `relationTo`/default target list naming a
+ * collection this particular app doesn't have). Never fetches, just
+ * resolves to zero rows, so a relationship-style field degrades to "no
+ * options from this collection" instead of crashing the whole render.
+ */
+function createEmptyContentCollection() {
+	const { queryClient } = requireContentDataSource()
+	return createCollection(
+		queryCollectionOptions<DocumentRow<Record<string, unknown>>>({
+			queryKey: ['content', 'documents', '__unregistered__'],
+			queryClient,
+			getKey: (item) => item.id,
+			staleTime: Number.POSITIVE_INFINITY,
+			queryFn: async () => []
+		})
+	) as unknown as ContentCollection
+}
+
+/**
  * The plain-`string`-keyed lookup `contentCollections`'s own Proxy uses
  * internally, exported directly (unlike the Proxy, which is typed to this
  * app's own closed `CollectionSlug`) so a plugin package can fetch its own,
  * dynamically-registered collection (e.g. `@baseconfig/plugin-form-builder`'s
  * `forms`) without needing that slug to be a member of a union it doesn't
- * own. Safe for any slug actually present in `collectionsBySlug` at call
- * time (i.e. after `baseConfig()` has registered it), same caching
- * behavior `contentCollections[slug]` already has.
+ * own. Safe for any slug, registered or not (see `createEmptyContentCollection`
+ * above), same caching behavior `contentCollections[slug]` already has.
  */
 export function getContentCollection(slug: string): ContentCollection {
 	let collection = contentCollectionCache.get(slug)
 	if (!collection) {
 		const config = collectionsBySlug[slug as CollectionSlug]
-		collection = config.auth
-			? createUsersCollection()
-			: createContentCollection(slug)
+		collection = !config
+			? createEmptyContentCollection()
+			: config.auth
+				? createUsersCollection()
+				: createContentCollection(slug)
 		contentCollectionCache.set(slug, collection)
 	}
 	return collection

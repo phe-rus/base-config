@@ -2,7 +2,11 @@ import { Button } from '@baseconfig/ui/components/button'
 import { ArrayField } from '@baseconfig/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
 import { collectionsBySlug } from '../../registry'
-import { appearanceValues, collectionPath } from '../../types'
+import {
+	appearanceValues,
+	collectionPath,
+	type CollectionSlug
+} from '../../types'
 import { RelationshipField, type RelationshipValue } from '../Relationship'
 
 const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
@@ -15,6 +19,8 @@ export type LinkModeFieldsProps = {
 	form: any
 	/** The dotted path to this link's own mode/target value (`linkValueSchema` in `../types.ts`), never the label/appearance, which a caller (`LinksField` below, or `NavMenuField`'s own per-item fields) renders separately alongside this. */
 	name: string
+	/** Restrict the "Reference" mode's picker to one or more collections, omit to search every collection this app has registered. Forwarded straight to `RelationshipField`'s own `targetType`. */
+	relationTo?: CollectionSlug | CollectionSlug[]
 }
 
 /**
@@ -27,7 +33,11 @@ export type LinkModeFieldsProps = {
  * appearance fields (`nav-menu-field.tsx`'s `NavItemFields`), this is the
  * one piece shared between both callers.
  */
-export function LinkModeFields({ form, name }: LinkModeFieldsProps) {
+export function LinkModeFields({
+	form,
+	name,
+	relationTo
+}: LinkModeFieldsProps) {
 	return (
 		<form.AppField name={`${name}.mode`}>
 			{(f: any) => (
@@ -49,6 +59,7 @@ export function LinkModeFields({ form, name }: LinkModeFieldsProps) {
 								{() => (
 									<RelationshipField
 										label='Reference'
+										targetType={relationTo}
 										onValueChange={(value: RelationshipValue | undefined) =>
 											form.setFieldValue(
 												`${name}.to`,
@@ -85,6 +96,8 @@ export type LinksFieldProps = {
 	name: string
 	label?: string
 	description?: string
+	/** Restrict every item's "Reference" mode to one or more collections, omit to search every collection this app has registered. */
+	relationTo?: CollectionSlug | CollectionSlug[]
 }
 
 /**
@@ -106,7 +119,8 @@ export function LinksField({
 	form,
 	name,
 	label = 'Links',
-	description
+	description,
+	relationTo
 }: LinksFieldProps) {
 	return (
 		<form.AppField name={name}>
@@ -146,7 +160,7 @@ export function LinksField({
 									)}
 								</form.AppField>
 							</div>
-							<LinkModeFields form={form} name={path} />
+							<LinkModeFields form={form} name={path} relationTo={relationTo} />
 						</div>
 					)}
 				</ArrayField>

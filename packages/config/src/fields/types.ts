@@ -188,11 +188,14 @@ export type MetaFieldConfig = BaseFieldConfig & { type: 'meta' }
  * conditional rendering the declarative `array`/`select` primitives don't
  * support.
  */
-export type MenuFieldConfig = BaseFieldConfig & {
-	type: 'menu'
-	/** New items start flagged as a mega menu (grouped columns) instead of a plain link, e.g. the footer, which is always column groups. */
-	startAsMegaMenu?: boolean
-}
+export type MenuFieldConfig<TCollectionSlug extends string = string> =
+	BaseFieldConfig & {
+		type: 'menu'
+		/** New items start flagged as a mega menu (grouped columns) instead of a plain link, e.g. the footer, which is always column groups. */
+		startAsMegaMenu?: boolean
+		/** Restrict each item's "Reference" link mode to one or more collections, omit to search every collection this app has registered. */
+		relationTo?: TCollectionSlug | TCollectionSlug[]
+	}
 
 /**
  * A list of links, each its own label + button appearance + a
@@ -205,9 +208,12 @@ export type MenuFieldConfig = BaseFieldConfig & {
  * and with blocks (`cta`/`banner`) that call `LinksField` directly
  * instead of going through this generic dispatch.
  */
-export type LinksFieldConfig = BaseFieldConfig & {
-	type: 'links'
-}
+export type LinksFieldConfig<TCollectionSlug extends string = string> =
+	BaseFieldConfig & {
+		type: 'links'
+		/** Restrict each link's "Reference" mode to one or more collections, omit to search every collection this app has registered. */
+		relationTo?: TCollectionSlug | TCollectionSlug[]
+	}
 
 /**
  * Payload's own Row (https://payloadcms.com/docs/fields/row), pure visual
@@ -343,8 +349,8 @@ export type FieldConfig<
 	| RelationshipFieldConfig<TCollectionSlug>
 	| RelationsFieldConfig<TCollectionSlug>
 	| MetaFieldConfig
-	| MenuFieldConfig
-	| LinksFieldConfig
+	| MenuFieldConfig<TCollectionSlug>
+	| LinksFieldConfig<TCollectionSlug>
 	| RowFieldConfig<TCollectionSlug, TBlockSlug>
 	| CollapsibleFieldConfig<TCollectionSlug, TBlockSlug>
 	| GroupFieldConfig<TCollectionSlug, TBlockSlug>

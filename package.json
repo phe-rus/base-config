@@ -13,6 +13,7 @@
 	},
 	"private": true,
 	"workspaces": [
+		"www",
 		"packages/*",
 		"plugins/*",
 		"templates/*"

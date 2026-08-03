@@ -15,6 +15,7 @@ import {
 import { FieldShell, useFieldState } from '@baseconfig/ui/forms'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useMemo, useState } from 'react'
+import { collectionsBySlug } from '../../registry'
 import type { CollectionSlug } from '../../types'
 
 /**
@@ -53,44 +54,75 @@ type Option = {
 }
 
 /**
- * Every real collection's live data, queried once each: React's rules of
- * hooks mean this can't loop over a runtime-length `targetType` list, so
- * adding a new collection means adding one more `useLiveQuery` line here.
+ * A sentinel slug that's never a real registered collection, `getContentCollection`
+ * (`../../../db/collections.ts`) resolves any unregistered slug to a shared,
+ * always-empty stand-in, so a `useLiveQuery` slot below with nothing real to
+ * query still gets a valid, empty collection rather than `undefined`.
+ */
+const UNUSED_TARGET_SLOT = '__unused_relationship_target__'
+
+/** How many collections one `RelationshipField` can search at once, see `useRelationshipOptions`'s own doc comment for why this is a fixed number. Raise it (and add one more `useLiveQuery(...)` slot below) if a real field ever needs more simultaneous targets. */
+const MAX_RELATIONSHIP_TARGETS = 8
+
+/**
+ * Every targeted collection's live data, queried through a fixed number of
+ * `useLiveQuery` "slots": React's rules of hooks mean this can't loop
+ * `useLiveQuery` over a runtime-length list directly, so instead each slot
+ * always calls the hook, just against whichever real `targets[i]` names (or
+ * the shared empty stand-in once `targets` runs out). This is what makes
+ * `targetType`/a field's own `relationTo` genuinely dynamic, not restricted
+ * to a hardcoded few collection names, up to `MAX_RELATIONSHIP_TARGETS` at
+ * once. Omitting `targetType` searches every collection this app has
+ * registered (minus `users`, see below), not a fixed subset.
  */
 function useRelationshipOptions(
 	targetType: CollectionSlug | CollectionSlug[] | undefined,
 	excludeId: string | undefined
 ): Option[] {
-	const { data: pages } = useLiveQuery(contentCollections.pages)
-	const { data: posts } = useLiveQuery(contentCollections.posts)
-	const { data: policies } = useLiveQuery(contentCollections.policies)
-
-	return useMemo(() => {
+	const targets = useMemo<CollectionSlug[]>(() => {
+		if (targetType) return Array.isArray(targetType) ? targetType : [targetType]
 		// `users` is deliberately excluded: real accounts aren't a relatable
 		// content type, and (being server-backed, not `localStorage`) aren't
 		// queried here at all. See `CollectionConfig['auth']`. A plugin's own
 		// collections (e.g. `@baseconfig/plugin-form-builder`'s `forms`) are
-		// deliberately *not* wired in here either: this component only knows
-		// about the host app's own fixed `CollectionSlug` union (React's
-		// rules of hooks rule out looping `useLiveQuery` over a runtime-length
-		// list), so a plugin needing its own relationship-style picker builds
-		// a small one of its own instead (see `@baseconfig/plugin-form-builder`'s
-		// own form-block picker) rather than this file growing a hook per
-		// plugin.
-		const bySlug: Partial<Record<CollectionSlug, typeof pages>> = {
-			pages,
-			posts,
-			policies
-		}
-		const targets: CollectionSlug[] = targetType
-			? Array.isArray(targetType)
-				? targetType
-				: [targetType]
-			: (Object.keys(bySlug) as CollectionSlug[])
+		// included here for free now, since this reads the real registry
+		// rather than a hardcoded list.
+		return Object.values(collectionsBySlug)
+			.filter((collection) => !collection.auth)
+			.map((collection) => collection.slug)
+	}, [targetType])
 
+	const slot0 = useLiveQuery(
+		contentCollections[targets[0] ?? UNUSED_TARGET_SLOT]
+	).data
+	const slot1 = useLiveQuery(
+		contentCollections[targets[1] ?? UNUSED_TARGET_SLOT]
+	).data
+	const slot2 = useLiveQuery(
+		contentCollections[targets[2] ?? UNUSED_TARGET_SLOT]
+	).data
+	const slot3 = useLiveQuery(
+		contentCollections[targets[3] ?? UNUSED_TARGET_SLOT]
+	).data
+	const slot4 = useLiveQuery(
+		contentCollections[targets[4] ?? UNUSED_TARGET_SLOT]
+	).data
+	const slot5 = useLiveQuery(
+		contentCollections[targets[5] ?? UNUSED_TARGET_SLOT]
+	).data
+	const slot6 = useLiveQuery(
+		contentCollections[targets[6] ?? UNUSED_TARGET_SLOT]
+	).data
+	const slot7 = useLiveQuery(
+		contentCollections[targets[7] ?? UNUSED_TARGET_SLOT]
+	).data
+
+	return useMemo(() => {
+		const slots = [slot0, slot1, slot2, slot3, slot4, slot5, slot6, slot7]
 		return targets
-			.flatMap((collectionSlug) =>
-				(bySlug[collectionSlug] ?? []).map((row) => ({ row, collectionSlug }))
+			.slice(0, MAX_RELATIONSHIP_TARGETS)
+			.flatMap((collectionSlug, i) =>
+				(slots[i] ?? []).map((row) => ({ row, collectionSlug }))
 			)
 			.filter(({ row }) => row.id !== excludeId)
 			.map(({ row, collectionSlug }) => {
@@ -102,7 +134,18 @@ function useRelationshipOptions(
 					collection: collectionSlug
 				}
 			})
-	}, [pages, posts, policies, targetType, excludeId])
+	}, [
+		targets,
+		excludeId,
+		slot0,
+		slot1,
+		slot2,
+		slot3,
+		slot4,
+		slot5,
+		slot6,
+		slot7
+	])
 }
 
 export function RelationshipField(props: RelationshipFieldProps) {

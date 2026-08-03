@@ -2,7 +2,7 @@ import { Button } from '@baseconfig/ui/components/button'
 import { cn } from '@baseconfig/ui/lib/utils'
 import { ArrayField } from '@baseconfig/ui/forms'
 import { IconPlus } from '@tabler/icons-react'
-import { appearanceValues } from '../../types'
+import { appearanceValues, type CollectionSlug } from '../../types'
 import { LinkModeFields } from '../Links'
 
 const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
@@ -18,6 +18,8 @@ type NavMenuFieldProps = {
 	description?: string
 	/** New items start flagged as a mega menu (grouped columns) instead of a plain link, e.g. the footer, which is always column groups. */
 	startAsMegaMenu?: boolean
+	/** Restrict every item's "Reference" link mode to one or more collections, omit to search every collection this app has registered. */
+	relationTo?: CollectionSlug | CollectionSlug[]
 }
 
 function newItem(startAsMegaMenu?: boolean) {
@@ -45,7 +47,8 @@ export function NavMenuField({
 	name,
 	label = 'Navigation items',
 	description = 'A link by default (reference a page/post/policy, or a custom URL); flag "Mega menu" to turn it into a dropdown instead.',
-	startAsMegaMenu
+	startAsMegaMenu,
+	relationTo
 }: NavMenuFieldProps) {
 	return (
 		<form.AppField name={name}>
@@ -66,7 +69,7 @@ export function NavMenuField({
 					)}
 				>
 					{({ path }: { path: string }) => (
-						<NavItemFields form={form} path={path} />
+						<NavItemFields form={form} path={path} relationTo={relationTo} />
 					)}
 				</ArrayField>
 			)}
@@ -74,7 +77,15 @@ export function NavMenuField({
 	)
 }
 
-function NavItemFields({ form, path }: { form: any; path: string }) {
+function NavItemFields({
+	form,
+	path,
+	relationTo
+}: {
+	form: any
+	path: string
+	relationTo?: CollectionSlug | CollectionSlug[]
+}) {
 	return (
 		<div className='flex flex-col gap-3'>
 			<div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
@@ -97,9 +108,13 @@ function NavItemFields({ form, path }: { form: any; path: string }) {
 					<>
 						<f.Checkbox label='Mega menu' />
 						{f.state.value ? (
-							<MegaMenuFields form={form} path={path} />
+							<MegaMenuFields form={form} path={path} relationTo={relationTo} />
 						) : (
-							<NavLinkModeFields form={form} path={path} />
+							<NavLinkModeFields
+								form={form}
+								path={path}
+								relationTo={relationTo}
+							/>
 						)}
 					</>
 				)}
@@ -112,11 +127,13 @@ function NavItemFields({ form, path }: { form: any; path: string }) {
 function NavLinkModeFields({
 	form,
 	path,
-	disabled
+	disabled,
+	relationTo
 }: {
 	form: any
 	path: string
 	disabled?: boolean
+	relationTo?: CollectionSlug | CollectionSlug[]
 }) {
 	if (disabled) {
 		return (
@@ -126,23 +143,39 @@ function NavLinkModeFields({
 		)
 	}
 
-	return <LinkModeFields form={form} name={path} />
+	return <LinkModeFields form={form} name={path} relationTo={relationTo} />
 }
 
 /** One link entry inside a mega menu's flat list or a column's list, same fields as a top-level link (minus appearance/mega-menu, which only apply at the item level). */
-function NavMenuLinkFields({ form, path }: { form: any; path: string }) {
+function NavMenuLinkFields({
+	form,
+	path,
+	relationTo
+}: {
+	form: any
+	path: string
+	relationTo?: CollectionSlug | CollectionSlug[]
+}) {
 	return (
 		<div className='flex flex-col gap-3'>
 			<form.AppField name={`${path}.label`}>
 				{(f: any) => <f.Input label='Label' placeholder='About' />}
 			</form.AppField>
-			<NavLinkModeFields form={form} path={path} />
+			<NavLinkModeFields form={form} path={path} relationTo={relationTo} />
 		</div>
 	)
 }
 
 /** A mega menu item's own body: the link fields are irrelevant here (`to` stays visible but disabled), so this only ever shows the category toggle and either grouped columns or one flat list. */
-function MegaMenuFields({ form, path }: { form: any; path: string }) {
+function MegaMenuFields({
+	form,
+	path,
+	relationTo
+}: {
+	form: any
+	path: string
+	relationTo?: CollectionSlug | CollectionSlug[]
+}) {
 	return (
 		<>
 			<NavLinkModeFields form={form} path={path} disabled />
@@ -155,7 +188,11 @@ function MegaMenuFields({ form, path }: { form: any; path: string }) {
 								{(lf: any) => (
 									<lf.ArrayField label='Menu items'>
 										{({ path: linkPath }: { path: string }) => (
-											<NavMenuLinkFields form={form} path={linkPath} />
+											<NavMenuLinkFields
+												form={form}
+												path={linkPath}
+												relationTo={relationTo}
+											/>
 										)}
 									</lf.ArrayField>
 								)}
@@ -186,6 +223,7 @@ function MegaMenuFields({ form, path }: { form: any; path: string }) {
 																<NavMenuLinkFields
 																	form={form}
 																	path={linkPath}
+																	relationTo={relationTo}
 																/>
 															)}
 														</clf.ArrayField>
