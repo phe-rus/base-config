@@ -16,3 +16,7 @@ bun.lock
 
 # wrangler
 .wrangler
+worker-configuration.d.ts
+
+# tanstack router
+routeTree.gen.ts
