@@ -21,6 +21,7 @@
 	"scripts": {
 		"build": "turbo build",
 		"dev": "turbo dev --filter=!@baseconfig/cli",
+		"type-gen": "turbo run type-gen",
 		"typecheck": "turbo typecheck",
 		"format": "biome format --write .",
 		"lint": "biome check --write ."

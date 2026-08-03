@@ -6,10 +6,14 @@
 			"dependsOn": ["^build"],
 			"outputs": ["dist/**"]
 		},
-		"typecheck": {
-			"dependsOn": ["^build"],
+		"type-gen": {
 			"cache": false
 		},
+		"typecheck": {
+			"dependsOn": ["type-gen"],
+			"cache": false
+		},
+		
 		"dev": {
 			"cache": false,
 			"persistent": true

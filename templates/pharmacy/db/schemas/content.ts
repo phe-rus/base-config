@@ -2,12 +2,7 @@
 
 import { defineRelationsPart, sql } from 'drizzle-orm'
 
-import {
-	integer,
-	sqliteTable,
-	text,
-	uniqueIndex
-} from 'drizzle-orm/sqlite-core'
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const products = sqliteTable(
 	'cn-products',
@@ -15,20 +10,10 @@ export const products = sqliteTable(
 		id: text('id').primaryKey(),
 		title: text('title'),
 		slug: text('slug'),
-		status: text('status', { enum: ['draft', 'published'] })
-			.notNull()
-			.default('draft'),
-		data: text('data', { mode: 'json' })
-			.$type<Record<string, unknown>>()
-			.notNull()
-			.default({}),
-		createdAt: integer('createdAt', { mode: 'timestamp_ms' })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull()
+		status: text('status', { enum: ['draft', 'published'] }).notNull().default('draft'),
+		data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
+		createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).notNull(),
+		updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).$onUpdate(() => /* @__PURE__ */ new Date()).notNull()
 	},
 	(table) => [uniqueIndex('idx_products_slug').on(table.slug)]
 )
@@ -39,45 +24,26 @@ export const posts = sqliteTable(
 		id: text('id').primaryKey(),
 		title: text('title'),
 		slug: text('slug'),
-		status: text('status', { enum: ['draft', 'published'] })
-			.notNull()
-			.default('draft'),
-		data: text('data', { mode: 'json' })
-			.$type<Record<string, unknown>>()
-			.notNull()
-			.default({}),
-		createdAt: integer('createdAt', { mode: 'timestamp_ms' })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull()
+		status: text('status', { enum: ['draft', 'published'] }).notNull().default('draft'),
+		data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
+		createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).notNull(),
+		updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).$onUpdate(() => /* @__PURE__ */ new Date()).notNull()
 	},
 	(table) => [uniqueIndex('idx_posts_slug').on(table.slug)]
 )
 
 export const keywords = sqliteTable('cn-keywords', {
-	data: text('data', { mode: 'json' })
-		.$type<Record<string, unknown>>()
-		.notNull()
-		.default({}),
-	updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
-		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-		.$onUpdate(() => /* @__PURE__ */ new Date())
-		.notNull()
+	data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
+	updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).$onUpdate(() => /* @__PURE__ */ new Date()).notNull()
 })
 
 export const collectionTablesBySlug = {
-	products: products,
-	posts: posts
+	'products': products,
+	'posts': posts
 }
 
 export const globalTablesBySlug = {
-	keywords: keywords
+	'keywords': keywords
 }
 
-export const contentRelations = defineRelationsPart(
-	{ products, posts, keywords },
-	() => ({})
-)
+export const contentRelations = defineRelationsPart({ products, posts, keywords }, () => ({}))
