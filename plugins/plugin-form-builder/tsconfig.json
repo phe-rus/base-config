@@ -8,9 +8,9 @@
 		"types": ["bun"],
 		"paths": {
 			"@baseconfig/plugin-form-builder/*": ["./src/*"],
-			"@baseconfig/core": ["../config/src/index.ts"],
-			"@baseconfig/core/*": ["../config/src/*"],
-			"@baseconfig/ui/*": ["../ui/src/*"]
+			"@baseconfig/core": ["../../packages/config/src/index.ts"],
+			"@baseconfig/core/*": ["../../packages/config/src/*"],
+			"@baseconfig/ui/*": ["../../packages/ui/src/*"]
 		},
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
