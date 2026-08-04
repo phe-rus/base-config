@@ -1,16 +1,16 @@
 {
 	"name": "@baseconfig/core",
-	"version": "0.0.12",
+	"version": "0.0.13",
 	"description": "baseConfig's engine: field vocabulary, schema deriver, D1-backed content persistence, the Hono API layer, and the admin UI shell.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/phe-rus/base-config.git",
+		"url": "git+https://github.com/phe-rus/baseconfig.git",
 		"directory": "packages/config"
 	},
-	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"homepage": "https://github.com/phe-rus/baseconfig#readme",
 	"bugs": {
-		"url": "https://github.com/phe-rus/base-config/issues"
+		"url": "https://github.com/phe-rus/baseconfig/issues"
 	},
 	"keywords": [
 		"cms",

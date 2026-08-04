@@ -1,16 +1,16 @@
 {
 	"name": "@baseconfig/cli",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"description": "Scaffold a new baseConfig app: bunx @baseconfig/cli my-app.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/phe-rus/base-config.git",
+		"url": "git+https://github.com/phe-rus/baseconfig.git",
 		"directory": "packages/cli"
 	},
-	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"homepage": "https://github.com/phe-rus/baseconfig#readme",
 	"bugs": {
-		"url": "https://github.com/phe-rus/base-config/issues"
+		"url": "https://github.com/phe-rus/baseconfig/issues"
 	},
 	"keywords": [
 		"baseconfig",

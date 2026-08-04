@@ -16,18 +16,26 @@ import {
 	TableRow
 } from '../components/table'
 import {
+	columnFilteringFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	filterFns,
 	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getPaginationRowModel,
-	getSortedRowModel,
-	useReactTable,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+	useTable,
 	type Column,
 	type ColumnDef,
 	type ColumnFiltersState,
+	type ColumnVisibilityState,
+	type RowData,
 	type RowSelectionState,
-	type SortingState,
-	type VisibilityState
+	type SortingState
 } from '@tanstack/react-table'
 import {
 	IconChevronDown,
@@ -38,12 +46,27 @@ import {
 import { useMemo, useState, type ReactNode } from 'react'
 import { DataTablePagination } from './pagination'
 
-export type DataTableColumnDef<TData, TValue = unknown> = ColumnDef<
-	TData,
-	TValue
->
+export type DataTableColumnDef<
+	TData extends RowData,
+	TValue = unknown
+> = ColumnDef<DataTableFeatures, TData, TValue>
 
-type DataTableProps<TData> = {
+const features = tableFeatures({
+	columnFilteringFeature,
+	rowSortingFeature,
+	rowPaginationFeature,
+	columnVisibilityFeature,
+	rowSelectionFeature,
+	filteredRowModel: createFilteredRowModel(),
+	sortedRowModel: createSortedRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	filterFns,
+	sortFns
+})
+
+export type DataTableFeatures = typeof features
+
+type DataTableProps<TData extends RowData> = {
 	data: TData[]
 	columns: DataTableColumnDef<TData, unknown>[]
 	/** Column id to search on - also gates the Columns/Filters toolbar. */
@@ -97,7 +120,7 @@ function getColumnLabel(column: {
  * any column with `accessorKey` gets a sort affordance automatically off
  * whatever you pass as `header` (a plain string is fine).
  */
-export function DataTable<TData>({
+export function DataTable<TData extends RowData>({
 	data,
 	columns,
 	filterKey,
@@ -110,12 +133,14 @@ export function DataTable<TData>({
 }: DataTableProps<TData>) {
 	const [sorting, setSorting] = useState<SortingState>([])
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+	const [columnVisibility, setColumnVisibility] =
+		useState<ColumnVisibilityState>({})
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 	const [columnsOpen, setColumnsOpen] = useState(false)
 	const [filtersOpen, setFiltersOpen] = useState(false)
 
-	const table = useReactTable({
+	const table = useTable({
+		features,
 		data,
 		columns,
 		enableRowSelection: true,
@@ -123,11 +148,7 @@ export function DataTable<TData>({
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
 		onColumnVisibilityChange: setColumnVisibility,
-		onRowSelectionChange: setRowSelection,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getPaginationRowModel: getPaginationRowModel()
+		onRowSelectionChange: setRowSelection
 	})
 
 	const toggleableColumns = table.getAllColumns().filter((c) => c.getCanHide())
@@ -433,12 +454,12 @@ export function DataTable<TData>({
 	)
 }
 
-function FilterRow<TData>({
+function FilterRow<TData extends RowData>({
 	column,
 	data,
 	skip
 }: {
-	column: Column<TData, unknown>
+	column: Column<DataTableFeatures, TData, unknown>
 	data: TData[]
 	skip: string[]
 }) {

@@ -1,8 +1,8 @@
 # @baseconfig/core
 
-The engine behind [baseConfig](https://github.com/phe-rus/base-config), a config-driven CMS engine for TanStack Start, built edge-first for one Cloudflare Worker. This package owns the field vocabulary, the schema deriver, D1-backed content persistence, the Hono API layer, and the full admin UI shell.
+The engine behind [baseConfig](https://github.com/phe-rus/baseconfig), a config-driven CMS engine for TanStack Start, built edge-first for one Cloudflare Worker. This package owns the field vocabulary, the schema deriver, D1-backed content persistence, the Hono API layer, and the full admin UI shell.
 
-See the [main repo README](https://github.com/phe-rus/base-config#readme) for screenshots, the full feature list, and the roadmap. See [`CLAUDE.md`](https://github.com/phe-rus/base-config/blob/main/config/CLAUDE.md) for the deep internals.
+See the [main repo README](https://github.com/phe-rus/baseconfig#readme) for screenshots, the full feature list, and the roadmap. See [`CLAUDE.md`](https://github.com/phe-rus/baseconfig/blob/main/config/CLAUDE.md) for the deep internals.
 
 ## Install
 

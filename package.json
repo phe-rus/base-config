@@ -5,11 +5,11 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/phe-rus/base-config.git"
+		"url": "git+https://github.com/phe-rus/baseconfig.git"
 	},
-	"homepage": "https://github.com/phe-rus/base-config#readme",
+	"homepage": "https://github.com/phe-rus/baseconfig#readme",
 	"bugs": {
-		"url": "https://github.com/phe-rus/base-config/issues"
+		"url": "https://github.com/phe-rus/baseconfig/issues"
 	},
 	"private": true,
 	"workspaces": [
@@ -20,7 +20,7 @@
 	],
 	"scripts": {
 		"build": "turbo build",
-		"dev": "turbo dev --filter=baseconfig",
+		"dev": "turbo dev --filter=!basics --filter=!pharmacy",
 		"type-gen": "turbo run type-gen",
 		"typecheck": "turbo typecheck",
 		"format": "biome format --write .",

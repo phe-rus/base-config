@@ -3,25 +3,25 @@
 </p>
 
 <p align="left">
-  <a href="https://github.com/phe-rus/base-config/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/phe-rus/base-config/publish.yml?style=flat-square"></a>
+  <a href="https://github.com/phe-rus/baseconfig/actions"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/phe-rus/baseconfig/publish.yml?style=flat-square"></a>
   &nbsp;
   <a href="https://www.npmjs.com/package/@baseconfig/core">
   <img alt="npm downloads" src="https://img.shields.io/npm/dt/@baseconfig/core?style=flat-square" />
 </a>
   &nbsp;
-  <a href="https://github.com/phe-rus/base-config/graphs/contributors"><img alt="npm" src="https://img.shields.io/github/contributors-anon/phe-rus/base-config?color=yellow&style=flat-square" /></a>
+  <a href="https://github.com/phe-rus/baseconfig/graphs/contributors"><img alt="npm" src="https://img.shields.io/github/contributors-anon/phe-rus/baseconfig?color=yellow&style=flat-square" /></a>
   &nbsp;
   <a href="https://www.npmjs.com/package/@baseconfig/core"><img alt="npm" src="https://img.shields.io/npm/v/@baseconfig/core?style=flat-square" /></a>
   &nbsp;
   <a href="https://twitter.com/la_nniina"><img src="https://img.shields.io/badge/follow-la_nniina-1DA1F2?logo=twitter&style=flat-square" alt="La niina Twitter" /></a>
   &nbsp;
-  <a href="https://github.com/phe-rus/base-config"><img alt="views" src="https://api.visitorbadge.io/api/visitors?path=phe-rus%2Fbase-config&label=views&countColor=%23555555&style=flat-square" /></a>
+  <a href="https://github.com/phe-rus/baseconfig"><img alt="views" src="https://api.visitorbadge.io/api/visitors?path=phe-rus%2Fbaseconfig&label=views&countColor=%23555555&style=flat-square" /></a>
 </p>
 
 <hr/>
 
 <div align='center'>
-  <h1 align='center'>Baseconfig</h1>
+  <h1 align='center'>baseconfig</h1>
   <h3 align='center'>The edge native, local first content<br /> management system for<br /> TanStack Start.</h3>
   
   <p align='center'>
@@ -138,6 +138,6 @@ All running from the same Cloudflare Worker.
 
   <h2>👏 Thanks to all our contributors</h2>
 
-<img align="center" src="https://contributors-img.web.app/image?repo=phe-rus/base-config"/>
+<img align="center" src="https://contributors-img.web.app/image?repo=phe-rus/baseconfig"/>
 
 </div>

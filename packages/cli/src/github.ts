@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import * as tar from 'tar'
 
-const REPO = 'phe-rus/base-config'
+const REPO = 'phe-rus/baseconfig'
 const REF = 'main'
 
 export type Template = { id: string; label: string; hint?: string }

@@ -6,24 +6,25 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '../components/select'
-import type { Table } from '@tanstack/react-table'
+import type { ReactTable, RowData } from '@tanstack/react-table'
 import {
 	IconChevronLeft,
 	IconChevronRight,
 	IconChevronsLeft,
 	IconChevronsRight
 } from '@tabler/icons-react'
+import type { DataTableFeatures } from './data-table'
 
-type DataTablePaginationProps<TData> = {
-	table: Table<TData>
+type DataTablePaginationProps<TData extends RowData> = {
+	table: ReactTable<DataTableFeatures, TData>
 	pageSizeOptions?: number[]
 }
 
-export function DataTablePagination<TData>({
+export function DataTablePagination<TData extends RowData>({
 	table,
 	pageSizeOptions = [10, 20, 30, 50]
 }: DataTablePaginationProps<TData>) {
-	const { pageIndex, pageSize } = table.getState().pagination
+	const { pageIndex, pageSize } = table.state.pagination
 	const pageCount = table.getPageCount()
 
 	return (

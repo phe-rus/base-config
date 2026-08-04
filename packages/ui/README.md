@@ -1,8 +1,8 @@
 # @baseconfig/ui
 
-The sibling primitive library behind [baseConfig](https://github.com/phe-rus/base-config): vendored shadcn/base-ui components, a Tiptap v3 rich text editor, and the `useAppForm`-based form field system [`@baseconfig/core`](https://www.npmjs.com/package/@baseconfig/core) renders every field through.
+The sibling primitive library behind [baseconfig](https://github.com/phe-rus/baseconfig): vendored shadcn/base-ui components, a Tiptap v3 rich text editor, and the `useAppForm`-based form field system [`@baseconfig/core`](https://www.npmjs.com/package/@baseconfig/core) renders every field through.
 
-See the [main repo README](https://github.com/phe-rus/base-config#readme) for the bigger picture. See [`CLAUDE.md`](https://github.com/phe-rus/base-config/blob/main/ui/CLAUDE.md) for the deep internals.
+See the [main repo README](https://github.com/phe-rus/baseconfig#readme) for the bigger picture. See [`CLAUDE.md`](https://github.com/phe-rus/baseconfig/blob/main/ui/CLAUDE.md) for the deep internals.
 
 ## Install
 

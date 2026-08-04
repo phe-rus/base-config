@@ -72,7 +72,7 @@ async function resolveTemplateList(): Promise<
 	const templates = await listTemplates()
 	if (templates.length === 0) {
 		throw new Error(
-			'No templates found in the templates/ directory of github.com/phe-rus/base-config.'
+			'No templates found in the templates/ directory of github.com/phe-rus/baseconfig.'
 		)
 	}
 	return templates
