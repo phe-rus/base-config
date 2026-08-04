@@ -2,7 +2,13 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
 	testDir: './e2e',
-	fullyParallel: true,
+	// Serial, single worker: the first page load after a cold `vite dev` boot
+	// recompiles the whole app (SSR + client) and the Cloudflare module
+	// runner is fragile under concurrent cold loads, so hitting it with
+	// parallel workers makes the first run flaky.
+	workers: 1,
+	retries: 1,
+	globalSetup: './e2e/global-setup',
 	reporter: 'list',
 	use: {
 		baseURL: 'http://127.0.0.1:3000',
