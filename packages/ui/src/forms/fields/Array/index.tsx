@@ -168,7 +168,7 @@ export const ArrayField = ({
 		>
 			<section className='flex flex-col gap-1'>
 				{addAtBottom ? null : addRow}
-				<div className='flex flex-col gap-1 ml-2'>
+				<div className='flex flex-col gap-1'>
 					{list.map((item, index) => {
 						const itemPath = `${name}[${index}]`
 						const label = getItemLabel

@@ -129,13 +129,13 @@ export function BlocksField({
 							)
 						}}
 						renderAdd={(add) => (
-							<div className='flex flex-col gap-1'>
+							<div className='flex flex-col gap-1 py-2'>
 								<Dialog>
 									<DialogTrigger
 										disabled={maxed}
 										className={cn(
 											'w-fit! bg-transparent! shadow-none!',
-											'flex items-center gap-1'
+											'flex items-center gap-1 group'
 										)}
 									>
 										<div
@@ -145,12 +145,14 @@ export function BlocksField({
 												className: 'rounded-full!'
 											})}
 										>
-											<IconPlus />
+											<IconPlus className='size-3!' />
 										</div>
-										Add {label ?? name}
+										<span className='text-muted-foreground'>
+											Add {label ?? name}
+										</span>
 									</DialogTrigger>
-									<DialogContent className='sm:max-w-lg'>
-										<DialogHeader>
+									<DialogContent className='sm:max-w-lg rounded-none bg-background!'>
+										<DialogHeader className='gap-0!'>
 											<DialogTitle>Pick block</DialogTitle>
 											<DialogDescription>
 												Click a block to add it to the page
@@ -177,7 +179,7 @@ export function BlocksField({
 															{group}
 														</h3>
 													) : null}
-													<section className='grid grid-cols-2 gap-3 sm:grid-cols-3'>
+													<section className='grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-4'>
 														{groupSlugs.map((slug) => {
 															const block = blocksBySlug[slug]
 															const Icon = block.Icon ?? IconBox
@@ -191,15 +193,28 @@ export function BlocksField({
 																		})
 																	}
 																	className={cn(
-																		'flex flex-col items-center gap-2 rounded-md p-3',
-																		'border border-dashed bg-input/20',
-																		'hover:bg-input/50 cursor-pointer transition-colors'
+																		'flex flex-col items-center gap-2 rounded-none p-3',
+																		'border border-dashed bg-card/55',
+																		'hover:bg-card/85 cursor-pointer transition-colors'
 																	)}
 																>
-																	<span className='flex size-10 items-center justify-center rounded-md bg-input text-muted-foreground'>
-																		<Icon className='size-5' />
+																	<span
+																		className={cn(
+																			buttonVariants({
+																				size: 'icon-lg',
+																				variant: 'secondary',
+																				className: 'rounded-full!'
+																			})
+																		)}
+																	>
+																		<Icon />
 																	</span>
-																	<span className='text-center text-xs font-medium'>
+																	<span
+																		className={cn(
+																			'text-center text-xs font-medium',
+																			'text-muted-foreground line-clamp-1'
+																		)}
+																	>
 																		{block.label}
 																	</span>
 																</DialogClose>
