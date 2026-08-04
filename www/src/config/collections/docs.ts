@@ -5,6 +5,7 @@ import { authenticatedOrPublished } from '../access/authenticatedOrPublished'
 
 export const docs: CollectionConfig = defineCollection({
 	slug: 'docs',
+	path: 'docx',
 	access: {
 		create: authenticated,
 		read: authenticatedOrPublished,
@@ -21,6 +22,19 @@ export const docs: CollectionConfig = defineCollection({
 					name: 'body',
 					type: 'richtext',
 					label: 'Body'
+				}
+			]
+		},
+		{
+			tab: 'settings',
+			label: 'Settings',
+			flat: true,
+			fields: [
+				{
+					name: 'slug',
+					type: 'slug',
+					label: 'Slug',
+					description: 'Used in the URL. If empty, it will be the same as the title.'
 				}
 			]
 		}

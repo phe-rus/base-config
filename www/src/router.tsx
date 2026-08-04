@@ -9,11 +9,14 @@ import '@/styles/globals.css'
 // evaluate first, so importing it here closes that gap unconditionally, the
 // client-side counterpart to the server-side ordering fix already
 // documented in `@baseconfig/core`'s own `db/CLAUDE.md`.
+import { DefaultBoundary } from '@/components/bounderies/default-boundary'
+import { NotFound } from '@/components/bounderies/not-founder'
 import '@/config/base.config'
+import { routeTree } from '@/routeTree.gen'
+import { getContext, TRProvider } from '@/utils/query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
-import { routeTree } from './routeTree.gen'
-import { getContext, TRProvider } from './utils/query'
+import { DefaultLoader } from '@/components/bounderies/default-loader'
 
 export function getRouter() {
 	const query = getContext()
@@ -24,6 +27,9 @@ export function getRouter() {
 		defaultPreload: 'intent',
 		routeTree,
 		scrollRestoration: true,
+		defaultPendingComponent: DefaultLoader,
+		defaultErrorComponent: DefaultBoundary,
+		defaultNotFoundComponent: () => <NotFound />,
 		Wrap: ({ children }) => {
 			return <TRProvider query={query}>{children}</TRProvider>
 		}

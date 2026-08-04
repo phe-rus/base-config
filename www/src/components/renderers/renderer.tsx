@@ -8,7 +8,7 @@ type rendererProps = {
 }
 export const Renderer: FC<rendererProps> = ({ data }) => {
 	return (
-		<article className='flex flex-col'>
+		<article className='flex flex-col mb-5'>
 			<RenderHero data={data.hero} />
 			<div className='container flex flex-col gap-5 mx-auto md:max-w-3xl'>
 				<RenderBlocks blocks={data?.content} />

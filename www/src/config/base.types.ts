@@ -18,6 +18,7 @@ export interface Pages {
 
 export interface Docs {
 	body?: BasiccnContent
+	slug?: string
 }
 
 export interface Topbar {

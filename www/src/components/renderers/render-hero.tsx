@@ -27,38 +27,43 @@ export const RenderHero: FC<rendererHeroProps> = ({ data }) => {
 					)}
 				>
 					<Preview content={data?.content} />
-					<div className='md:max-w-md mx-auto'>
-						{data?.links &&
-							data.links.map((link, idx) => (
+					{data?.links ? (
+						<div className='md:max-w-md mx-auto'>
+							{data.links.map((link, idx) => (
 								<Link
 									key={idx}
 									to={link.href}
 									className={cn(
 										buttonVariants({
 											size: 'lg',
-											variant: 'secondary',
-											className: 'rounded-none! p-5!'
+											variant: 'secondary'
 										})
 									)}
 								>
 									{link.label}
 								</Link>
 							))}
-					</div>
+						</div>
+					) : (
+						<></>
+					)}
 				</div>
 			</section>
-			<div className='min-h-[75vh] select-none'>
+			<div className='min-h-[70vh] max-h-[70vh] w-full select-none'>
 				{data?.image && (
 					<img
 						src={data.image.url}
 						alt={data.image.name}
-						className='-z-10 object-cover opacity-35 aspect-auto'
+						className={cn(
+							'-z-10 object-cover aspect-auto',
+							'w-full object-cover opacity-20'
+						)}
 					/>
 				)}
 				<div
 					className={cn(
-						'absolute pointer-events-none left-0 -bottom-2',
-						'w-full h-2/1 bg-linear-to-t from-background to-transparent'
+						'absolute pointer-events-none left-0 -bottom-1',
+						'w-full h-1/2 bg-linear-to-t from-background to-transparent'
 					)}
 				/>
 			</div>

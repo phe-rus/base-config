@@ -11,11 +11,14 @@ export const Topbar = () => {
 		<header
 			className={cn(
 				'sticky top-0 flex items-center justify-between z-55',
-				'border-b border-border/35 bg-background'
+				'backdrop-blur'
 			)}
 		>
 			<section
-				className={cn('px-5 flex items-center h-10 justify-between', 'w-full')}
+				className={cn(
+					'container flex items-center h-10 justify-between',
+					'w-full'
+				)}
 			>
 				<div className='flex items-center gap-5'>
 					<span className='font-bold'>basics</span>

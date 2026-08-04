@@ -1,3 +1,4 @@
+import { DefaultLoader } from '@/components/bounderies/default-loader'
 import { Renderer } from '@/components/renderers'
 import { base } from '@baseconfig/core'
 import { useSuspenseQuery } from '@tanstack/react-query'
@@ -41,7 +42,7 @@ function RouteComponent() {
 
 	return (
 		<article className='flex flex-col gap-5 mx-auto'>
-			<Suspense fallback={<div>Loading...</div>}>
+			<Suspense fallback={<DefaultLoader />}>
 				<Renderer data={page.data} />
 			</Suspense>
 		</article>
