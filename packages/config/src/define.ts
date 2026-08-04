@@ -36,6 +36,7 @@ import type {
 	CollectionAccess,
 	CollectionConfig as BaseCollectionConfig,
 	CollectionHooks,
+	GeneratedBlockSlug,
 	GlobalAccess,
 	GlobalConfig as BaseGlobalConfig
 } from './base.types'
@@ -49,22 +50,26 @@ import {
 	deriveDefaultValues,
 	fieldsToSchema,
 	flattenTabFields,
-	tabsToSchema
+	tabsToSchema,
+	type FieldSchemaResolvers
 } from './fields/schema'
 
 // This app has exactly one real implementation of each composite field type,
 // wired once here, so every collection/global under `hooks/config/collections`/
 // `hooks/config/globals` only ever writes `{slug, label, tabs}`, never
 // resolver boilerplate.
-const schemaResolvers = {
+const schemaResolvers: FieldSchemaResolvers = {
 	meta: metaSchema,
 	relations: relationsSchema,
-	// Lazy, not the plain schema object `meta`/`relations`/`menu` are, see
-	// `getBlocksSchema()`'s own doc comment (`collections/blocks/index.ts`)
-	// for why: this needs to resolve *after* `baseConfig()` has run (and
-	// registered every plugin's own blocks), but `schemaResolvers` itself is
-	// built once, at this module's own eval time, well before that.
-	blocks: z.lazy(() => getBlocksSchema()),
+	// A function returning the `z.lazy`, not the lazy itself, see
+	// `getBlocksSchema()`'s own doc comment (`collections/blocks/registry.ts`)
+	// for why the *resolution* must be lazy: it needs to run after
+	// `baseConfig()` has run (and registered every plugin's own blocks), but
+	// `schemaResolvers` itself is built once, at this module's own eval time,
+	// well before that. `case 'blocks'` calls it with the field's own
+	// `blocks` restriction list (if any), so a restricted `blocks` field
+	// validates against just that subset.
+	blocks: (slugs) => z.lazy(() => getBlocksSchema(slugs)),
 	menu: navMenuSchema,
 	links: linksSchema
 }
@@ -102,7 +107,7 @@ const RENDERABLE_COLUMN_FIELD_TYPES = new Set([
  * naturally in `fieldColumns` below.
  */
 function deriveDefaultColumns(
-	tabs: TabConfig<string, string>[],
+	tabs: TabConfig<any, any>[],
 	useAsTitle?: string
 ): { key: string; label: string; type?: string }[] {
 	const fieldColumns = flattenTabFields(tabs)
@@ -139,7 +144,13 @@ type CollectionDefinition<TSlug extends string> = {
 	filterKey?: string
 	/** Admin-display overrides, see `CollectionConfig['admin']`. */
 	admin?: { useAsTitle?: string }
-	tabs: TabConfig<string, string>[]
+	/**
+	 * `TBlockSlug` is the generated `GeneratedBlockSlug` union, not a plain
+	 * `string`, so a `blocks` field's own `blocks: [...]` restriction list
+	 * autocompletes against the consumer's registered slugs (falls back to
+	 * `string` in a plugin package or an un-generated consumer).
+	 */
+	tabs: TabConfig<string, GeneratedBlockSlug>[]
 	/** Pure, isomorphic-safe lifecycle hooks, see `CollectionHooks`' own doc comment (`base.types.ts`). */
 	hooks?: CollectionHooks
 	/** Pure, isomorphic-safe per-operation access control, see `CollectionAccess`'s own doc comment (`base.types.ts`). Omit for open (every operation allowed to everyone). */
@@ -193,7 +204,8 @@ type GlobalDefinition<TSlug extends string> =
 			slug: TSlug
 			/** Derived from `slug` via `labelFromSlug()` if omitted, see `CollectionDefinition['label']`. */
 			label?: string
-			fields: FieldConfig<string, string>[]
+			/** `GeneratedBlockSlug` here for the same reason `CollectionDefinition['tabs']` carries it: a `blocks` field's restriction list autocompletes. */
+			fields: FieldConfig<string, GeneratedBlockSlug>[]
 			component?: never
 			hooks?: CollectionHooks
 			/** Pure, isomorphic-safe per-operation access control, see `GlobalAccess`'s own doc comment (`base.types.ts`). Omit for open. */

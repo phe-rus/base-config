@@ -84,7 +84,7 @@ export const linkValueSchema = z.object({
 	openInNewTab: z.boolean().optional()
 })
 
-/** Plain TS shape of `linkValueSchema`, for a block's own `Render` (e.g. `blocks/Cta/index.tsx`/`blocks/Banner/index.tsx`) reading a document's raw stored `data`, which isn't run through the schema itself. */
+/** Plain TS shape of `linkValueSchema`, for a block's own `Render` (e.g. a consumer `cta`/`banner` block's `Component.tsx`) reading a document's raw stored `data`, which isn't run through the schema itself. */
 export type LinkValue = z.infer<typeof linkValueSchema>
 
 export const navMenuLinkSchema = linkValueSchema.extend({

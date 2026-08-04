@@ -10,6 +10,7 @@ type rendererHeroProps = {
 }
 
 export const RenderHero: FC<rendererHeroProps> = ({ data }) => {
+	if (!data) return null
 	return (
 		<article
 			className={cn(
@@ -21,7 +22,8 @@ export const RenderHero: FC<rendererHeroProps> = ({ data }) => {
 				<div
 					className={cn(
 						'container flex flex-col gap-5 mx-auto',
-						'typeset-img:px-0 typeset-img:rounded-none'
+						'typeset-img:px-0 typeset-img:rounded-none',
+						'md:max-w-3xl'
 					)}
 				>
 					<Preview content={data?.content} />

@@ -22,7 +22,8 @@
 	"private": false,
 	"type": "module",
 	"files": [
-		"dist"
+		"dist",
+		"src"
 	],
 	"exports": {
 		".": {
@@ -49,14 +50,14 @@
 			"types": "./dist/*.d.mts",
 			"default": "./dist/*.mjs"
 		},
-		"./tailwind.css": "./dist/tailwind.css"
+		"./tailwind.css": "./src/tailwind.css"
 	},
 	"bin": {
 		"base": "dist/cli.mjs"
 	},
 	"scripts": {
-		"build": "tsdown && cp src/tailwind.css dist/tailwind.css",
-		"dev": "cp src/tailwind.css dist/tailwind.css && tsdown --watch",
+		"build": "tsdown",
+		"dev": "tsdown --watch",
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {

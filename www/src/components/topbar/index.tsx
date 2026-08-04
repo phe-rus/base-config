@@ -11,7 +11,7 @@ export const Topbar = () => {
 		<header
 			className={cn(
 				'sticky top-0 flex items-center justify-between z-55',
-				'border-b border-border/35 bg-input/35 backdrop-blur-sm'
+				'border-b border-border/35 bg-background'
 			)}
 		>
 			<section

@@ -1,9 +1,5 @@
-import type {
-	BlockConfig,
-	BlockFieldsProps,
-	ContentDocumentRow
-} from '@baseconfig/core'
-import { base, getContentCollection } from '@baseconfig/core'
+import type { BlockFieldsProps, ContentDocumentRow } from '@baseconfig/core'
+import { base, defineBlock, getContentCollection } from '@baseconfig/core'
 import { Button } from '@baseconfig/ui/components/button'
 import { Checkbox } from '@baseconfig/ui/components/checkbox'
 import {
@@ -28,11 +24,6 @@ const formReferenceSchema = z.object({
 	id: z.string(),
 	slug: z.string(),
 	title: z.string()
-})
-
-export const formBlockSchema = z.object({
-	blockType: z.literal('form'),
-	form: formReferenceSchema.optional()
 })
 
 type FormReference = z.infer<typeof formReferenceSchema>
@@ -263,14 +254,23 @@ function FormBlockRender({ data }: { data: Record<string, unknown> }) {
 	)
 }
 
-export const formBlock: BlockConfig = {
+/**
+ * `fields` is deliberately a plain `json` field (the real value is the
+ * `{id, slug, title}` reference below, but nothing in this package's field
+ * vocabulary expresses "a strict reference to a `forms` document", and the
+ * `schema` override supplies the strict validation, while `fields` still
+ * drives the generated TS type), so a `defineBlock` schema override is the
+ * one case this package documents as the intended escape hatch.
+ */
+export const formBlock = defineBlock({
 	slug: 'form',
 	label: 'Form',
-	schema: formBlockSchema,
-	defaultValue: {
-		form: undefined
-	},
+	fields: [{ name: 'form', type: 'json', label: 'Form' }],
+	schema: z.object({ form: formReferenceSchema.optional() }),
 	Fields: FormBlockFields,
 	Render: FormBlockRender,
 	Icon: IconForms
-}
+})
+
+/** Back-compat alias: `formBlock.schema` is the extended schema (`blockType: z.literal('form')` auto-injected by `defineBlock`). */
+export const formBlockSchema = formBlock.schema

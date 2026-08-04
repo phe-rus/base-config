@@ -7,6 +7,7 @@
 			"outputs": ["dist/**"]
 		},
 		"type-gen": {
+			"dependsOn": ["^type-gen"],
 			"cache": false
 		},
 		"typecheck": {
@@ -16,6 +17,9 @@
 		"dev": {
 			"cache": false,
 			"persistent": true
+		},
+		"test": {
+			"cache": false
 		}
 	}
 }

@@ -7,7 +7,7 @@ export const Route = createFileRoute('/(frontend)/(pages)/$')({
 	params: {
 		parse: ({ _splat = 'home' }) => {
 			return {
-				_splat: _splat.includes('') ? 'home' : _splat
+				_splat: _splat || 'home'
 			}
 		}
 	},
@@ -25,9 +25,22 @@ function RouteComponent() {
 		})
 	)
 
+	const page = pageLists.docs[0]
+
+	if (!page) {
+		return (
+			<article className='flex flex-col gap-5 mx-auto'>
+				<h1 className='text-3xl font-bold'>Page not found</h1>
+				<p>
+					The page <code>/{_splat}</code> does not exist.
+				</p>
+			</article>
+		)
+	}
+
 	return (
 		<article className='flex flex-col gap-5 mx-auto'>
-			<Renderer data={pageLists.docs[0].data} />
+			<Renderer data={page.data} />
 		</article>
 	)
 }

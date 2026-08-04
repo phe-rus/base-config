@@ -43,7 +43,7 @@ bun run local            # bun x base gen --local  (regenerate schema + migrate 
 bun run remote            # bun x base gen --remote  (same, against real remote D1)
 ```
 
-There is no test suite in this repo (no vitest/jest config, no `*.test.ts` files anywhere); validate changes via `typecheck` plus manually exercising them in `templates/basics`.
+There is no unit test suite in this repo (no vitest/jest config, no `*.test.ts` files anywhere); the one automated test surface is **`www`'s Playwright e2e smoke suite** (`www/e2e/smoke.spec.ts`, run with `bun run test` inside `www/`). It drives a real browser against the dev server (`bun run dev`, started/reused automatically by the Playwright webServer config) and asserts the client actually renders: the frontend hero rich text on `/`, a second page on `/docs`, and the admin sign-in view on `/admin`, each failing on any page/console error. This exists specifically because `www` consumes the libraries as `workspace:*` and dev compiles their source directly, so client-side runtime regressions (e.g. React Compiler auto-memoizing library hooks) are invisible to SSR-only checks. Needs `bun run local` first for the local D1 seed, and `bunx playwright install chromium` once per machine; it reuses an already-running dev server rather than forcing a restart. Validate other changes via `typecheck` plus manually exercising them in `templates/basics`.
 
 ### The `base` CLI (`packages/config/src/cli.ts`)
 

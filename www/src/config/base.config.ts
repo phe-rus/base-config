@@ -2,6 +2,7 @@ import { baseConfig } from '@baseconfig/core'
 import { getBaseURL } from '@/lib/getURL'
 import { authClient } from '@/config/api/auth/authClient'
 import { getContext } from '@/utils/query'
+import { blocks } from './blocks'
 import { docs } from './collections/docs'
 import { storage } from './globals/storage'
 import { users } from './collections/users'
@@ -18,6 +19,7 @@ export default baseConfig({
 		adminPath: 'admin',
 		adminIcon: '/icon.png'
 	},
+	blocks: [...blocks],
 	collections: [users, pages, docs],
 	globals: [topbar, keywords, storage]
 })

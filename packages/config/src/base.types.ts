@@ -216,12 +216,16 @@ export type BaseConfigProps = {
 	collections: CollectionConfig[]
 	globals: GlobalConfig[]
 	/**
-	 * Extra block types beyond this package's own 7 built-ins (richtext/
-	 * media/cta/banner/grid/columns/relatedPosts), almost always populated
-	 * by a plugin (e.g. `@baseconfig/plugin-form-builder`'s `formBlock`) rather
-	 * than hand-written here directly. `baseConfig()` merges these into the
+	 * Every block a consumer can pick in the admin, almost always populated
+	 * by a plugin (e.g. `@baseconfig/plugin-form-builder`'s `formBlock`) or,
+	 * in this repo's reference consumer, www's own `config/blocks` tree
+	 * (this package ships no built-in blocks, see
+	 * `collections/blocks/CLAUDE.md`). `baseConfig()` merges these into the
 	 * live `blocksBySlug` registry (`collections/blocks/registry.ts`) as a
-	 * side effect, same pattern `collections`/`globals` already use.
+	 * side effect, same pattern `collections`/`globals` already use, and
+	 * `base gen` emits one named interface per block (auto-named PascalCase
+	 * slug, `BlockConfig['interfaceName']` overrides it) combined into the
+	 * `ContentBlock` union.
 	 */
 	blocks?: BlockConfig[]
 	/**
@@ -404,12 +408,15 @@ export type CollectionConfig<TSlug extends string = string> =
  * `{collections: {}, globals: {}}` wrapper, for the same reason: a
  * wrapper's own nested property would hit the identical conflict.
  *
- * A consumer never touches these two directly, `db/content-types-schema.ts`
- * (the generator) emits the actual `declare module` block, and
- * `db/content-client.ts`'s `base` object is the only thing that reads them.
+ * A consumer never touches these three directly, `db/content-types-schema.ts`
+ * (the generator) emits the actual `declare module` block. `db/content-client.ts`'s
+ * `base` object reads `GeneratedCollectionTypes`/`GeneratedGlobalTypes`, and
+ * `BlocksFieldConfig['blocks']` autocompletes through `GeneratedBlockSlug`
+ * (itself derived from `GeneratedBlockTypes`).
  */
 export interface GeneratedCollectionTypes {}
 export interface GeneratedGlobalTypes {}
+export interface GeneratedBlockTypes {}
 
 /** A registered collection's real slug, once a consumer's own generated `src/config/base.types.ts` has augmented `GeneratedCollectionTypes`. Falls back to a plain `string` (today's behavior) when nothing has augmented it yet, so an un-generated consumer keeps compiling exactly as before. */
 export type GeneratedCollectionSlug =
@@ -421,6 +428,24 @@ export type GeneratedCollectionSlug =
 export type GeneratedGlobalSlug = keyof GeneratedGlobalTypes extends never
 	? string
 	: keyof GeneratedGlobalTypes
+
+/**
+ * A registered block's real slug, once a consumer's own generated
+ * `src/config/base.types.ts` has augmented `GeneratedBlockTypes` (the
+ * generator emits one `interface GeneratedBlockTypes` member per registered
+ * block, slug keyed to the block's own named interface, see
+ * `db/content-types-schema.ts`'s augmentation block). The union that gives
+ * a `blocks` field's own `blocks: [...]` restriction list its autocomplete
+ * (`BlocksFieldConfig['blocks']`): the consumer owns the block tree, so the
+ * slugs it can pick from are exactly the ones *it* registered, not a
+ * library-side union a plugin couldn't add to. Falls back to a plain
+ * `string` when nothing has augmented it yet, so an un-generated consumer
+ * (or a plugin package, which never sees a consumer's augmentation) keeps
+ * compiling exactly as before.
+ */
+export type GeneratedBlockSlug = keyof GeneratedBlockTypes extends never
+	? string
+	: keyof GeneratedBlockTypes
 
 /** A collection's real per-field document shape once generated; `Record<string, unknown>` (today's behavior) for any slug that isn't a known key yet, covering both "nothing generated" and, defensively, a slug the generator doesn't recognize. */
 export type GeneratedCollectionDoc<TSlug extends string> =

@@ -1,5 +1,6 @@
 import type { FC } from 'react'
 import type { SelectOption } from '@baseconfig/ui/forms'
+import type { GeneratedBlockSlug } from '../base.types'
 
 // The declarative field-authoring vocabulary, `@baseconfig/core`'s own core.
 // Each variant here maps 1:1 onto an existing rendered field
@@ -88,7 +89,7 @@ export type ConfirmPasswordFieldConfig = BaseFieldConfig & {
 /** No visible chrome at all, `@baseconfig/ui/forms`'s `Hidden` renders a bare `<input type="hidden">`. For a value set elsewhere (a server-assigned id, a value another field computes), not typed directly, so `label`/`description`/`placeholder` are meaningless here even though they're still technically valid to set on `BaseFieldConfig`. */
 export type HiddenFieldConfig = BaseFieldConfig & { type: 'hidden' }
 
-/** A real CodeMirror 6 editor saving a plain string (https://payloadcms.com/docs/fields/code). `language` sets the initial language mode; the admin UI still shows its own corner toggle. See `collections/blocks/Code/index.tsx`'s block for the pattern of a sibling field reacting to this one's live value. */
+/** A real CodeMirror 6 editor saving a plain string (https://payloadcms.com/docs/fields/code). `language` sets the initial language mode; the admin UI still shows its own corner toggle. See a consumer `code` block's `Fields` (e.g. `www/src/config/blocks/Code/Fields.tsx`) for the pattern of a sibling field reacting to this one's live value. */
 export type CodeFieldConfig = BaseFieldConfig & {
 	type: 'code'
 	language?: string
@@ -120,13 +121,41 @@ export type ArrayFieldConfig<
 
 /**
  * A content-block picker, see `BlocksField` and the `blockRegistry` in
- * `collections/blocks`. `blocks` restricts the "Add block" menu to a
- * subset of the registry; omit it to allow every registered block.
+ * `collections/blocks`. `blocks` restricts which registered blocks this
+ * field offers, by slug reference (the consumer owns the block tree, so a
+ * field never re-passes block configs, it just names which of its own
+ * registered blocks it wants); omit it to allow every registered block.
+ * Typed as `TBlockSlug[]`, which defaults to the generated `GeneratedBlockSlug`
+ * union (`../base.types`), so the restriction list autocompletes against the
+ * consumer's own registered slugs (and a plugin, seeing no augmentation,
+ * gets a plain `string`), Payload's `blocks` field option minus the
+ * re-passing of block definitions. The restriction is enforced in all three
+ * places a `blocks` field means something: the zod schema (`getBlocksSchema(slugs)`
+ * in `fields/schema.ts`'s `case 'blocks'`, an unregistered slug throws),
+ * the admin "Pick block" menu (`BlocksField`), and the generated types
+ * (a restricted field emits the narrowed union of its blocks' own named
+ * interfaces instead of `ContentBlock[]`, see `db/content-types-schema.ts`).
+ * `minRows`/`maxRows` bound the number of block instances, Payload's
+ * `minRows`/`maxRows` (https://payloadcms.com/docs/fields/blocks#minrows-maxrows),
+ * enforced schema-side (a `superRefine` wrapper on the lazy block array,
+ * see `fields/schema.ts`'s `case 'blocks'`) and reflected in the
+ * admin UI as a live count plus a disabled "Add block" button at `maxRows`.
  */
-export type BlocksFieldConfig<TBlockSlug extends string = string> =
+export type BlocksFieldConfig<TBlockSlug extends string = GeneratedBlockSlug> =
 	BaseFieldConfig & {
 		type: 'blocks'
 		blocks?: TBlockSlug[]
+		/**
+		 * Block slugs to hide from the "Add block" menu for *this* field,
+		 * forwarded to `BlocksField` (`collections/fields/BlocksField`), the
+		 * renderer-only nesting cap (a `grid`-style block passes
+		 * `exclude: ['grid']` on its own `items` field so a grid can't nest
+		 * itself); unlike `blocks`, purely presentational, never enforced
+		 * schema-side (a disallowed-but-existing instance stays valid).
+		 */
+		exclude?: string[]
+		minRows?: number
+		maxRows?: number
 	}
 
 /**

@@ -42,7 +42,7 @@ export function RelationsField({ form, name, excludeId }: RelationsFieldProps) {
 	)
 }
 
-/** One relation group's fields on their own, reused directly by the `relatedPosts` content block (see `blocks/RelatedPosts/index.tsx`), where a block *is* a single group rather than a picker over an array of them. */
+/** One relation group's fields on their own, reused directly by a consumer's `relatedPosts` content block (e.g. `www/src/config/blocks/RelatedPosts/Fields.tsx`), where a block *is* a single group rather than a picker over an array of them. */
 export function RelationGroupFields({
 	form,
 	path,

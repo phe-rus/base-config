@@ -20,7 +20,7 @@
 	],
 	"scripts": {
 		"build": "turbo build",
-		"dev": "turbo dev --filter=!@baseconfig/cli",
+		"dev": "turbo dev --filter=baseconfig",
 		"type-gen": "turbo run type-gen",
 		"typecheck": "turbo typecheck",
 		"format": "biome format --write .",

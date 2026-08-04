@@ -45,6 +45,12 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 		description?: string
 		uploadFolder?: string
 		id?: string
+		minRows?: number
+		maxRows?: number
+		/** The field's own `blocks: [...]` allow-list (undefined = every registered block), forwarded so `BlocksField` can filter the "Pick block" menu and show the restriction. */
+		blocks?: string[]
+		/** The field's own `exclude: [...]` list, forwarded so `BlocksField` can hide those slugs (a `grid`-style block capping itself at one nesting level). */
+		exclude?: string[]
 	}>
 	relationship?: FC<{
 		label?: string
@@ -78,7 +84,7 @@ function dotJoin(prefix: string | undefined, name: string): string {
 	return prefix ? `${prefix}.${name}` : name
 }
 
-function renderField(
+export function renderField(
 	field: FieldConfig<any, any>,
 	form: any,
 	prefix: string | undefined,
@@ -251,6 +257,10 @@ function renderField(
 				description={field.description}
 				uploadFolder={uploadFolder}
 				id={id}
+				minRows={field.minRows}
+				maxRows={field.maxRows}
+				blocks={field.blocks}
+				exclude={field.exclude}
 			/>
 		) : null
 	}

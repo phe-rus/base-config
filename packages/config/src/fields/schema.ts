@@ -25,7 +25,15 @@ export type UploadValue = z.infer<typeof uploadValueSchema>
 export type FieldSchemaResolvers = {
 	meta?: z.ZodTypeAny
 	relations?: z.ZodTypeAny
-	blocks?: z.ZodTypeAny
+	/**
+	 * A function, not the schema itself: called per `blocks` field with that
+	 * field's own `blocks` restriction list (if any), so a field that opts
+	 * into a subset of the registry validates against just that subset. The
+	 * caller-facing `blocks` resolvers (`define.ts`/`shared/define-block.tsx`)
+	 * return a `z.lazy(() => getBlocksSchema(slugs))`, keeping the
+	 * registry build deferred until first validation.
+	 */
+	blocks?: (slugs?: string[]) => z.ZodTypeAny
 	menu?: z.ZodTypeAny
 	links?: z.ZodTypeAny
 }
@@ -179,8 +187,40 @@ function baseFieldSchema(
 			return resolvers.meta ?? z.record(z.string(), z.unknown())
 		case 'relations':
 			return resolvers.relations ?? z.array(z.unknown())
-		case 'blocks':
-			return resolvers.blocks ?? z.array(z.unknown())
+		case 'blocks': {
+			// The resolver returns a `z.lazy(() => getBlocksSchema(slugs))`,
+			// i.e. a `ZodLazy`. It has no `min`/`max` of its own, and
+			// `.unwrap()` would eagerly evaluate the lazy (breaking the
+			// deferred registration design: a block's own `defineBlock` runs
+			// during module-eval, before the registry is populated), so bounds
+			// are enforced with `superRefine` on the lazy itself, which wraps
+			// it without evaluating. A consumer-supplied plain-array resolver
+			// (or the `z.array(z.unknown())` fallback) is a real array and
+			// gets the same `superRefine` treatment, which every zod schema
+			// supports.
+			let schema: z.ZodTypeAny = resolvers.blocks
+				? resolvers.blocks(field.blocks)
+				: z.array(z.unknown())
+			if (field.minRows !== undefined || field.maxRows !== undefined) {
+				const min = field.minRows
+				const max = field.maxRows
+				schema = schema.superRefine((value, ctx) => {
+					if (min !== undefined && Array.isArray(value) && value.length < min) {
+						ctx.addIssue({
+							code: 'custom',
+							message: `Must have at least ${min} block${min === 1 ? '' : 's'}`
+						})
+					}
+					if (max !== undefined && Array.isArray(value) && value.length > max) {
+						ctx.addIssue({
+							code: 'custom',
+							message: `Must have at most ${max} block${max === 1 ? '' : 's'}`
+						})
+					}
+				})
+			}
+			return schema
+		}
 		case 'menu':
 			return resolvers.menu ?? z.array(z.unknown())
 		case 'links':
@@ -294,10 +334,11 @@ function ensurePath(
 /**
  * A field only gets a default when it explicitly opts in (`field.defaultValue`)
  * or is one of the container types that already default to an empty
- * container today (`array` → `[]`, `blocks`/`relations` → `[]`, `meta` →
- * `{title: '', description: ''}`, matching every hand-written `defaultValues()`
- * this replaces byte-for-byte). Every other field is simply left undefined.
- * Only ever called on a `LeafFieldConfig` (post-`expandFields`).
+ * container today (`array` → `[]`, `blocks`/`relations`/`menu`/`links` → `[]`,
+ * `meta` → `{title: '', description: ''}`, matching every hand-written
+ * `defaultValues()` this replaces byte-for-byte). Every other field is
+ * simply left undefined. Only ever called on a `LeafFieldConfig`
+ * (post-`expandFields`).
  */
 function fieldDefaultValue(field: LeafFieldConfig): unknown {
 	if (field.defaultValue !== undefined) return field.defaultValue
@@ -306,6 +347,7 @@ function fieldDefaultValue(field: LeafFieldConfig): unknown {
 		case 'blocks':
 		case 'relations':
 		case 'menu':
+		case 'links':
 			return []
 		case 'meta':
 			return { title: '', description: '' }
