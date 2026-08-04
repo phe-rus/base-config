@@ -21,6 +21,7 @@
 	"scripts": {
 		"build": "turbo build",
 		"dev": "turbo dev --filter=!basics --filter=!pharmacy",
+		"test": "turbo run test",
 		"type-gen": "turbo run type-gen",
 		"typecheck": "turbo typecheck",
 		"format": "biome format --write .",

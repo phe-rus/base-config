@@ -2,6 +2,7 @@ import { Renderer } from '@/components/renderers'
 import { base } from '@baseconfig/core'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { Suspense } from 'react'
 
 export const Route = createFileRoute('/(frontend)/(pages)/$')({
 	params: {
@@ -40,7 +41,9 @@ function RouteComponent() {
 
 	return (
 		<article className='flex flex-col gap-5 mx-auto'>
-			<Renderer data={page.data} />
+			<Suspense fallback={<div>Loading...</div>}>
+				<Renderer data={page.data} />
+			</Suspense>
 		</article>
 	)
 }
