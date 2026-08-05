@@ -32,9 +32,8 @@ export const docs: CollectionConfig = defineCollection({
 			fields: [
 				{
 					name: 'category',
-					type: 'relationship',
+					type: 'relations',
 					relationTo: 'category',
-					hasMany: false,
 					label: 'Category / Section',
 					description:
 						'Main section grouping (e.g., "Getting Started", "Concepts", "API Reference")'
