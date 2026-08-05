@@ -21,7 +21,9 @@ export const Topbar = () => {
 				)}
 			>
 				<div className='flex items-center gap-5'>
-					<span className='font-bold'>basics</span>
+					<Link to={'/' as any} className='font-bold text-primary'>
+						Baseconfig
+					</Link>
 					<nav className='flex items-center gap-3 text-sm!'>
 						{items?.data.items?.map((items, index) => {
 							const isTo = items.to?.includes('home') ? '/' : items.to
