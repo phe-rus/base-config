@@ -10,8 +10,10 @@ export const topbar: GlobalConfig = defineGlobal({
 			type: 'menu',
 			label: 'Navigation items',
 			relationTo: ['pages', 'docs'],
-			description:
-				'Simple links, a single dropdown list, or a full multi-column mega menu.'
+			admin: {
+				description:
+					'Simple links, a single dropdown list, or a full multi-column mega menu.'
+			}
 		}
 	]
 })

@@ -83,9 +83,7 @@ type GenState = {
 const EXTERNAL_TYPE_IMPORTS: Record<string, string> = {
 	BasiccnContent: '@baseconfig/ui/basiccn',
 	UploadValue: '@baseconfig/core',
-	RelationshipValue: '@baseconfig/core',
 	MetaValue: '@baseconfig/core',
-	RelationsValue: '@baseconfig/core',
 	NavMenuValue: '@baseconfig/core',
 	LinkItemValue: '@baseconfig/core'
 }
@@ -228,15 +226,22 @@ function fieldTypeSource(
 			return 'UploadValue'
 		case 'array':
 			return `${objectTypeSource(field.fields, state, indent)}[]`
-		case 'relationship':
-			state.usedTypes.add('RelationshipValue')
-			return field.hasMany ? 'RelationshipValue[]' : 'RelationshipValue'
+		case 'relationship': {
+			// Mirrors `baseFieldSchema`'s own `case 'relationship'`
+			// (`fields/schema.ts`): a single-`relationTo` field stores the bare
+			// id (`string`), a polymorphic one (`array` `relationTo`) stores
+			// `{relationTo, value}`, `hasMany` wraps either in an array, so
+			// the generated type can't admit the shape the zod schema would
+			// reject (the old emitted `RelationshipValue` union was wider
+			// than the real per-field value).
+			const item = Array.isArray(field.relationTo)
+				? '{ relationTo: string; value: string }'
+				: 'string'
+			return field.hasMany ? `${item}[]` : item
+		}
 		case 'meta':
 			state.usedTypes.add('MetaValue')
 			return 'MetaValue'
-		case 'relations':
-			state.usedTypes.add('RelationsValue')
-			return 'RelationsValue'
 		case 'blocks': {
 			state.usesBlocks = true
 			// A restricted field (its own `blocks: [...]`,

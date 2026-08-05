@@ -7,7 +7,7 @@ import {
 	collectionPath,
 	type CollectionSlug
 } from '../../types'
-import { RelationshipField, type RelationshipValue } from '../Relationship'
+import { RelationshipField, type RelationshipSelection } from '../Relationship'
 
 const APPEARANCE_OPTIONS = appearanceValues.map((value) => ({
 	label: value[0].toUpperCase() + value.slice(1),
@@ -60,7 +60,7 @@ export function LinkModeFields({
 									<RelationshipField
 										label='Reference'
 										targetType={relationTo}
-										onValueChange={(value: RelationshipValue | undefined) =>
+										onValueChange={(value: RelationshipSelection | undefined) =>
 											form.setFieldValue(
 												`${name}.to`,
 												value
@@ -110,8 +110,9 @@ export type LinksFieldProps = {
  * behind `type: 'links'` (`fields/types.ts`'s `LinksFieldConfig`,
  * dispatched via `fields/renderer.tsx`), also reused directly by blocks
  * that call it without going through the generic per-field-type renderer
- * (`cta.tsx`/`banner.tsx`, the same way `related-posts.tsx` already
- * reuses `RelationGroupFields` directly). `ArrayField`'s own default row
+ * (`cta.tsx`/`banner.tsx`, the same "a block reuses a composite field
+ * component directly" pattern the framework's own `RelationshipField`/
+ * `BlocksField` use). `ArrayField`'s own default row
  * label (`item?.label ?? ...`, `@baseconfig/ui`'s `Array/index.tsx`) already
  * works here for free, every item genuinely has a real `label`.
  */

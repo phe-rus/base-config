@@ -19,18 +19,31 @@ import { collectionsBySlug } from '../../registry'
 import type { CollectionSlug } from '../../types'
 
 /**
- * What a selected relationship actually stores: `id` is the source of
- * truth; `slug`/`title` are a snapshot taken at selection time so a
- * "related posts"-style display can render a link immediately without a
- * live lookup. Trade-off: if the target document is later renamed, the
- * snapshot goes stale until re-selected.
+ * The field's stored value, Payload's own relationship value model
+ * (`fields/schema.ts`'s `relationshipValueSchema`): a bare document id for a
+ * single-`relationTo` field, `{relationTo, value}` for a polymorphic (array
+ * `relationTo`) one, `hasMany` wraps whichever applies in an array. Labels
+ * are never stored, they're re-derived at render time from the live options.
  */
-export type RelationshipValue = {
+type RelationshipStored = string | { relationTo: string; value: string }
+
+/** The id of a stored value regardless of which shape it took. */
+function valueId(value: RelationshipStored): string {
+	return typeof value === 'string' ? value : value.value
+}
+
+/**
+ * The full pick handed to `onValueChange`: the id the field stores plus the
+ * label/slug/collection details that a bare id can't carry, so a caller can
+ * derive a sibling value (e.g. a nav link's `to` from the picked document's
+ * slug) without a live lookup.
+ */
+export type RelationshipSelection = {
 	id: string
 	slug: string
 	title: string
-	/** Which collection this document belongs to, see `collectionPath()` (`../types`) for what this is used for. */
 	collection: CollectionSlug
+	relationTo: CollectionSlug
 }
 
 type RelationshipFieldProps = {
@@ -42,8 +55,11 @@ type RelationshipFieldProps = {
 	excludeId?: string
 	/** Allow picking more than one document instead of only one. */
 	hasMany?: boolean
+	/** Only meaningful with `hasMany`, fewest/most documents allowed. Enforced schema-side, the picker also stops offering new picks once `maxRows` is reached. */
+	minRows?: number
+	maxRows?: number
 	/** Single-select only, called alongside the field's own `handleChange`, e.g. to sync a sibling field (a nav link's `to` derived from the picked document's slug). */
-	onValueChange?: (value: RelationshipValue | undefined) => void
+	onValueChange?: (value: RelationshipSelection | undefined) => void
 }
 
 type Option = {
@@ -156,6 +172,24 @@ export function RelationshipField(props: RelationshipFieldProps) {
 	)
 }
 
+/** The stored value for one pick, `{relationTo, value}` when polymorphic, a bare id otherwise. */
+function storedFor(item: Option, isPolymorphic: boolean): RelationshipStored {
+	return isPolymorphic
+		? { relationTo: item.collection, value: item.value }
+		: item.value
+}
+
+/** The full selection handed to `onValueChange` for one pick. */
+function selectionFor(item: Option): RelationshipSelection {
+	return {
+		id: item.value,
+		slug: item.slug,
+		title: item.label,
+		collection: item.collection,
+		relationTo: item.collection
+	}
+}
+
 function RelationshipFieldSingle({
 	label,
 	description,
@@ -164,11 +198,15 @@ function RelationshipFieldSingle({
 	onValueChange
 }: RelationshipFieldProps) {
 	const options = useRelationshipOptions(targetType, excludeId)
+	const isPolymorphic = Array.isArray(targetType)
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
-		useFieldState<RelationshipValue | undefined>()
+		useFieldState<RelationshipStored | undefined>()
 
 	const selected = useMemo(
-		() => options.find((option) => option.value === value?.id) ?? null,
+		() =>
+			value === undefined
+				? null
+				: (options.find((option) => option.value === valueId(value)) ?? null),
 		[options, value]
 	)
 
@@ -183,16 +221,8 @@ function RelationshipFieldSingle({
 				items={options}
 				value={selected}
 				onValueChange={(item: Option | null) => {
-					const next = item
-						? {
-								id: item.value,
-								slug: item.slug,
-								title: item.label,
-								collection: item.collection
-							}
-						: undefined
-					handleChange(next)
-					onValueChange?.(next)
+					handleChange(item ? storedFor(item, isPolymorphic) : undefined)
+					onValueChange?.(item ? selectionFor(item) : undefined)
 				}}
 			>
 				<ComboboxInput
@@ -225,22 +255,31 @@ function RelationshipFieldMulti({
 	label,
 	description,
 	targetType,
-	excludeId
+	excludeId,
+	minRows,
+	maxRows
 }: RelationshipFieldProps) {
 	const options = useRelationshipOptions(targetType, excludeId)
+	const isPolymorphic = Array.isArray(targetType)
 	const anchor = useComboboxAnchor()
 	const [searchValue, setSearchValue] = useState('')
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
-		useFieldState<RelationshipValue[]>()
+		useFieldState<RelationshipStored[]>()
 
 	const activeValues = Array.isArray(value) ? value : []
 	const selectedOptions = useMemo(
 		() =>
 			options.filter((option) =>
-				activeValues.some((active) => active.id === option.value)
+				activeValues.some((active) => valueId(active) === option.value)
 			),
 		[options, activeValues]
 	)
+
+	// `maxRows` caps new picks UI-side (the schema's own `superRefine`
+	// enforces it regardless): at the cap, only already-picked options stay
+	// in the picker, so an author can remove but not add.
+	const atMax = maxRows !== undefined && activeValues.length >= maxRows
+	const pickItems = atMax ? selectedOptions : options
 
 	return (
 		<FieldShell
@@ -252,17 +291,10 @@ function RelationshipFieldMulti({
 			<div onBlur={handleBlur} className='w-full'>
 				<Combobox
 					multiple
-					items={options}
+					items={pickItems}
 					value={selectedOptions}
 					onValueChange={(items: Option[]) =>
-						handleChange(
-							items.map((item) => ({
-								id: item.value,
-								slug: item.slug,
-								title: item.label,
-								collection: item.collection
-							}))
-						)
+						handleChange(items.map((item) => storedFor(item, isPolymorphic)))
 					}
 				>
 					<ComboboxChips ref={anchor}>
@@ -294,7 +326,7 @@ function RelationshipFieldMulti({
 								: 'No matches found.'}
 						</ComboboxEmpty>
 						<ComboboxList>
-							{options.map((option) => (
+							{pickItems.map((option) => (
 								<ComboboxItem key={option.value} value={option}>
 									{option.label}
 								</ComboboxItem>
@@ -303,6 +335,12 @@ function RelationshipFieldMulti({
 					</ComboboxContent>
 				</Combobox>
 			</div>
+			{minRows !== undefined || maxRows !== undefined ? (
+				<p className='text-sm text-muted-foreground'>
+					{activeValues.length}
+					{maxRows !== undefined ? ` / ${maxRows}` : ''} selected
+				</p>
+			) : null}
 		</FieldShell>
 	)
 }

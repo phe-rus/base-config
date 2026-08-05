@@ -16,19 +16,23 @@ import {
 	StorageWidget,
 	type StorageWidgetTriggerProps
 } from '../admin/widgets/storage-widget'
+import { KeywordsField } from '../collections/fields/KeywordsField'
 import { withTabPrefix } from './schema'
 import type { FieldConfig, TabConfig } from './types'
 import { uploadFile } from './upload'
 
 /**
- * The four field types that resolve to an app-specific component rather than
- * a generic form primitive (same reasoning as `FieldSchemaResolvers` in
- * `schema.ts`), the consumer passes its real `MetaFields`/`RelationsField`/
- * `BlocksField`/`RelationshipField` in here rather than this file importing
- * them directly, so `baseConfig` stays reusable across a different app's
- * different collections/blocks. `upload` isn't here: every `upload` field is
- * backed by the single `uploadFile` in `./upload.ts` automatically, so no
- * collection ever wires its own upload mechanics again.
+ * The composite field types that resolve to an app-specific component rather
+ * than a generic form primitive (same reasoning as `FieldSchemaResolvers` in
+ * `schema.ts`), the consumer passes its real `MetaFields`/`BlocksField`/
+ * `RelationshipField` in here rather than this file importing them directly,
+ * so `baseConfig` stays reusable across a different app's different
+ * collections/blocks. `upload` isn't here: every `upload` field is backed by
+ * the single `uploadFile` in `./upload.ts` automatically, so no collection
+ * ever wires its own upload mechanics again. `keywords` isn't here either:
+ * every `keywords` field is backed by the single `KeywordsField`
+ * (`collections/fields/KeywordsField`) which wires the shared keyword pool
+ * itself.
  *
  * Generic over `TCollectionSlug` so `relationship.targetType` can match the
  * consumer's real `RelationshipField` component (whose `targetType` prop is
@@ -37,7 +41,6 @@ import { uploadFile } from './upload'
  */
 export type FieldRenderers<TCollectionSlug extends string = string> = {
 	meta?: FC<{ form: any; uploadFolder?: string; id?: string }>
-	relations?: FC<{ form: any; name: string; excludeId?: string }>
 	blocks?: FC<{
 		form: any
 		name: string
@@ -57,6 +60,9 @@ export type FieldRenderers<TCollectionSlug extends string = string> = {
 		description?: string
 		targetType?: TCollectionSlug | TCollectionSlug[]
 		excludeId?: string
+		hasMany?: boolean
+		minRows?: number
+		maxRows?: number
 	}>
 	menu?: FC<{
 		form: any
@@ -229,20 +235,13 @@ export function renderField(
 
 	const name = prefix ? `${prefix}.${field.name}` : field.name
 
-	// `meta`/`relations` (as currently implemented) hardcode their own
-	// paths/props rather than taking an arbitrary `name`, they're rendered
-	// directly, not wrapped in `form.AppField`.
+	// `meta` (as currently implemented) hardcodes its own paths/props rather
+	// than taking an arbitrary `name`, it's rendered directly, not wrapped in
+	// `form.AppField`.
 	if (field.type === 'meta') {
 		const Meta = renderers.meta
 		return Meta ? (
 			<Meta key={name} form={form} uploadFolder={uploadFolder} id={id} />
-		) : null
-	}
-
-	if (field.type === 'relations') {
-		const Relations = renderers.relations
-		return Relations ? (
-			<Relations key={name} form={form} name={name} excludeId={id} />
 		) : null
 	}
 
@@ -254,7 +253,7 @@ export function renderField(
 				form={form}
 				name={name}
 				label={field.label}
-				description={field.description}
+				description={field.admin?.description}
 				uploadFolder={uploadFolder}
 				id={id}
 				minRows={field.minRows}
@@ -273,7 +272,7 @@ export function renderField(
 				form={form}
 				name={name}
 				label={field.label}
-				description={field.description}
+				description={field.admin?.description}
 				startAsMegaMenu={field.startAsMegaMenu}
 				relationTo={field.relationTo}
 			/>
@@ -288,7 +287,7 @@ export function renderField(
 				form={form}
 				name={name}
 				label={field.label}
-				description={field.description}
+				description={field.admin?.description}
 				relationTo={field.relationTo}
 			/>
 		) : null
@@ -302,20 +301,35 @@ export function renderField(
 				{() => (
 					<Relationship
 						label={field.label}
-						description={field.description}
+						description={field.admin?.description}
 						targetType={field.relationTo}
 						excludeId={id}
+						hasMany={field.hasMany}
+						minRows={field.minRows}
+						maxRows={field.maxRows}
 					/>
 				)}
 			</form.AppField>
 		)
 	}
 
+	// `keywords` is a framework-owned composite now, not a generic primitive:
+	// `KeywordsField` wires the shared keyword pool (`useKeywordSuggestions`)
+	// into the generic `KeywordsInput`, and renders its own `form.AppField`
+	// (it has a real value to bind), so it's dispatched before the generic
+	// leaf-field wrapper below, same as `relationship`.
+	if (field.type === 'keywords') {
+		return <KeywordsField key={name} form={form} name={name} field={field} />
+	}
+
 	if (field.type === 'array') {
 		return (
 			<form.AppField key={name} name={name}>
 				{(f: any) => (
-					<f.ArrayField label={field.label} description={field.description}>
+					<f.ArrayField
+						label={field.label}
+						description={field.admin?.description}
+					>
 						{({ path }: { path: string }) => (
 							<div className='flex flex-col gap-3'>
 								{field.fields.map((childField, childIndex) =>
@@ -346,7 +360,7 @@ export function renderField(
 							<f.Input
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -356,7 +370,7 @@ export function renderField(
 							<f.Textarea
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -369,7 +383,7 @@ export function renderField(
 							<f.RichText
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								onUpload={(file: File) =>
 									uploadFile(file, uploadPrefix || undefined)
@@ -388,7 +402,7 @@ export function renderField(
 						return (
 							<f.Checkbox
 								label={field.label}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -397,7 +411,7 @@ export function renderField(
 						return (
 							<f.Switch
 								label={field.label}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -406,17 +420,7 @@ export function renderField(
 						return (
 							<f.DatePicker
 								label={field.label}
-								description={field.description}
-								placeholder={field.placeholder}
-								required={field.required}
-								disabled={field.disabled}
-							/>
-						)
-					case 'keywords':
-						return (
-							<f.KeywordsInput
-								label={field.label}
-								description={field.description}
+								description={field.admin?.description}
 								placeholder={field.placeholder}
 								required={field.required}
 								disabled={field.disabled}
@@ -426,7 +430,7 @@ export function renderField(
 						return (
 							<f.Select
 								label={field.label}
-								description={field.description}
+								description={field.admin?.description}
 								placeholder={field.placeholder}
 								options={field.options}
 								defaultValue={field.defaultValue as string | undefined}
@@ -438,7 +442,7 @@ export function renderField(
 						return (
 							<f.RadioGroup
 								label={field.label}
-								description={field.description}
+								description={field.admin?.description}
 								options={field.options}
 								required={field.required}
 								disabled={field.disabled}
@@ -449,7 +453,7 @@ export function renderField(
 							<f.Email
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -459,7 +463,7 @@ export function renderField(
 							<f.Number
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								min={field.min}
 								max={field.max}
 								step={field.step}
@@ -472,7 +476,7 @@ export function renderField(
 							<f.Password
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -482,7 +486,7 @@ export function renderField(
 							<f.ConfirmPassword
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -496,7 +500,7 @@ export function renderField(
 							<f.Code
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								language={field.language}
 								required={field.required}
 								disabled={field.disabled}
@@ -507,7 +511,7 @@ export function renderField(
 							<f.JSON
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -517,7 +521,7 @@ export function renderField(
 							<f.Slug
 								label={field.label}
 								placeholder={field.placeholder}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -526,7 +530,7 @@ export function renderField(
 						return (
 							<f.Point
 								label={field.label}
-								description={field.description}
+								description={field.admin?.description}
 								required={field.required}
 								disabled={field.disabled}
 							/>
@@ -538,7 +542,7 @@ export function renderField(
 						return (
 							<f.Upload
 								label={field.label}
-								description={field.description}
+								description={field.admin?.description}
 								accept={field.accept}
 								required={field.required}
 								disabled={field.disabled}
@@ -566,7 +570,12 @@ export function renderField(
 /**
  * Turns a plain `FieldConfig[]` into a real `Fields` component with no tab
  * chrome at all: for globals (`footer`, `topbar`), which render their
- * field(s) directly rather than inside `Tabs`.
+ * field(s) directly rather than inside `Tabs`. A field with
+ * `admin.position === 'sidebar'` is split into a fixed right-hand column
+ * (`md:grid-cols-[minmax(0,1fr)_280px]`), everything else stays in the
+ * main column; with no sidebar fields this is a plain `md:max-w-lg` stack,
+ * byte-for-byte the single-column layout the old hand-written wrappers
+ * rendered.
  */
 export function createFlatFieldsRenderer<
 	TCollectionSlug extends string = string,
@@ -578,20 +587,32 @@ export function createFlatFieldsRenderer<
 	uploadFolder?: string
 ): FC<CollectionFieldsProps> {
 	return function GeneratedFlatFields({ form, id }: CollectionFieldsProps) {
+		const renderOne = (field: FieldConfig<any, any>, index: number) =>
+			renderField(field, form, undefined, id, renderers, uploadFolder, index)
+
+		const sidebar = fields.filter(
+			(field) => 'admin' in field && field.admin?.position === 'sidebar'
+		)
+
+		if (sidebar.length === 0) {
+			return (
+				<div className='flex flex-col w-full md:max-w-lg mr-auto'>
+					{fields.map(renderOne)}
+				</div>
+			)
+		}
+
+		const main = fields.filter(
+			(field) => !('admin' in field) || field.admin?.position !== 'sidebar'
+		)
+
 		return (
-			<>
-				{fields.map((field, index) =>
-					renderField(
-						field,
-						form,
-						undefined,
-						id,
-						renderers,
-						uploadFolder,
-						index
-					)
-				)}
-			</>
+			<div className='grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_280px]'>
+				<div className='flex flex-col w-full md:max-w-lg gap-5'>
+					{main.map(renderOne)}
+				</div>
+				<aside className='flex flex-col gap-5'>{sidebar.map(renderOne)}</aside>
+			</div>
 		)
 	}
 }
@@ -619,6 +640,70 @@ export function createFieldsRenderer<
 	uploadFolder?: string
 ): FC<CollectionFieldsProps> {
 	return function GeneratedFields({ form, id }: CollectionFieldsProps) {
+		const renderTabField = (
+			field: FieldConfig<any, any>,
+			index: number,
+			tab: TabConfig<any, any>
+		) => {
+			switch (field.type) {
+				case 'row':
+				case 'collapsible':
+				case 'group':
+				case 'tabs':
+				case 'ui':
+					return renderField(
+						field,
+						form,
+						tab.flat ? undefined : tab.tab,
+						id,
+						renderers,
+						uploadFolder,
+						index
+					)
+				default:
+					return renderField(
+						{
+							...field,
+							name: withTabPrefix(tab.tab, field.name, tab.flat)
+						},
+						form,
+						undefined,
+						id,
+						renderers,
+						uploadFolder,
+						index
+					)
+			}
+		}
+
+		const renderTabColumns = (tab: TabConfig<any, any>) => {
+			const sidebar = tab.fields.filter(
+				(field) => 'admin' in field && field.admin?.position === 'sidebar'
+			)
+			if (sidebar.length === 0) {
+				return (
+					<>
+						{tab.fields.map((field, index) =>
+							renderTabField(field, index, tab)
+						)}
+					</>
+				)
+			}
+			const main = tab.fields.filter(
+				(field) => !('admin' in field) || field.admin?.position !== 'sidebar'
+			)
+			return (
+				<div className='grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_280px]'>
+					<div className='flex flex-col gap-5'>
+						{main.map((field, index) => renderTabField(field, index, tab))}
+					</div>
+					<aside className='flex flex-col gap-5'>
+						{sidebar.map((field, index) => renderTabField(field, index, tab))}
+					</aside>
+				</div>
+			)
+		}
+
 		return (
 			<Tabs defaultValue={tabs[0]?.tab} className='mb-20'>
 				<TabsList variant='line' className='sticky top-32 z-5 gap-3 px-0 mb-3'>
@@ -635,37 +720,7 @@ export function createFieldsRenderer<
 						value={tab.tab}
 						className='flex flex-col gap-5'
 					>
-						{tab.fields.map((field, index) => {
-							switch (field.type) {
-								case 'row':
-								case 'collapsible':
-								case 'group':
-								case 'tabs':
-								case 'ui':
-									return renderField(
-										field,
-										form,
-										tab.flat ? undefined : tab.tab,
-										id,
-										renderers,
-										uploadFolder,
-										index
-									)
-								default:
-									return renderField(
-										{
-											...field,
-											name: withTabPrefix(tab.tab, field.name, tab.flat)
-										},
-										form,
-										undefined,
-										id,
-										renderers,
-										uploadFolder,
-										index
-									)
-							}
-						})}
+						{renderTabColumns(tab)}
 					</TabsContent>
 				))}
 			</Tabs>

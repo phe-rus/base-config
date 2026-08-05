@@ -12,10 +12,9 @@ import { BlocksField } from '../../fields/BlocksField'
 import { LinksField } from '../../fields/Links'
 import { MetaFields } from '../../fields/MetaFields'
 import { NavMenuField } from '../../fields/NavMenu'
-import { RelationsField } from '../../fields/Relations'
 import { RelationshipField } from '../../fields/Relationship'
 import { labelFromSlug } from '../../slug'
-import { linksSchema, relationsSchema } from '../../types'
+import { linksSchema } from '../../types'
 import { getBlocksSchema } from '../registry'
 import type { BlockConfig, BlockFieldsProps } from './types'
 
@@ -36,8 +35,7 @@ const blockSchemaResolvers: FieldSchemaResolvers = {
 	// field's own `blocks` restriction list, so a nested `blocks` field that
 	// opts into a subset of the registry validates against just that subset.
 	blocks: (slugs) => z.lazy(() => getBlocksSchema(slugs)),
-	links: linksSchema,
-	relations: relationsSchema
+	links: linksSchema
 }
 
 /**
@@ -54,7 +52,6 @@ let blockRenderersCache: FieldRenderers<any> | undefined
 function blockFieldRenderers(): FieldRenderers<any> {
 	return (blockRenderersCache ??= {
 		meta: MetaFields,
-		relations: RelationsField,
 		blocks: BlocksField,
 		relationship: RelationshipField,
 		menu: NavMenuField,
@@ -71,7 +68,7 @@ function blockFieldRenderers(): FieldRenderers<any> {
  * the single source of truth, the same reason `defineCollection`/
  * `defineGlobal` derive their own `Fields`. `renderField` covers every leaf
  * type (`richtext`, `upload` with its own `prefix`, `select`, ...) and the
- * composite types (`links`, `blocks` with `exclude`, `relations`, ...), so
+ * composite types (`links`, `blocks` with `exclude`, ...), so
  * only a genuinely custom editor (a `code` block's sibling-driven language
  * toggle, a `relatedPosts`-style relation group) supplies `Fields` anymore.
  */
@@ -134,8 +131,7 @@ export type BlockDefinition<TSlug extends string> = {
 	 * is the entire authoring surface and no consumer `Fields.tsx` exists.
 	 * Only supply one for a genuinely custom editor the generic dispatch
 	 * can't express, e.g. a `code` block whose corner language toggle drives
-	 * a sibling field, or a `relatedPosts`-style block that renders the
-	 * relation group (`RelationGroupFields`) directly.
+	 * a sibling field.
 	 */
 	Fields?: FC<BlockFieldsProps>
 	/** See `BlockConfig['Render']` (`./types.ts`). */

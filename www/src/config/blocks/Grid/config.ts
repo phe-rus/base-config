@@ -11,7 +11,9 @@ export const gridBlock = defineBlock({
 			name: 'variant',
 			type: 'select',
 			label: 'Layout',
-			description: 'How each item is wrapped when this grid renders publicly.',
+			admin: {
+				description: 'How each item is wrapped when this grid renders publicly.'
+			},
 			defaultValue: 'default',
 			options: [
 				{ label: 'Default', value: 'default' },
@@ -23,7 +25,9 @@ export const gridBlock = defineBlock({
 			name: 'items',
 			type: 'blocks',
 			label: 'Items',
-			description: 'Any block goes here, each one lays out as one grid cell.',
+			admin: {
+				description: 'Any block goes here, each one lays out as one grid cell.'
+			},
 			// The nesting cap the old hand-written `Fields.tsx` hardcoded as
 			// `exclude={['grid']}`; a `blocks` field's `exclude` is a
 			// renderer-only restriction (BlocksField ANDs it with the field's

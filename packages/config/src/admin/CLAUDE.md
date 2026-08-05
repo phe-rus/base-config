@@ -4,7 +4,7 @@ Loads when working under `packages/config/src/admin/`: SSR safety, the admin ses
 
 #### SSR safety
 
-`CollectionForm`/`GlobalForm` (`admin/views/document/`) gate their entire subtree behind a `mounted` state flag before rendering `config.Fields`, this is why `MetaFields`/`RelationsField`/`RelationshipField`/`NavMenuField` (all of which call `useLiveQuery`) never need their own SSR guard. Don't add a *new* top-level admin surface that renders one of these composites without going through `CollectionForm`/`GlobalForm`'s existing mount gate.
+`CollectionForm`/`GlobalForm` (`admin/views/document/`) gate their entire subtree behind a `mounted` state flag before rendering `config.Fields`, this is why `MetaFields`/`KeywordsField`/`RelationshipField`/`NavMenuField` (all of which call `useLiveQuery`) never need their own SSR guard. Don't add a *new* top-level admin surface that renders one of these composites without going through `CollectionForm`/`GlobalForm`'s existing mount gate.
 
 #### The admin session guard: no route files, no consumer wiring at all
 

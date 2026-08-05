@@ -13,7 +13,7 @@ import { RenderBlock, RenderBlocks } from './RenderBlocks'
  * library's job) plus a `Component.tsx` (www's own public markup, used by
  * `RenderBlocks`, never the library's). The admin authoring half is derived
  * by `defineBlock` from each block's `fields`; only a genuinely custom
- * editor (here: `Code`, `RelatedPosts`) keeps a `Fields.tsx`. The `blocks`
+ * editor (here: `Code`) keeps a `Fields.tsx`. The `blocks`
  * array is what `base.config.ts` registers via `baseConfig({blocks})`,
  * which is what makes each block appear in the admin picker and in the
  * generated `ContentBlock` union. Add a new block by adding a folder here

@@ -2,7 +2,7 @@ import type {
 	CollectionConfig as BaseCollectionConfig,
 	GlobalConfig as BaseGlobalConfig
 } from '../base.types'
-import { uploadValueSchema } from '../fields/schema'
+import { relationshipValueSchema, uploadValueSchema } from '../fields/schema'
 import { z } from 'zod'
 
 export type { CollectionFieldsProps } from '../base.types'
@@ -29,30 +29,14 @@ export const metaSchema = z.object({
 /** Plain TS shape of `metaSchema`, the `type: 'meta'` field's real value. */
 export type MetaValue = z.infer<typeof metaSchema>
 
-/** One selected relationship, see `RelationshipValue` in `fields/Relationship/index.tsx`, the actual source of this shape. */
-export const relationshipValueSchema = z.object({
-	id: z.string(),
-	slug: z.string(),
-	title: z.string(),
-	/** Which collection the referenced document belongs to, lets a display resolve the right `path` prefix via `collectionPath()` without a live lookup. */
-	collection: z.string()
-})
-
-// One relations field shape shared by every collection, a list of groups,
-// each either a hand-picked set of posts or a keyword filter that resolves
-// to whichever posts currently share one of those keywords. `label` lets
-// posts (which can have several groups) name each one as a category.
-export const relationsSchema = z.array(
-	z.object({
-		label: z.string().optional(),
-		mode: z.enum(['manual', 'keyword']).optional(),
-		ids: z.array(relationshipValueSchema).optional(),
-		keywords: z.array(z.string()).optional()
-	})
-)
-
-/** Plain TS shape of `relationsSchema`, the `type: 'relations'` field's real value. */
-export type RelationsValue = z.infer<typeof relationsSchema>
+/**
+ * Plain TS shape of `relationshipValueSchema` (`fields/schema.ts`), the real
+ * value of a `type: 'relationship'` field and of a link/menu item's
+ * `reference`: a bare id for a single-`relationTo` field, `{relationTo,
+ * value}` for a polymorphic one. Re-exported so the barrel can keep
+ * surfacing it under the same name it always had.
+ */
+export type { RelationshipValue } from '../fields/schema'
 
 /** shadcn's own `Button` variants (`shared/ui/src/components/button.tsx`), reused so a nav item/link can be styled like a real button. */
 export const appearanceValues = [
@@ -66,11 +50,10 @@ export const appearanceValues = [
 
 /**
  * A single link's own mode/target: a reference to an existing
- * page/post/policy (`mode: 'internal'`, `to` synced from `reference.slug`
- * at selection time, see `RelationshipField`'s `onValueChange`) or a
- * hand-typed URL (`mode: 'custom'`). Not a strict `discriminatedUnion`,
- * matching how `relationsSchema` above handles its own manual/keyword
- * mode. The base both `navMenuLinkSchema` (below) and `linkItemSchema`
+ * page/post/policy (`mode: 'internal'`) or a hand-typed URL (`mode:
+ * 'custom'`). Not a strict `discriminatedUnion`, matching how the other
+ * link/menu schemas below stay loose. The base both `navMenuLinkSchema`
+ * (below) and `linkItemSchema`
  * (further below, the real value behind `type: 'links'`,
  * `fields/types.ts`'s `LinksFieldConfig`, rendered by `LinksField`,
  * `fields/Links/index.tsx`) extend with their own `label`/`appearance`.
@@ -79,7 +62,7 @@ export const linkValueSchema = z.object({
 	mode: z.enum(['internal', 'custom']).optional(),
 	/** Used when `mode === 'internal'`. */
 	reference: relationshipValueSchema.optional(),
-	/** The actual path/URL, hand-typed when `mode === 'custom'`, auto-synced from `reference.slug` when `mode === 'internal'`. */
+	/** The actual path/URL, hand-typed when `mode === 'custom'`, auto-synced from the picked document's slug at selection time when `mode === 'internal'` (see `LinkModeFields`), so a link's href never needs a live lookup even though `reference` itself only stores the id. */
 	to: z.string().optional(),
 	openInNewTab: z.boolean().optional()
 })

@@ -19,7 +19,16 @@ type BaseFieldConfig = {
 	 */
 	name: string
 	label?: string
-	description?: string
+	/**
+	 * Admin-only presentation settings, Payload's own `admin` option
+	 * (https://payloadcms.com/docs/fields/overview#admin). `description`
+	 * renders helper text under the field's label; `position` moves the
+	 * field into the sidebar column instead of the main content column.
+	 */
+	admin?: {
+		description?: string
+		position?: 'sidebar' | 'default'
+	}
 	placeholder?: string
 	required?: boolean
 	disabled?: boolean
@@ -51,7 +60,18 @@ export type RichTextFieldConfig = BaseFieldConfig & {
 export type CheckboxFieldConfig = BaseFieldConfig & { type: 'checkbox' }
 export type SwitchFieldConfig = BaseFieldConfig & { type: 'switch' }
 export type DateFieldConfig = BaseFieldConfig & { type: 'date' }
-export type KeywordsFieldConfig = BaseFieldConfig & { type: 'keywords' }
+export type KeywordsFieldConfig = BaseFieldConfig & {
+	type: 'keywords'
+	/**
+	 * Which global or collection supplies this field's suggestion pool,
+	 * defaults to the `keywords` global. A global target reads that
+	 * global's array-row labels (`{label}` rows) and stays writable (new
+	 * labels are registered into that global's pool); a collection target
+	 * reads its documents' `title`/`slug` labels as read-only suggestions.
+	 * Multiple targets means the union of pools.
+	 */
+	relationTo?: string | string[]
+}
 
 /** A single file/image field, see `Upload` in `@baseconfig/ui/forms`. */
 export type UploadFieldConfig = BaseFieldConfig & {
@@ -182,9 +202,17 @@ export type BlocksFieldConfig<TBlockSlug extends string = GeneratedBlockSlug> =
  * field-level hook or access-control system, collection-level `permissions`
  * is itself still inert, see the config discussion).
  *
- * `hasMany` describes intent ahead of the renderer: today's
- * `RelationshipField` component is single-select only, a `hasMany: true`
- * config isn't wired to anything yet.
+ * Value shape follows Payload's
+ * (https://payloadcms.com/docs/fields/relationship#value-shape): a
+ * single-`relationTo` (non-`hasMany`) field stores the bare document id; an
+ * array `relationTo` stores `{relationTo, value}` (polymorphic); `hasMany:
+ * true` stores an array of whichever of those applies. The former
+ * `{id, slug, title, collection}` snapshot is gone, labels are re-derived
+ * at render time.
+ *
+ * `minRows`/`maxRows` bound the number of picks (only meaningful with
+ * `hasMany`), enforced schema-side with a `superRefine` wrapper, same as
+ * `blocks`.
  */
 export type RelationshipFieldConfig<TCollectionSlug extends string = string> =
 	BaseFieldConfig & {
@@ -199,22 +227,9 @@ export type RelationshipFieldConfig<TCollectionSlug extends string = string> =
 	}
 
 /**
- * The "related posts" composite (label + manual/keyword mode + picker), see
- * `RelationsField`/`RelationGroupFields`. Deliberately its own field type
- * rather than forced into generic primitives: it's a fixed, opinionated
- * shape today, not a general-purpose relations builder.
- */
-export type RelationsFieldConfig<TCollectionSlug extends string = string> =
-	BaseFieldConfig & {
-		type: 'relations'
-		relationTo?: TCollectionSlug
-	}
-
-/**
  * The SEO title/description/keywords/preview bundle, see `MetaFields`.
- * Fixed shape today, same as `relations` above; no per-field configuration
- * yet (the mockup's `additionalFields` idea is a later extension point, not
- * designed yet).
+ * Fixed shape today, no per-field configuration yet (the mockup's
+ * `additionalFields` idea is a later extension point, not designed yet).
  */
 export type MetaFieldConfig = BaseFieldConfig & { type: 'meta' }
 
@@ -223,7 +238,7 @@ export type MetaFieldConfig = BaseFieldConfig & { type: 'meta' }
  * auto-populated from an existing document via a reference), and can be
  * flagged as a mega menu instead (grouped columns, or one flat list). See
  * `NavMenuField`. Deliberately its own field type rather than forced into
- * generic primitives, same reasoning as `relations`/`meta` above: per-item
+ * generic primitives, same reasoning as `meta` above: per-item
  * conditional rendering the declarative `array`/`select` primitives don't
  * support.
  */
@@ -386,7 +401,6 @@ export type FieldConfig<
 	| ArrayFieldConfig<TCollectionSlug, TBlockSlug>
 	| BlocksFieldConfig<TBlockSlug>
 	| RelationshipFieldConfig<TCollectionSlug>
-	| RelationsFieldConfig<TCollectionSlug>
 	| MetaFieldConfig
 	| MenuFieldConfig<TCollectionSlug>
 	| LinksFieldConfig<TCollectionSlug>

@@ -19,7 +19,7 @@
  * `'product.price'` reconciles the nested `product` object's own keys; a
  * known path like `'seo'` (a `meta`-type field, itself a leaf per
  * `knownFieldPaths`' own doc comment) keeps whatever's stored there
- * wholesale, this never recurses into an `array`/`blocks`/`relations`/
+ * wholesale, this never recurses into an `array`/`blocks`/
  * `menu`/`links` field's own item shape. Deliberate, not an oversight, see
  * `knownFieldPaths`.
  */

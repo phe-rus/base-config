@@ -5,10 +5,15 @@ import {
 	pruneGlobal
 } from '../../../db/collections'
 import { useDocument } from '../../../db/use-document'
-import { expandFields, knownFieldPaths } from '../../../fields/schema'
+import {
+	expandFields,
+	hasSidebarFields,
+	knownFieldPaths
+} from '../../../fields/schema'
 import { DocumentHeader } from './document-header'
 import { Button } from '@baseconfig/ui/components/button'
 import { t } from '@baseconfig/ui/components/sonner'
+import { cn } from '@baseconfig/ui/lib/utils'
 import { useLiveQuery } from '@tanstack/react-db'
 import { useEffect, useState } from 'react'
 
@@ -58,6 +63,11 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 		defaultValues: config.defaultValues,
 		knownFieldPaths: knownFieldPaths(expandFields(config.fields ?? []))
 	})
+
+	// Same as `CollectionForm`'s own check: any sidebar-positioned field
+	// (`admin.position === 'sidebar'`)? The renderer's flat-fields split puts
+	// those in a right-hand column, the wrapper has to widen first.
+	const hasSidebar = hasSidebarFields(config.fields ?? [])
 
 	return (
 		<form
@@ -115,7 +125,12 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 			/>
 
 			<section className='container flex flex-col gap-2 w-full md:max-w-4xl mx-auto'>
-				<div className='flex flex-col w-full md:max-w-lg mr-auto'>
+				<div
+					className={cn(
+						'flex flex-col w-full mr-auto',
+						!hasSidebar && 'md:max-w-lg'
+					)}
+				>
 					<config.Fields form={form} id={id} />
 				</div>
 			</section>

@@ -1,4 +1,4 @@
-import { collectionsBySlug } from '../collections/registry'
+import { collectionsBySlug, globalsBySlug } from '../collections/registry'
 import type {
 	CollectionConfig,
 	CollectionSlug,
@@ -1077,119 +1077,290 @@ export const draftGlobalsCollection: DraftCollection = createCollection(
 	})
 )
 
-// --- Keywords: not a separate collection, the shared, site-wide keyword
-// pool *is* the `keywords` global's own document (`draftGlobalsCollection`/
-// `globalsCollection`, id `'keywords'`; see `hooks/config/globals/keywords.ts`),
-// so it's both auto-populated from every `KeywordsInput.onCreate` below *and*
-// directly editable at `/admin/keywords`, with no second, disconnected copy
+// --- Keywords: not a separate collection, a keyword pool *is a global's own
+// array-row document* (`draftGlobalsCollection`/`globalsCollection`, the
+// default is the `keywords` global, id `'keywords'`; see
+// `hooks/config/globals/keywords.ts`), so a `keywords` field's `relationTo`
+// picks *which* global supplies its pool (e.g. `category`). A global pool is
+// both auto-populated from every `KeywordsInput.onCreate` below *and*
+// directly editable at `/admin/<slug>`, with no second, disconnected copy
 // of the data. Local-first like every other edit: `registerKeyword` only
 // ever writes to the *draft*, typing a new keyword on some unrelated
-// document's `meta`/`relations` field must never fire a real
-// `/api/globals/keywords` write on every keystroke. `publishKeywordPool()`
-// is the one place that draft ever reaches the real backend, called
-// alongside a normal document publish (see `collection-form.tsx`'s
-// `runPublish`): "a page using a new keyword publishes, the keyword pool
-// publishes with it," rather than needing its own separate manual publish
-// step on `/admin/keywords`. ---
+// document's field must never fire a real `/api/globals/<slug>` write on
+// every keystroke. `publishKeywordPool()` is the one place those drafts
+// ever reach the real backend, called alongside a normal document publish
+// (see `collection-form.tsx`'s `runPublish`): "a page using a new keyword
+// publishes, the keyword pool publishes with it," rather than needing its
+// own separate manual publish step on `/admin/<slug>`. A collection target
+// (`relationTo` naming a registered collection instead) is read-only: its
+// suggestions are the documents' own `title`/`slug` labels, nothing is ever
+// registered into it. ---
 
 const KEYWORDS_GLOBAL_ID = 'keywords'
 
-// Matches the `keywords` global's own field shape (`hooks/config/globals/keywords.ts`),
-// a plain `array` of `{label}` rows, not a flat `string[]`, since that
-// global renders as a real list (add/remove/see-each-row), not the
-// `keywords`-type combobox used for *consuming* the pool onto a document.
-type KeywordsGlobalData = { keywords?: { label: string }[] }
+// Matches a keyword-pool global's own field shape
+// (`hooks/config/globals/keywords.ts`): a plain `array` of `{label}` rows,
+// not a flat `string[]`, since that global renders as a real list
+// (add/remove/see-each-row), not the `keywords`-type combobox used for
+// *consuming* the pool onto a document. The array field's *name* is looked
+// up per-global (`globalPoolFieldName` below), the `category` global stores
+// `{category: [...]}`, not `{keywords: [...]}`.
+type PoolRows = { label?: string }[]
 
-// A stable reference for the "no keywords yet" case, returning a fresh `[]`
+/** Which array field of a global is its keyword pool: the `array` field whose own item shape has a `label`, e.g. the `keywords` global's `keywords` field or the `category` global's `category` field. */
+function globalPoolFieldName(
+	globalConfig: GlobalConfig | undefined
+): string | undefined {
+	for (const field of globalConfig?.fields ?? []) {
+		if (
+			field.type === 'array' &&
+			field.fields.some((child) => 'name' in child && child.name === 'label')
+		) {
+			return field.name
+		}
+	}
+	return undefined
+}
+
+/** Reads one global's pool rows out of its document data, keyed by the pool field name `globalPoolFieldName` found in its config. */
+function poolRows(
+	data: Record<string, unknown> | undefined,
+	fieldName: string | undefined
+): PoolRows {
+	if (!fieldName || !data) return []
+	const rows = data[fieldName]
+	return Array.isArray(rows) ? (rows as PoolRows) : []
+}
+
+// A stable reference for the "no suggestions yet" case, returning a fresh `[]`
 // literal every call would make this hook's result a new array on every
 // render, which is exactly the kind of unstable value that breaks a
 // consumer's `useEffect([suggestions])` into an infinite render loop (see
 // `KeywordsInput`'s own defensive fix for the other half of this).
 const EMPTY_KEYWORDS: string[] = []
 
+type KeywordTarget = { slug: string; kind: 'global' | 'collection' }
+
 /**
- * All globally known keywords, live, flattened to plain strings, pass
- * straight to a `KeywordsInput`'s `suggestions` prop. Reads the *draft* pool
- * (seeded from whatever's already published, the first time any admin
- * screen touches keywords in this browser, mirrors `useDocument`'s own
- * draft-seeding effect, just scoped to this one global instead of a whole
- * hook) so a keyword typed moments ago on another open document shows up as
- * a suggestion immediately, without waiting for a publish. Filters out
- * anything that isn't a real, non-empty label, a row an admin just clicked
- * "Add" on but hasn't typed into yet has no `label` at all (the array
- * field's default add button pushes a bare `{}`), and shouldn't crash or
- * show up as a blank suggestion.
+ * Resolves a `keywords` field's `relationTo` into the pool sources:
+ * `undefined` defaults to the `keywords` global; a named *global* reads that
+ * global's `{label}` array rows (writable); a named *collection* reads its
+ * documents' `title`/`slug` labels (read-only); anything not registered as
+ * either is dropped. See `KeywordsFieldConfig['relationTo']`
+ * (`fields/types.ts`).
  */
-export function useGlobalKeywordSuggestions(): string[] {
-	const { data: remoteData, isLoading: remoteLoading } =
-		useLiveQuery(globalsCollection)
-	const { data: draftData } = useLiveQuery(draftGlobalsCollection)
-
-	const remoteRow = remoteData.find((item) => item.id === KEYWORDS_GLOBAL_ID)
-	const draftRow = draftData.find((item) => item.id === KEYWORDS_GLOBAL_ID)
-
-	useEffect(() => {
-		if (remoteLoading || draftGlobalsCollection.get(KEYWORDS_GLOBAL_ID)) {
-			return
+function resolveKeywordTargets(
+	relationTo?: string | string[]
+): KeywordTarget[] {
+	if (!relationTo) return [{ slug: KEYWORDS_GLOBAL_ID, kind: 'global' }]
+	const slugs = Array.isArray(relationTo) ? relationTo : [relationTo]
+	const targets: KeywordTarget[] = []
+	for (const slug of slugs) {
+		if (slug in globalsBySlug) {
+			targets.push({ slug, kind: 'global' })
+		} else if (slug in collectionsBySlug) {
+			targets.push({ slug, kind: 'collection' })
 		}
-		if (!remoteRow) return
-		draftGlobalsCollection.insert({
-			id: KEYWORDS_GLOBAL_ID,
-			data: remoteRow.data,
-			status: remoteRow.status,
-			createdAt: remoteRow.createdAt,
-			updatedAt: remoteRow.updatedAt
-		})
-		// Only re-seeds once, when the real pool first becomes available,
-		// re-running on every `remoteRow` change would clobber local,
-		// not-yet-published keyword edits with stale published data.
+	}
+	return targets
+}
+
+/** How many collections one `keywords` field can read suggestions from at once, same fixed-`useLiveQuery`-slots constraint as `useRelationshipOptions` (`collections/fields/Relationship`). Raise it (and add one more slot below) if a real field ever needs more simultaneous collection targets. */
+const MAX_KEYWORD_TARGETS = 8
+
+/**
+ * A sentinel slug that's never a real registered collection, `getContentCollection`
+ * resolves it to the shared, always-empty stand-in (never fetches, see
+ * `createEmptyContentCollection`), so a `useLiveQuery` slot below with
+ * nothing real to query still gets a valid, empty collection rather than
+ * `undefined`.
+ */
+const UNUSED_KEYWORD_TARGET_SLOT = '__unused_keyword_target__'
+
+/**
+ * A `keywords` field's live suggestions plus its `onCreate`, see
+ * `resolveKeywordTargets` for the target-resolution rules. Global targets
+ * contribute their draft pool (seeded from whatever's already published,
+ * the first time any admin screen touches that global in this browser,
+ * mirrors `useDocument`'s own draft-seeding effect) and stay writable:
+ * `onCreate` registers new labels into the first global target's pool. A
+ * collection target contributes its documents' `title`/`slug` labels
+ * read-only (no `onCreate`). Pass the result straight to a
+ * `KeywordsInput`'s `suggestions`/`onCreate` props, see
+ * `collections/fields/KeywordsField`.
+ */
+export function useKeywordSuggestions(relationTo?: string | string[]): {
+	suggestions: string[]
+	onCreate: ((value: string) => void) | undefined
+} {
+	const targets = useMemo(() => resolveKeywordTargets(relationTo), [relationTo])
+	const globalTargets = useMemo(
+		() => targets.filter((target) => target.kind === 'global'),
+		[targets]
+	)
+	const collectionTargets = useMemo(
+		() => targets.filter((target) => target.kind === 'collection'),
+		[targets]
+	)
+
+	const { data: remoteGlobals, isLoading: remoteLoading } =
+		useLiveQuery(globalsCollection)
+	const { data: draftGlobals } = useLiveQuery(draftGlobalsCollection)
+
+	// Collection targets each need their own `useLiveQuery`, fixed slots
+	// (React's rules of hooks forbid looping the hook over a runtime-length
+	// list), the same pattern `useRelationshipOptions` uses.
+	const slot0 = useLiveQuery(
+		contentCollections[collectionTargets[0]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+	const slot1 = useLiveQuery(
+		contentCollections[collectionTargets[1]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+	const slot2 = useLiveQuery(
+		contentCollections[collectionTargets[2]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+	const slot3 = useLiveQuery(
+		contentCollections[collectionTargets[3]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+	const slot4 = useLiveQuery(
+		contentCollections[collectionTargets[4]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+	const slot5 = useLiveQuery(
+		contentCollections[collectionTargets[5]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+	const slot6 = useLiveQuery(
+		contentCollections[collectionTargets[6]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+	const slot7 = useLiveQuery(
+		contentCollections[collectionTargets[7]?.slug ?? UNUSED_KEYWORD_TARGET_SLOT]
+	).data
+
+	// Seeds each global target's draft from the published pool the first time
+	// it's available in this browser, so a keyword typed moments ago on
+	// another open document shows up as a suggestion immediately.
+	useEffect(() => {
+		if (remoteLoading) return
+		for (const target of globalTargets) {
+			if (draftGlobalsCollection.get(target.slug)) continue
+			const remoteRow = (remoteGlobals ?? []).find(
+				(item) => item.id === target.slug
+			)
+			if (!remoteRow) continue
+			draftGlobalsCollection.insert({
+				id: target.slug,
+				data: remoteRow.data,
+				status: remoteRow.status,
+				createdAt: remoteRow.createdAt,
+				updatedAt: remoteRow.updatedAt
+			})
+		}
+		// Only re-seeds once, when the remote side first becomes available,
+		// re-running on every `remoteGlobals` change would clobber local,
+		// not-yet-published pool edits with stale published data.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [remoteLoading])
 
-	const keywordRows = (
-		(draftRow ?? remoteRow)?.data as KeywordsGlobalData | undefined
-	)?.keywords
+	const suggestions = useMemo(() => {
+		const labels: string[] = []
+		const seen = new Set<string>()
+		const add = (label: string | undefined) => {
+			if (typeof label !== 'string' || !label.trim()) return
+			if (seen.has(label)) return
+			seen.add(label)
+			labels.push(label)
+		}
 
-	return useMemo(() => {
-		if (!Array.isArray(keywordRows)) return EMPTY_KEYWORDS
-		const labels = keywordRows
-			.map((entry) => entry?.label)
-			.filter(
-				(label): label is string =>
-					typeof label === 'string' && label.trim().length > 0
+		for (const target of globalTargets) {
+			const draftRow = (draftGlobals ?? []).find(
+				(item) => item.id === target.slug
 			)
+			const remoteRow = (remoteGlobals ?? []).find(
+				(item) => item.id === target.slug
+			)
+			const fieldName = globalPoolFieldName(globalsBySlug[target.slug])
+			for (const entry of poolRows(
+				(draftRow ?? remoteRow)?.data as Record<string, unknown> | undefined,
+				fieldName
+			)) {
+				add(entry?.label)
+			}
+		}
+
+		const slots = [slot0, slot1, slot2, slot3, slot4, slot5, slot6, slot7]
+		for (
+			let i = 0;
+			i < collectionTargets.length && i < MAX_KEYWORD_TARGETS;
+			i++
+		) {
+			for (const row of slots[i] ?? []) {
+				const rowData = row.data as { title?: string; slug?: string }
+				add(rowData.title || rowData.slug)
+			}
+		}
+
 		return labels.length > 0 ? labels : EMPTY_KEYWORDS
-	}, [keywordRows])
+	}, [
+		globalTargets,
+		collectionTargets,
+		remoteGlobals,
+		draftGlobals,
+		slot0,
+		slot1,
+		slot2,
+		slot3,
+		slot4,
+		slot5,
+		slot6,
+		slot7
+	])
+
+	const firstGlobal = globalTargets[0]?.slug
+	const onCreate = useMemo(() => {
+		if (!firstGlobal) return undefined
+		return (value: string) => registerKeyword(value, firstGlobal)
+	}, [firstGlobal])
+
+	return { suggestions, onCreate }
 }
 
-/** Adds a keyword to the shared pool if it isn't already there (case-insensitive), call from `KeywordsInput`'s `onCreate` wherever it's used, so new keywords typed on any document become suggestions everywhere else *and* show up as a row in the `keywords` global's own editor. A pure `localStorage` write, same as any other draft edit, see this section's own doc comment for why. */
-export function registerKeyword(value: string) {
+/** The keyword-pool global slugs written to this session, so `publishKeywordPool` knows which drafts to flush (it runs once per document publish, without any pool-specific input from the caller). */
+const keywordPoolSlugs = new Set<string>()
+
+/** Adds a keyword to a keyword-pool global's draft if it isn't already there (case-insensitive), call from `KeywordsInput`'s `onCreate` wherever it's used, so new keywords typed on any document become suggestions everywhere else *and* show up as a row in that global's own editor. `slug` defaults to the `keywords` global. A pure `localStorage` write, same as any other draft edit, see this section's own doc comment for why. */
+export function registerKeyword(
+	value: string,
+	slug: string = KEYWORDS_GLOBAL_ID
+) {
 	const trimmed = value.trim()
 	if (!trimmed) return
 
-	const draftRow = draftGlobalsCollection.get(KEYWORDS_GLOBAL_ID)
-	const remoteRow = globalsCollection.get(KEYWORDS_GLOBAL_ID)
-	const currentKeywords =
-		((draftRow ?? remoteRow)?.data as KeywordsGlobalData | undefined)
-			?.keywords ?? []
-	const alreadyExists = currentKeywords.some(
+	keywordPoolSlugs.add(slug)
+	const fieldName = globalPoolFieldName(globalsBySlug[slug]) ?? 'keywords'
+
+	const draftRow = draftGlobalsCollection.get(slug)
+	const remoteRow = globalsCollection.get(slug)
+	const data = (draftRow ?? remoteRow)?.data as
+		| Record<string, unknown>
+		| undefined
+	const current = poolRows(data, fieldName)
+	const alreadyExists = current.some(
 		(keyword) => keyword?.label?.toLowerCase() === trimmed.toLowerCase()
 	)
 	if (alreadyExists) return
 
-	const nextKeywords = [...currentKeywords, { label: trimmed }]
+	const nextRows = [...current, { label: trimmed }]
 
 	if (draftRow) {
-		draftGlobalsCollection.update(KEYWORDS_GLOBAL_ID, (draft) => {
-			;(draft.data as KeywordsGlobalData).keywords = nextKeywords
+		draftGlobalsCollection.update(slug, (draft) => {
+			;(draft.data as Record<string, unknown>)[fieldName] = nextRows
 		})
 		return
 	}
 
 	const now = new Date().toISOString()
 	draftGlobalsCollection.insert({
-		id: KEYWORDS_GLOBAL_ID,
-		data: { keywords: nextKeywords },
+		id: slug,
+		data: { ...(data ?? {}), [fieldName]: nextRows },
 		status: remoteRow?.status ?? 'published',
 		createdAt: remoteRow?.createdAt ?? now,
 		updatedAt: now
@@ -1197,32 +1368,36 @@ export function registerKeyword(value: string) {
 }
 
 /**
- * Pushes the local keyword-pool draft live if it actually differs from
- * what's currently published, no-ops otherwise. Called from
+ * Pushes every keyword-pool global's local draft live if it actually
+ * differs from what's currently published, no-ops otherwise. Called from
  * `collection-form.tsx`'s `runPublish`, right after a document's own
  * publish succeeds, so newly-typed keywords go live *with* whatever
  * document introduced them rather than needing a separate trip to
- * `/admin/keywords` (see this section's own doc comment). Safe to call
- * unconditionally, including for collections that don't touch keywords at
- * all (`users`), it only ever writes when the draft and remote pools
- * actually disagree.
+ * `/admin/<slug>` (see this section's own doc comment). Only pools actually
+ * written to this session (via `registerKeyword`) are checked; a pool
+ * edited through its own `/admin/<slug>` editor publishes through that
+ * global's own form. Safe to call unconditionally, including for
+ * collections that don't touch keywords at all (`users`), it only ever
+ * writes when a draft and its remote row actually disagree.
  */
 export async function publishKeywordPool(): Promise<void> {
-	const draft = draftGlobalsCollection.get(KEYWORDS_GLOBAL_ID)
-	if (!draft) return
+	for (const slug of keywordPoolSlugs) {
+		const draft = draftGlobalsCollection.get(slug)
+		if (!draft) continue
 
-	const remote = globalsCollection.get(KEYWORDS_GLOBAL_ID)
-	if (remote && deepEqual(remote.data, draft.data)) {
-		return
+		const remote = globalsCollection.get(slug)
+		if (remote && deepEqual(remote.data, draft.data)) {
+			continue
+		}
+
+		if (!remote) {
+			await globalsCollection.insert({ ...draft }).isPersisted.promise
+			continue
+		}
+
+		await globalsCollection.update(slug, (row) => {
+			row.data = draft.data
+			row.updatedAt = new Date().toISOString()
+		}).isPersisted.promise
 	}
-
-	if (!remote) {
-		await globalsCollection.insert({ ...draft }).isPersisted.promise
-		return
-	}
-
-	await globalsCollection.update(KEYWORDS_GLOBAL_ID, (row) => {
-		row.data = draft.data
-		row.updatedAt = new Date().toISOString()
-	}).isPersisted.promise
 }

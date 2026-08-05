@@ -3,10 +3,7 @@ import {
 	type StorageWidgetTriggerProps
 } from '../../../admin/widgets/storage-widget'
 import { uploadFile } from '../../../fields/upload'
-import {
-	registerKeyword,
-	useGlobalKeywordSuggestions
-} from '../../../db/collections'
+import { useKeywordSuggestions } from '../../../db/collections'
 import { useSelector } from '@tanstack/react-store'
 import { collectionsBySlug } from '../../registry'
 import { collectionPath } from '../../types'
@@ -23,7 +20,8 @@ export function MetaFields({
 	id?: string
 }) {
 	const store = useSelector(form.store, (s: any) => s.values)
-	const keywordSuggestions = useGlobalKeywordSuggestions()
+	const { suggestions: keywordSuggestions, onCreate: registerKeyword } =
+		useKeywordSuggestions()
 	const metaUploadPrefix = ['meta', uploadFolder, id].filter(Boolean).join('/')
 	// Widened to a plain-`string`-keyed lookup, same trade-off `Topbar` already
 	// makes (`admin/views/topbar.tsx`): `uploadFolder` is a plain `string`

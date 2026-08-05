@@ -13,18 +13,37 @@ export const uploadValueSchema = z.object({
 export type UploadValue = z.infer<typeof uploadValueSchema>
 
 /**
- * The four composite field types (`meta`/`relations`/`blocks`/`menu`) resolve
- * to an app-specific schema that this framework-side module has no business
- * knowing about: `collections/types.ts`'s `metaSchema`/`relationsSchema`/
- * `navMenuSchema` and `collections/blocks`'s `blocksSchema` are *this
- * package's own* real shapes, wired in centrally by `define.ts`, but a
- * different consumer swapping in different collections/blocks would supply
- * different ones, the consumer passes them in here rather than this file
- * importing them directly, so `@baseconfig/core` stays reusable.
+ * The shape a `relationship`-type field's value takes, Payload's own
+ * relationship value model
+ * (https://payloadcms.com/docs/fields/relationship#value-shape): a
+ * non-polymorphic field (single `relationTo` string) stores the bare
+ * document id, a polymorphic one (array `relationTo`) stores `{relationTo,
+ * value}`; `hasMany` wraps whichever of those applies in an array. The
+ * former `{id, slug, title, collection}` snapshot is gone, labels are
+ * re-derived at render time.
+ */
+export const relationshipValueSchema = z.union([
+	z.string(),
+	z.object({ relationTo: z.string(), value: z.string() })
+])
+
+/** Plain TS shape of `relationshipValueSchema`, one selected relationship's real value. */
+export type RelationshipValue = z.infer<typeof relationshipValueSchema>
+
+/**
+ * The composite field types (`meta`/`blocks`/`menu`/`links`) resolve to an
+ * app-specific schema that this framework-side module has no business
+ * knowing about: `collections/types.ts`'s `metaSchema`/`navMenuSchema` and
+ * `collections/blocks`'s `blocksSchema` are *this package's own* real
+ * shapes, wired in centrally by `define.ts`, but a different consumer
+ * swapping in different collections/blocks would supply different ones,
+ * the consumer passes them in here rather than this file importing them
+ * directly, so `@baseconfig/core` stays reusable. `relationship` is a real
+ * leaf field now (its value shape is framework-owned, see
+ * `relationshipValueSchema` above), not a resolver.
  */
 export type FieldSchemaResolvers = {
 	meta?: z.ZodTypeAny
-	relations?: z.ZodTypeAny
 	/**
 	 * A function, not the schema itself: called per `blocks` field with that
 	 * field's own `blocks` restriction list (if any), so a field that opts
@@ -181,12 +200,34 @@ function baseFieldSchema(
 			return uploadValueSchema
 		case 'array':
 			return z.array(fieldsToSchema(field.fields, resolvers))
-		case 'relationship':
-			return field.hasMany ? z.array(z.string()) : z.string()
+		case 'relationship': {
+			const isPolymorphic = Array.isArray(field.relationTo)
+			const item = isPolymorphic
+				? z.object({ relationTo: z.string(), value: z.string() })
+				: z.string()
+			let schema: z.ZodTypeAny = field.hasMany ? z.array(item) : item
+			if (field.minRows !== undefined || field.maxRows !== undefined) {
+				const min = field.minRows
+				const max = field.maxRows
+				schema = schema.superRefine((value, ctx) => {
+					if (min !== undefined && Array.isArray(value) && value.length < min) {
+						ctx.addIssue({
+							code: 'custom',
+							message: `Must have at least ${min} relation${min === 1 ? '' : 's'}`
+						})
+					}
+					if (max !== undefined && Array.isArray(value) && value.length > max) {
+						ctx.addIssue({
+							code: 'custom',
+							message: `Must have at most ${max} relation${max === 1 ? '' : 's'}`
+						})
+					}
+				})
+			}
+			return schema
+		}
 		case 'meta':
 			return resolvers.meta ?? z.record(z.string(), z.unknown())
-		case 'relations':
-			return resolvers.relations ?? z.array(z.unknown())
 		case 'blocks': {
 			// The resolver returns a `z.lazy(() => getBlocksSchema(slugs))`,
 			// i.e. a `ZodLazy`. It has no `min`/`max` of its own, and
@@ -296,13 +337,30 @@ export function tabsToSchema(
 }
 
 /**
+ * Whether any top-level field in this list is positioned into the sidebar
+ * column (`admin.position === 'sidebar'`, see `BaseFieldConfig['admin']`,
+ * `fields/types.ts`). Only top-level fields participate: the renderer's
+ * sidebar split happens once, at the tab-content level, so a `sidebar` flag
+ * buried inside a `row`/`group`'s own `fields` is ignored (only a named
+ * field has `admin` at all, see `isContainerFieldType`). A form uses this to
+ * widen its own single-column wrapper (`md:max-w-lg`) into the full section
+ * width when any field needs the second column, so the sidebar isn't crushed
+ * into 280px squeezed against a 512px main column.
+ */
+export function hasSidebarFields(fields: FieldConfig<any, any>[]): boolean {
+	return fields.some(
+		(field) => 'admin' in field && field.admin?.position === 'sidebar'
+	)
+}
+
+/**
  * The flat list of a collection/global's real, *current* field paths
  * (`flattenTabFields`/`expandFields`'s own already-resolved dotted `name`s),
  * the source of truth a "prune" operation (`db/prune.ts`) compares a
  * document's stored `data` against: any key reachable in stored data but not
  * in this list no longer corresponds to any field in the current config
  * (renamed/removed since that data was last written) and gets dropped.
- * `array`/`blocks`/`relations`/`menu`/`links`/`meta`/`relationship`/`upload`
+ * `array`/`blocks`/`menu`/`links`/`meta`/`relationship`/`upload`
  * fields are leaves here (see `expandFields`'s own doc comment for exactly
  * which types recurse vs. resolve to one path), so this only ever
  * reconciles top-level/nested-group structure, never an array item's own
@@ -334,8 +392,8 @@ function ensurePath(
 /**
  * A field only gets a default when it explicitly opts in (`field.defaultValue`)
  * or is one of the container types that already default to an empty
- * container today (`array` → `[]`, `blocks`/`relations`/`menu`/`links` → `[]`,
- * `meta` → `{title: '', description: ''}`, matching every hand-written
+ * container today (`array` → `[]`, `blocks`/`menu`/`links` → `[]`, `meta` →
+ * `{title: '', description: ''}`, matching every hand-written
  * `defaultValues()` this replaces byte-for-byte). Every other field is
  * simply left undefined. Only ever called on a `LeafFieldConfig`
  * (post-`expandFields`).
@@ -345,7 +403,6 @@ function fieldDefaultValue(field: LeafFieldConfig): unknown {
 	switch (field.type) {
 		case 'array':
 		case 'blocks':
-		case 'relations':
 		case 'menu':
 		case 'links':
 			return []

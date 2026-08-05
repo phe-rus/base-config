@@ -32,7 +32,9 @@ export const pages: CollectionConfig = defineCollection({
 					name: 'links',
 					type: 'array',
 					label: 'Links',
-					description: 'Buttons or links shown in the hero.',
+					admin: {
+						description: 'Buttons or links shown in the hero.'
+					},
 					fields: [
 						{
 							name: 'label',
@@ -58,8 +60,10 @@ export const pages: CollectionConfig = defineCollection({
 					name: 'content',
 					type: 'blocks',
 					label: 'Content',
-					description:
-						'Build the page out of blocks — including a "Related posts" block wherever you want one.'
+					admin: {
+						description:
+							'Build the page out of blocks — including a "Related posts" block wherever you want one.'
+					}
 				}
 			]
 		},

@@ -9,7 +9,9 @@ export const category: GlobalConfig = defineGlobal({
 			name: 'category',
 			type: 'array',
 			label: 'Category',
-			description: 'Use a custom keyword for the category order.',
+			admin: {
+				description: 'Use a custom keyword for the category order.'
+			},
 			fields: [
 				{
 					name: 'label',

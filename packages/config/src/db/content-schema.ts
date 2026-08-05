@@ -18,7 +18,7 @@
  * Each table still keeps a single `data` JSON column for everything beyond
  * the fixed columns, deliberately: giving every individual *field* its
  * own real SQL column would need a field-type → SQL-column mapper (and
- * real normalization for composite types like `blocks`/`array`/`relations`,
+ * real normalization for composite types like `blocks`/`array`/`menu`,
  * which don't flatten into a scalar column at all) and would reintroduce
  * migration friction on every field edit, not just when a collection is
  * added or removed. What changes here is real separation per collection,

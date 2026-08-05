@@ -37,11 +37,10 @@ export type {
 	LinkValue,
 	MetaValue,
 	NavMenuItemValue,
-	NavMenuValue,
-	RelationsValue
+	NavMenuValue
 } from './collections/types'
 export type { UploadValue } from './fields/schema'
-export type { RelationshipValue } from './collections/fields/Relationship'
+export type { RelationshipValue } from './collections/types'
 export { defineBlock, registerBlocks } from './collections/blocks'
 export type {
 	BlockConfig,
@@ -52,13 +51,12 @@ export type {
 // (`www/src/config/blocks`, Payload-style): every block's admin `Fields`
 // composes these the same way this package's own (now consumer-owned)
 // blocks always did. `BlocksField` is how a `grid`-style block nests other
-// blocks; `LinksField`/`RelationGroupFields` are the `links`/`relations`
-// composite renderers; `uploadFile`/`StorageWidget` give an upload-typed
-// block's `Fields` a real storage round-trip (see `fields/renderer.tsx`'s
-// generic `case 'upload'` for the wiring pattern).
+// blocks; `LinksField` is the `links` composite renderer; `uploadFile`/
+// `StorageWidget` give an upload-typed block's `Fields` a real storage
+// round-trip (see `fields/renderer.tsx`'s generic `case 'upload'` for the
+// wiring pattern).
 export { BlocksField } from './collections/fields/BlocksField'
 export { LinksField } from './collections/fields/Links'
-export { RelationGroupFields } from './collections/fields/Relations'
 export { uploadFile } from './fields/upload'
 export {
 	StorageWidget,

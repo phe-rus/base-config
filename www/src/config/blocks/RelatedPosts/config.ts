@@ -1,6 +1,5 @@
 import { defineBlock } from '@baseconfig/core'
 import { IconNews } from '@tabler/icons-react'
-import { RelatedPostsBlockFields } from './Fields'
 
 export const relatedPostsBlock = defineBlock({
 	slug: 'relatedPosts',
@@ -20,13 +19,15 @@ export const relatedPostsBlock = defineBlock({
 		},
 		{
 			name: 'ids',
-			type: 'array',
-			label: 'Posts',
-			description: 'Manually chosen posts, shown when Mode is Manual.',
-			fields: [{ name: 'id', type: 'text', label: 'ID' }]
+			type: 'relationship',
+			label: 'Pages',
+			relationTo: 'pages',
+			hasMany: true,
+			admin: {
+				description: 'Manually chosen pages, shown when Mode is Manual.'
+			}
 		},
 		{ name: 'keywords', type: 'keywords', label: 'Keywords' }
 	],
-	Fields: RelatedPostsBlockFields,
 	Icon: IconNews
 })

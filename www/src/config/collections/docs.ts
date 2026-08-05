@@ -32,32 +32,40 @@ export const docs: CollectionConfig = defineCollection({
 			fields: [
 				{
 					name: 'category',
-					type: 'relations',
+					type: 'keywords',
 					relationTo: 'category',
 					label: 'Category / Section',
-					description:
-						'Main section grouping (e.g., "Getting Started", "Concepts", "API Reference")'
+					admin: {
+						description: 'Main section grouping (e.g., "Getting Started", "Concepts", "API Reference")'
+					}
 				},
 				{
 					name: 'parent',
 					type: 'relationship',
 					relationTo: 'docs',
 					label: 'Parent Document',
-					description: 'Select a parent doc if this is a sub-page'
+					admin: {
+						description: 'Select a parent doc if this is a sub-page'
+					}
 				},
 				{
 					name: 'order',
 					type: 'number',
 					label: 'Order',
 					defaultValue: 0,
-					description: 'Display priority within the section/category'
+					admin: {
+						description: 'Display priority within the section/category',
+						position: 'sidebar'
+					}
 				},
 				{
 					name: 'slug',
 					type: 'slug',
 					label: 'Slug',
-					description:
-						'Used in the URL. If empty, it will be the same as the title.'
+					admin: {
+						description: 'Used in the URL. If empty, it will be the same as the title.',
+						position: 'sidebar'
+					}
 				}
 			]
 		}

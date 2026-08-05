@@ -7,7 +7,6 @@ import { BlocksField } from './collections/fields/BlocksField'
 import { LinksField } from './collections/fields/Links'
 import { MetaFields } from './collections/fields/MetaFields'
 import { NavMenuField } from './collections/fields/NavMenu'
-import { RelationsField } from './collections/fields/Relations'
 import { RelationshipField } from './collections/fields/Relationship'
 import {
 	registerBaseConfig,
@@ -25,12 +24,7 @@ import {
 	registerStorageDataSource
 } from './fields/storage-client'
 import type { CollectionSlug, GlobalSlug } from './collections/types'
-import {
-	linksSchema,
-	metaSchema,
-	navMenuSchema,
-	relationsSchema
-} from './collections/types'
+import { linksSchema, metaSchema, navMenuSchema } from './collections/types'
 import type {
 	BaseConfigProps,
 	CollectionAccess,
@@ -60,7 +54,6 @@ import {
 // resolver boilerplate.
 const schemaResolvers: FieldSchemaResolvers = {
 	meta: metaSchema,
-	relations: relationsSchema,
 	// A function returning the `z.lazy`, not the lazy itself, see
 	// `getBlocksSchema()`'s own doc comment (`collections/blocks/registry.ts`)
 	// for why the *resolution* must be lazy: it needs to run after
@@ -76,7 +69,6 @@ const schemaResolvers: FieldSchemaResolvers = {
 
 const fieldRenderers: FieldRenderers<CollectionSlug> = {
 	meta: MetaFields,
-	relations: RelationsField,
 	blocks: BlocksField,
 	relationship: RelationshipField,
 	menu: NavMenuField,
@@ -84,7 +76,7 @@ const fieldRenderers: FieldRenderers<CollectionSlug> = {
 }
 
 // Field types whose value renders sensibly as a flat table cell: everything
-// else (upload/richtext/blocks/relations/meta/menu/array) holds structured
+// else (upload/richtext/blocks/meta/menu/array) holds structured
 // data a single cell can't meaningfully show, so `deriveDefaultColumns` below
 // leaves those out of the auto-derived default.
 const RENDERABLE_COLUMN_FIELD_TYPES = new Set([

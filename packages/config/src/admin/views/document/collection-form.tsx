@@ -8,7 +8,11 @@ import {
 	type ContentCollection
 } from '../../../db/collections'
 import { useDocument } from '../../../db/use-document'
-import { flattenTabFields, knownFieldPaths } from '../../../fields/schema'
+import {
+	flattenTabFields,
+	hasSidebarFields,
+	knownFieldPaths
+} from '../../../fields/schema'
 import { useAdminConfig } from '../../functions/context'
 import { DocumentHeader } from './document-header'
 import { Button } from '@baseconfig/ui/components/button'
@@ -147,6 +151,14 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 	const slugTouched = useRef(!!(row.data as BaseData | undefined)?.slug)
 	const { adminPath } = useAdminConfig()
 	const navigate = useNavigate()
+
+	// Any field on any tab positioned into the sidebar column
+	// (`admin.position === 'sidebar'`)? The renderer splits those into a
+	// fixed right-hand column itself, but the form's own wrapper has to
+	// stop clamping the whole section to `md:max-w-lg` first, or the
+	// 280px sidebar gets crushed against a 512px main column.
+	const hasSidebar =
+		(config.tabs ?? []).some((tab) => hasSidebarFields(tab.fields)) ?? false
 
 	// "Publish" is for a document going live for the first time; "Update" is
 	// for pushing an edit to a document that's already live: same button,
@@ -294,7 +306,12 @@ function DocumentEditor({ config, collection, id }: CollectionFormProps) {
 			/>
 
 			<section className='container flex flex-col gap-2 w-full md:max-w-4xl mx-auto'>
-				<div className='flex flex-col w-full md:max-w-lg mr-auto'>
+				<div
+					className={cn(
+						'flex flex-col w-full mr-auto',
+						!hasSidebar && 'md:max-w-lg'
+					)}
+				>
 					<config.Fields form={form} id={id} />
 				</div>
 			</section>
