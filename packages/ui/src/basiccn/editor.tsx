@@ -3,13 +3,14 @@ import { cn } from '../lib/utils'
 import { IconGripVertical } from '@tabler/icons-react'
 import DragHandle from '@tiptap/extension-drag-handle-react'
 import { EditorContent, EditorContext, useEditor } from '@tiptap/react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { AddBlockButton } from './components/add-block-button'
 import { BubbleMenus } from './components/bubble-menus'
 import { LinkHoverCard } from './components/link-hover-card'
 import { basiccnTheme } from './theme'
 import type { EditorProps } from './types'
 import { BasiccnExtensions } from './utils/extensions'
+import { handleImageDrop, handleImagePaste } from './utils/image'
 
 export function Editor({
 	value,
@@ -17,24 +18,41 @@ export function Editor({
 	placeholder,
 	className,
 	contentClass,
+	onUpload,
+	renderBrowser,
 	...props
 }: EditorProps) {
+	const lastEmittedRef = useRef(value)
 	const editor = useEditor({
-		extensions: BasiccnExtensions.configure({ placeholder }),
+		extensions: BasiccnExtensions.configure({
+			placeholder,
+			onUpload,
+			renderBrowser
+		}),
 		content: value ?? '',
 		editorProps: {
 			attributes: {
 				class: cn(basiccnTheme, contentClass)
-			}
+			},
+			handlePaste: (view, event) => handleImagePaste(view, event, onUpload),
+			handleDrop: (view, event) => handleImageDrop(view, event, onUpload)
 		},
 		immediatelyRender: false,
-		onUpdate: ({ editor }) => onChange?.(editor.getJSON())
+		onUpdate: ({ editor }) => {
+			const json = editor.getJSON()
+			lastEmittedRef.current = json
+			onChange?.(json)
+		}
 	})
 
 	useEffect(() => {
 		if (!editor) return
-		const isSame = JSON.stringify(editor.getJSON()) === JSON.stringify(value)
-		if (isSame) return
+		if (
+			JSON.stringify(value ?? '') ===
+			JSON.stringify(lastEmittedRef.current ?? '')
+		)
+			return
+		lastEmittedRef.current = value
 		editor.commands.setContent(value ?? '', {
 			emitUpdate: false
 		})

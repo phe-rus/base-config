@@ -1,15 +1,17 @@
 import { Editor, type BasiccnContent } from '../../../basiccn'
+import type { EditorBrowserProps } from '../../../basiccn/types'
 import { cn } from '../../../lib/utils'
-import { useCallback } from 'react'
+import { useCallback, type ReactNode } from 'react'
 import { FieldShell } from '../shared/field-shell'
 import type { BaseFieldProps } from '../shared/types'
 import { useFieldState } from '../shared/use-field-state'
 
 type TextareaProps = BaseFieldProps & {
 	placeholder?: string
-} & {
 	className?: string
 	contentClass?: string
+	onUpload?: (file: File) => Promise<string>
+	renderBrowser?: (props: EditorBrowserProps) => ReactNode
 }
 
 export const RichText = ({
@@ -18,7 +20,9 @@ export const RichText = ({
 	placeholder,
 	required,
 	contentClass,
-	className
+	className,
+	onUpload,
+	renderBrowser
 }: TextareaProps) => {
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
 		useFieldState<BasiccnContent>()
@@ -28,10 +32,7 @@ export const RichText = ({
 		(newValue: BasiccnContent) => {
 			const currentString = JSON.stringify(value)
 			const newString = JSON.stringify(newValue)
-
-			if (currentString !== newString) {
-				handleChange(newValue)
-			}
+			if (currentString !== newString) handleChange(newValue)
 		},
 		[value, handleChange]
 	)
@@ -50,6 +51,8 @@ export const RichText = ({
 				value={value}
 				placeholder={placeholder}
 				contentClass={contentClass}
+				onUpload={onUpload}
+				renderBrowser={renderBrowser}
 				onBlur={handleBlur}
 				onChange={handleEditorChange} // Use the intercepted handler here
 				aria-invalid={isInvalid}

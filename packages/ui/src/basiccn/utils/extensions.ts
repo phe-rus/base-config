@@ -22,6 +22,7 @@ import {
 	UndoRedo
 } from '@tiptap/extensions'
 import type { AnyExtension } from '@tiptap/react'
+import type { ReactNode } from 'react'
 import { Code } from '@tiptap/extension-code'
 import { Highlight } from '@tiptap/extension-highlight'
 import { TextAlign } from '@tiptap/extension-text-align'
@@ -30,6 +31,7 @@ import { Subscript } from '@tiptap/extension-subscript'
 import { Superscript } from '@tiptap/extension-superscript'
 import { TableKit } from '@tiptap/extension-table'
 import { cn } from '../../lib/utils'
+import type { EditorBrowserProps } from '../types'
 import { Indent } from './indent'
 import { SlashCommand } from '../plugins/slash'
 import { ImageNode } from '../nodes/image-node'
@@ -38,6 +40,8 @@ const lowlight = createLowlight(common)
 
 export type BasiccnOptions = {
 	placeholder?: string
+	onUpload?: (file: File) => Promise<string>
+	renderBrowser?: (props: EditorBrowserProps) => ReactNode
 }
 
 export interface BasiccnExtensionsArray extends Array<AnyExtension> {
@@ -67,7 +71,10 @@ const buildExtensions = (options?: BasiccnOptions): AnyExtension[] => [
 	UndoRedo,
 	Typography,
 	Code,
-	ImageNode,
+	ImageNode.configure({
+		onUpload: options?.onUpload,
+		renderBrowser: options?.renderBrowser
+	}),
 	Bold,
 	Italic,
 	Underline,

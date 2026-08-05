@@ -34,8 +34,10 @@ export const docs: CollectionConfig = defineCollection({
 					name: 'category',
 					type: 'relationship',
 					relationTo: 'category',
+					hasMany: false,
 					label: 'Category / Section',
-					description: 'Main section grouping (e.g., "Getting Started", "Concepts", "API Reference")'
+					description:
+						'Main section grouping (e.g., "Getting Started", "Concepts", "API Reference")'
 				},
 				{
 					name: 'parent',
@@ -55,7 +57,8 @@ export const docs: CollectionConfig = defineCollection({
 					name: 'slug',
 					type: 'slug',
 					label: 'Slug',
-					description: 'Used in the URL. If empty, it will be the same as the title.'
+					description:
+						'Used in the URL. If empty, it will be the same as the title.'
 				}
 			]
 		}

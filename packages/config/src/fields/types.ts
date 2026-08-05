@@ -37,7 +37,17 @@ export type TextareaFieldConfig = BaseFieldConfig & {
 	minLength?: number
 	maxLength?: number
 }
-export type RichTextFieldConfig = BaseFieldConfig & { type: 'richtext' }
+export type RichTextFieldConfig = BaseFieldConfig & {
+	type: 'richtext'
+	/**
+	 * A path segment appended *under* the owning document's own folder for
+	 * images this field uploads (direct uploads, pastes, and the media
+	 * browser's uploads all land there), e.g. a `posts` document with
+	 * `prefix: 'content'` uploads to `/posts/<id>/content/<filename>`.
+	 * Omit for the document's own root.
+	 */
+	prefix?: string
+}
 export type CheckboxFieldConfig = BaseFieldConfig & { type: 'checkbox' }
 export type SwitchFieldConfig = BaseFieldConfig & { type: 'switch' }
 export type DateFieldConfig = BaseFieldConfig & { type: 'date' }

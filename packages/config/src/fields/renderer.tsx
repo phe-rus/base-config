@@ -361,15 +361,29 @@ export function renderField(
 								disabled={field.disabled}
 							/>
 						)
-					case 'richtext':
+					case 'richtext': {
+						const uploadPrefix = [uploadFolder, id, field.prefix]
+							.filter(Boolean)
+							.join('/')
 						return (
 							<f.RichText
 								label={field.label}
 								placeholder={field.placeholder}
 								description={field.description}
 								required={field.required}
+								onUpload={(file: File) =>
+									uploadFile(file, uploadPrefix || undefined)
+								}
+								renderBrowser={(browserProps: StorageWidgetTriggerProps) => (
+									<StorageWidget
+										{...browserProps}
+										defaultFolder={uploadPrefix || undefined}
+										accept='image/*'
+									/>
+								)}
 							/>
 						)
+					}
 					case 'checkbox':
 						return (
 							<f.Checkbox
