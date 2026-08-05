@@ -1,9 +1,10 @@
 import { DefaultLoader } from '@/components/bounderies/default-loader'
+import { buildDocTree, RenderNav } from '@/components/renderers'
 import { cn } from '@/lib/cn'
 import { base } from '@baseconfig/core'
 import { Preview } from '@baseconfig/ui/basiccn'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { format } from 'date-fns'
 import { useMemo } from 'react'
 
@@ -19,14 +20,15 @@ function RouteComponent() {
 	const { slug } = Route.useSearch()
 	const { data: docLists } = useSuspenseQuery(base.find({ collection: 'docs' }))
 
+	const tree = useMemo(
+		() => (docLists?.docs ? buildDocTree(docLists?.docs) : []),
+		[docLists]
+	)
+
 	const renderActive = useMemo(() => {
 		if (!slug) return docLists?.docs?.[0]
-
-		// Matches exact slug (e.g. "use-cases/concepts" or "use-cases")
 		const match = docLists?.docs?.find((doc) => doc.slug === slug)
 		if (match) return match
-
-		// Fallback to parent prefix if exact match fails
 		const parentSlug = slug.split('/')[0]
 		return docLists?.docs?.find((doc) => doc.slug === parentSlug)
 	}, [docLists, slug])
@@ -40,29 +42,7 @@ function RouteComponent() {
 				)}
 			>
 				{docLists?.docs ? (
-					<nav className='flex flex-col gap-1'>
-						{docLists.docs.map((item, idx) => {
-							const { title, slug: itemSlug } = item
-							const isChild = itemSlug?.includes('/')
-
-							return (
-								<Link
-									key={itemSlug || idx}
-									to='/docs'
-									search={{
-										slug: itemSlug ?? undefined
-									}}
-									className={cn(
-										'text-sm py-1 transition-colors',
-										isChild && 'pl-4 text-muted-foreground'
-									)}
-									activeProps={{ className: 'font-bold text-primary!' }}
-								>
-									{title}
-								</Link>
-							)
-						})}
-					</nav>
+					<nav className='flex flex-col gap-1'>{RenderNav(tree)}</nav>
 				) : null}
 			</aside>
 
