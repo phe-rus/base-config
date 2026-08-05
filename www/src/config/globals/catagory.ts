@@ -18,6 +18,15 @@ export const category: GlobalConfig = defineGlobal({
 					type: 'text',
 					label: 'Category',
 					placeholder: 'e.g. seo'
+				},
+				{
+					name: 'order',
+					type: 'number',
+					label: 'Order',
+					defaultValue: 0,
+					admin: {
+						description: 'Override the default order of this category in the nav list.'
+					}
 				}
 			]
 		}

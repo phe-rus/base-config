@@ -1,40 +1,98 @@
-import type { TypedDocumentRow } from "@baseconfig/core"
+import type { TypedDocumentRow, TypedGlobalRow } from "@baseconfig/core"
 
-// Single document
+export type CategoryItem = NonNullable<
+    NonNullable<TypedGlobalRow<"category">["data"]>["category"]
+>[number]
+
 export type DocumentProps = TypedDocumentRow<"docs">
 
-// Document + children
 export type DocumentNode = DocumentProps & {
     children: DocumentNode[]
+    isCategory?: boolean
 }
 
-export function buildDocTree(docs: DocumentProps[]): DocumentNode[] {
-    const map = new Map<string, DocumentNode>()
+function formatCategoryTitle(str: string): string {
+    const text = str.replace(/[-_]/g, " ").trim()
+    if (!text) return str
+    return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+export function buildDocTree(
+    docs: DocumentProps[],
+    categories: CategoryItem[] = []
+): DocumentNode[] {
+    const docMap = new Map<string, DocumentNode>()
+    const categoryMap = new Map<string, DocumentNode>()
     const roots: DocumentNode[] = []
-
-    // First pass: create nodes
-    docs.forEach((doc) => {
-        map.set(doc.id, { ...doc, children: [] })
+    const categoryMeta = new Map<string, { label: string; order: number }>()
+    categories.forEach((cat, index) => {
+        if (!cat?.label) return
+        const key = cat.label.toLowerCase().trim()
+        categoryMeta.set(key, {
+            label: cat.label,
+            order: cat.order ?? index,
+        })
     })
 
-    // Second pass: attach children
     docs.forEach((doc) => {
-        const node = map.get(doc.id)!
+        docMap.set(doc.id, { ...doc, children: [] })
+    })
+    docs.forEach((doc) => {
+        const node = docMap.get(doc.id)!
+        const cats = (doc.data?.category as string[] | undefined) ?? []
+        const parentId = doc.data?.parent as string | undefined
+        if (cats.length > 0) {
+            cats.forEach((rawCat) => {
+                const key = rawCat.trim().toLowerCase()
+                if (!key) return
 
-        // parent is an ID string (or null/undefined)
-        if (doc.data.parent && map.has(doc.data.parent)) {
-            map.get(doc.data.parent)!.children.push(node)
-        } else {
-            roots.push(node)
+                if (!categoryMap.has(key)) {
+                    const meta = categoryMeta.get(key)
+
+                    const catNode: DocumentNode = {
+                        id: `cat-${key}`,
+                        title: meta?.label ?? formatCategoryTitle(rawCat),
+                        slug: null as any,
+                        status: 'published',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        isCategory: true,
+                        data: { order: meta?.order ?? 99 } as any,
+                        children: [],
+                    }
+
+                    categoryMap.set(key, catNode)
+                    roots.push(catNode)
+                }
+
+                categoryMap.get(key)!.children.push(node)
+            })
+            return
         }
+        if (parentId && docMap.has(parentId)) {
+            docMap.get(parentId)!.children.push(node)
+            return
+        }
+        roots.push(node)
     })
-
-    // Sort by order (optional)
     const sortByOrder = (nodes: DocumentNode[]) => {
-        nodes.sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0))
+        nodes.sort((a, b) => {
+            const orderA = a.isCategory ? (a.data?.order ?? 99) : (a.data?.order ?? 0)
+            const orderB = b.isCategory ? (b.data?.order ?? 99) : (b.data?.order ?? 0)
+            return orderA - orderB
+        })
         nodes.forEach((n) => sortByOrder(n.children))
     }
     sortByOrder(roots)
-
     return roots
+}
+export function getFirstDoc(nodes: DocumentNode[]): DocumentNode | undefined {
+    for (const node of nodes) {
+        if (!node.isCategory && node.slug) return node
+        if (node.children.length) {
+            const found = getFirstDoc(node.children)
+            if (found) return found
+        }
+    }
+    return undefined
 }

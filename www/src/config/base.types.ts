@@ -37,6 +37,7 @@ export interface Keywords {
 export interface Category {
 	category?: {
 		label?: string
+		order?: number
 	}[]
 }
 

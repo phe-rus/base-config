@@ -1,5 +1,5 @@
 import { DefaultLoader } from '@/components/bounderies/default-loader'
-import { buildDocTree, RenderNav } from '@/components/renderers'
+import { buildDocTree, getFirstDoc, RenderNav } from '@/components/renderers'
 import { cn } from '@/lib/cn'
 import { base } from '@baseconfig/core'
 import { Preview } from '@baseconfig/ui/basiccn'
@@ -11,6 +11,7 @@ import { useMemo } from 'react'
 export const Route = createFileRoute('/(frontend)/(pages)/docs/')({
 	loader: async ({ context }) => {
 		await context.query.ensureQueryData(base.find({ collection: 'docs' }))
+		await context.query.ensureQueryData(base.findGlobal({ slug: 'category' }))
 	},
 	pendingComponent: DefaultLoader,
 	component: RouteComponent
@@ -19,19 +20,26 @@ export const Route = createFileRoute('/(frontend)/(pages)/docs/')({
 function RouteComponent() {
 	const { slug } = Route.useSearch()
 	const { data: docLists } = useSuspenseQuery(base.find({ collection: 'docs' }))
-
-	const tree = useMemo(
-		() => (docLists?.docs ? buildDocTree(docLists?.docs) : []),
-		[docLists]
+	const { data: catagoryLists } = useSuspenseQuery(
+		base.findGlobal({ slug: 'category' })
 	)
 
+	const categories = catagoryLists?.data?.category ?? []
+
+	const tree = useMemo(
+		() => buildDocTree(docLists?.docs ?? [], categories),
+		[docLists, categories]
+	)
+	const firstDoc = useMemo(() => getFirstDoc(tree), [tree])
 	const renderActive = useMemo(() => {
-		if (!slug) return docLists?.docs?.[0]
+		if (!slug) return firstDoc ?? docLists?.docs?.[0]
+
 		const match = docLists?.docs?.find((doc) => doc.slug === slug)
 		if (match) return match
+
 		const parentSlug = slug.split('/')[0]
 		return docLists?.docs?.find((doc) => doc.slug === parentSlug)
-	}, [docLists, slug])
+	}, [docLists, slug, firstDoc])
 
 	return (
 		<article className='relative container flex'>
@@ -42,12 +50,14 @@ function RouteComponent() {
 				)}
 			>
 				{docLists?.docs ? (
-					<nav className='flex flex-col gap-1'>{RenderNav(tree)}</nav>
+					<nav className='flex flex-col gap-1'>
+						<RenderNav nodes={tree} />
+					</nav>
 				) : null}
 			</aside>
 
 			<section
-				className={cn('flex flex-col gap-5 mx-auto', 'md:max-w-lg py-5')}
+				className={cn('flex flex-col gap-5 w-full mx-auto', 'md:max-w-lg py-5')}
 			>
 				<div className='flex flex-col'>
 					<h1 className='text-2xl font-bold'>{renderActive?.title}</h1>
@@ -67,7 +77,7 @@ function RouteComponent() {
 						</div>
 					</div>
 				</div>
-				<Preview content={renderActive?.data.body} />
+				<Preview content={renderActive?.data.body} className='w-full' />
 			</section>
 		</article>
 	)
