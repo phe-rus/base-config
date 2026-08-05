@@ -30,25 +30,12 @@ export const pages: CollectionConfig = defineCollection({
 				},
 				{
 					name: 'links',
-					type: 'array',
+					type: 'links',
 					label: 'Links',
+					relationTo: ['docs', 'pages'],
 					admin: {
 						description: 'Buttons or links shown in the hero.'
-					},
-					fields: [
-						{
-							name: 'label',
-							type: 'text',
-							label: 'Label',
-							placeholder: 'Learn more'
-						},
-						{
-							name: 'href',
-							type: 'text',
-							label: 'Link',
-							placeholder: 'https://…'
-						}
-					]
+					}
 				}
 			]
 		},

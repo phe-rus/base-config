@@ -7,10 +7,7 @@ export interface Pages {
 	hero?: {
 		image?: UploadValue
 		content?: BasiccnContent
-		links?: {
-			label?: string
-			href?: string
-		}[]
+		links?: LinkItemValue[]
 	}
 	content?: ContentBlock[]
 	metadata?: MetaValue

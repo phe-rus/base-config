@@ -26,7 +26,16 @@ export const Topbar = () => {
 						{items?.data.items?.map((items, index) => {
 							const isTo = items.to?.includes('home') ? '/' : items.to
 							return (
-								<Link key={index} to={isTo as any}>
+								<Link
+									key={index}
+									to={isTo as any}
+									activeProps={{
+										className: cn(
+											'underline decoration-wavy! decoration-primary!',
+											'text-primary!'
+										)
+									}}
+								>
 									{items.label}
 								</Link>
 							)

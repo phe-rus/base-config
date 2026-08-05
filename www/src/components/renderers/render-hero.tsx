@@ -32,11 +32,11 @@ export const RenderHero: FC<rendererHeroProps> = ({ data }) => {
 							{data.links.map((link, idx) => (
 								<Link
 									key={idx}
-									to={link.href}
+									to={link.to}
 									className={cn(
 										buttonVariants({
 											size: 'lg',
-											variant: 'secondary'
+											variant: link.appearance
 										})
 									)}
 								>
