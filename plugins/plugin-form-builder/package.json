@@ -1,6 +1,6 @@
 {
 	"name": "@baseconfig/plugin-form-builder",
-	"version": "0.0.15",
+	"version": "0.0.16",
 	"description": "A baseConfig plugin: a forms/form-submissions collection pair plus a public contact-form block.",
 	"license": "MIT",
 	"repository": {
