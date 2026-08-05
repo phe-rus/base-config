@@ -9,6 +9,7 @@ import { users } from './collections/users'
 import { keywords } from './globals/keywords'
 import { pages } from './collections/pages'
 import { topbar } from './globals/topbar'
+import { category } from './globals/catagory'
 
 export default baseConfig({
 	hostDomain: getBaseURL(),
@@ -21,5 +22,5 @@ export default baseConfig({
 	},
 	blocks: [...blocks],
 	collections: [users, pages, docs],
-	globals: [topbar, keywords, storage]
+	globals: [topbar, keywords, category, storage]
 })

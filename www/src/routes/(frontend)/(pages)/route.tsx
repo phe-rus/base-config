@@ -6,7 +6,6 @@ export const Route = createFileRoute('/(frontend)/(pages)')({
 	beforeLoad: async ({ context }) => {
 		await context.query.ensureQueryData(base.findGlobal({ slug: 'topbar' }))
 		await context.query.ensureQueryData(base.find({ collection: 'pages' }))
-		await context.query.ensureQueryData(base.find({ collection: 'docs' }))
 	},
 	component: RouteComponent
 })

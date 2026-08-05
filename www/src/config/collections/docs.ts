@@ -31,6 +31,27 @@ export const docs: CollectionConfig = defineCollection({
 			flat: true,
 			fields: [
 				{
+					name: 'category',
+					type: 'relationship',
+					relationTo: 'category',
+					label: 'Category / Section',
+					description: 'Main section grouping (e.g., "Getting Started", "Concepts", "API Reference")'
+				},
+				{
+					name: 'parent',
+					type: 'relationship',
+					relationTo: 'docs',
+					label: 'Parent Document',
+					description: 'Select a parent doc if this is a sub-page'
+				},
+				{
+					name: 'order',
+					type: 'number',
+					label: 'Order',
+					defaultValue: 0,
+					description: 'Display priority within the section/category'
+				},
+				{
 					name: 'slug',
 					type: 'slug',
 					label: 'Slug',

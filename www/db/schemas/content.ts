@@ -42,6 +42,11 @@ export const keywords = sqliteTable('cn-keywords', {
 	updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).$onUpdate(() => /* @__PURE__ */ new Date()).notNull()
 })
 
+export const category = sqliteTable('cn-category', {
+	data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
+	updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).$onUpdate(() => /* @__PURE__ */ new Date()).notNull()
+})
+
 export const collectionTablesBySlug = {
 	'pages': pages,
 	'docs': docs
@@ -49,7 +54,8 @@ export const collectionTablesBySlug = {
 
 export const globalTablesBySlug = {
 	'topbar': topbar,
-	'keywords': keywords
+	'keywords': keywords,
+	'category': category
 }
 
-export const contentRelations = defineRelationsPart({ pages, docs, topbar, keywords }, () => ({}))
+export const contentRelations = defineRelationsPart({ pages, docs, topbar, keywords, category }, () => ({}))
