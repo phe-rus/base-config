@@ -11,11 +11,11 @@ import {
 } from '@baseconfig/ui/components/tabs'
 import { IconChevronDown } from '@tabler/icons-react'
 import type { FC } from 'react'
-import type { CollectionFieldsProps } from '../base.types'
 import {
 	StorageWidget,
 	type StorageWidgetTriggerProps
 } from '../admin/widgets/storage-widget'
+import type { CollectionFieldsProps } from '../base.types'
 import { KeywordsField } from '../collections/fields/KeywordsField'
 import { withTabPrefix } from './schema'
 import type { FieldConfig, TabConfig } from './types'
@@ -677,7 +677,7 @@ export function createFieldsRenderer<
 		}
 
 		const renderTabColumns = (tab: TabConfig<any, any>) => {
-			const sidebar = tab.fields.filter(
+			/*const sidebar = tab.fields.filter(
 				(field) => 'admin' in field && field.admin?.position === 'sidebar'
 			)
 			if (sidebar.length === 0) {
@@ -701,6 +701,12 @@ export function createFieldsRenderer<
 						{sidebar.map((field, index) => renderTabField(field, index, tab))}
 					</aside>
 				</div>
+			) ***/
+
+			return (
+				<>
+					{tab.fields.map((field, index) => renderTabField(field, index, tab))}
+				</>
 			)
 		}
 

@@ -1,3 +1,8 @@
+import { Button } from '@baseconfig/ui/components/button'
+import { t } from '@baseconfig/ui/components/sonner'
+import { cn } from '@baseconfig/ui/lib/utils'
+import { useLiveQuery } from '@tanstack/react-db'
+import { useEffect, useState } from 'react'
 import type { GlobalConfig, GlobalSlug } from '../../../collections/types'
 import {
 	draftGlobalsCollection,
@@ -7,15 +12,10 @@ import {
 import { useDocument } from '../../../db/use-document'
 import {
 	expandFields,
-	hasSidebarFields,
+	// hasSidebarFields,
 	knownFieldPaths
 } from '../../../fields/schema'
 import { DocumentHeader } from './document-header'
-import { Button } from '@baseconfig/ui/components/button'
-import { t } from '@baseconfig/ui/components/sonner'
-import { cn } from '@baseconfig/ui/lib/utils'
-import { useLiveQuery } from '@tanstack/react-db'
-import { useEffect, useState } from 'react'
 
 type GlobalFormProps = {
 	config: GlobalConfig
@@ -67,7 +67,7 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 	// Same as `CollectionForm`'s own check: any sidebar-positioned field
 	// (`admin.position === 'sidebar'`)? The renderer's flat-fields split puts
 	// those in a right-hand column, the wrapper has to widen first.
-	const hasSidebar = hasSidebarFields(config.fields ?? [])
+	//const hasSidebar = hasSidebarFields(config.fields ?? [])
 
 	return (
 		<form
@@ -127,8 +127,8 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 			<section className='container flex flex-col gap-2 w-full md:max-w-4xl mx-auto'>
 				<div
 					className={cn(
-						'flex flex-col w-full mr-auto',
-						!hasSidebar && 'md:max-w-lg'
+						'flex flex-col w-full mr-auto md:max-w-lg'
+						// !hasSidebar && 'md:max-w-lg'
 					)}
 				>
 					<config.Fields form={form} id={id} />
