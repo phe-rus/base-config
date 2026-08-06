@@ -41,6 +41,23 @@ export type KVNamespaceLike = {
 export type CacheResource =
 	| { kind: 'document'; collection: string; id: string }
 	| { kind: 'document-slug'; collection: string; slug: string }
+	/**
+	 * The whole, unfiltered, unpaginated result of `GET /:collection` for a
+	 * given collection, exactly what a nav-tree/index view (e.g. the docs
+	 * list) actually queries. One key per collection, not per query: safe
+	 * because a `read` access function only ever sees `req.user` for a list
+	 * read (`AccessArgs`, `base.types.ts`, no `id`/`data`), so an anonymous
+	 * request's resolved `accessWhere` is the same value every time for a
+	 * given collection, there's no second, different scoped shape this could
+	 * ever collide with. This is *why* there's no `where`/`limit`/`page`
+	 * folded into the key the way a real per-query cache would need: this
+	 * resource only exists for the one shape that has none of those
+	 * (`content-route.ts`'s own `cacheableListLookup`), a genuinely
+	 * filtered/paginated list still has no natural single key and stays
+	 * uncached, same reasoning `ContentRouteBindings['cache']` already
+	 * documents.
+	 */
+	| { kind: 'list'; collection: string }
 	| { kind: 'global'; slug: string }
 
 function resourceKey(resource: CacheResource): string {
@@ -49,6 +66,8 @@ function resourceKey(resource: CacheResource): string {
 			return `content:${resource.collection}:${resource.id}`
 		case 'document-slug':
 			return `content:${resource.collection}:slug:${resource.slug}`
+		case 'list':
+			return `content:${resource.collection}:list`
 		case 'global':
 			return `content:global:${resource.slug}`
 	}

@@ -25,7 +25,11 @@ import {
 	listGlobalSlugs,
 	UnknownTableError
 } from '../db/content-queries'
-import type { ContentDatabase } from '../db/content-queries'
+import type {
+	ContentDatabase,
+	DocumentRow,
+	WhereCondition
+} from '../db/content-queries'
 import { createKVContentCache } from './content-cache'
 import type { KVNamespaceLike } from './content-cache'
 
@@ -117,25 +121,34 @@ export type ContentRouteBindings = {
 	 * handler below reads/writes through the resulting `ContentCache`
 	 * (`get`/`put`/`delete` keyed by a `CacheResource`), never this raw
 	 * binding directly. Only ever consulted/populated for a genuinely scoped
-	 * document read (`access.read` returned a `WhereCondition`, not a plain
-	 * `true`, see `resolveAccess()`'s own doc comment), and every global read
-	 * (globals have no draft/published concept at all); a request whose
+	 * document/list read (`access.read` returned a `WhereCondition`, not a
+	 * plain `true`, see `resolveAccess()`'s own doc comment), and every global
+	 * read (globals have no draft/published concept at all); a request whose
 	 * `access.read` resolved to `true` (sees everything, potentially drafts
 	 * included) always bypasses it, caching that response under a key with no
 	 * per-session component would leak it to the next, less-privileged
-	 * request hitting the same key. A cache-aside pattern, not "populate on
-	 * publish": every write (`PATCH`/`DELETE`) just invalidates the relevant
-	 * resource(s), and the next public read repopulates it, simpler and
-	 * harder to get subtly wrong than trying to compute what a fresh read
-	 * *would* return at write time. Covers three `CacheResource` kinds: a
-	 * single document by `id` (`GET /:collection/:id`), a single document by
-	 * `slug` (`GET /:collection?where={"slug":{"equals":"..."}}` with no
-	 * other filter/pagination, the one list query a public page-by-slug
-	 * lookup actually makes, since a public URL never knows a document's
-	 * internal `id`), and a single global (`GET /globals/:slug`, also reused
-	 * by the aggregate `GET /globals`). A plain unfiltered/paginated list has
-	 * no single natural cache key the way one document does, so it's still
-	 * never cached, see `content-cache.ts`'s own doc comment.
+	 * request hitting the same key.
+	 *
+	 * A **warm-on-write** pattern for a write that still has a live `row`
+	 * (`POST`/`PATCH`/prune, via `warmPublicCaches()`), not "invalidate and
+	 * let the next read repopulate": the write itself recomputes exactly what
+	 * a real anonymous read would now find (`publicAccessWhere()`/
+	 * `matchesWhere()`) and repopulates the cache directly, so the D1 cost of
+	 * a stale cache lands on the write (paid once, by the editor) instead of
+	 * on however many visitors hit a cold cache before someone happens to
+	 * read it. `DELETE` (no surviving row) still just refreshes the `list`
+	 * resource (`refreshListCache()`) and invalidates the rest. Covers four
+	 * `CacheResource` kinds: a single document by `id`
+	 * (`GET /:collection/:id`), a single document by `slug`
+	 * (`GET /:collection?where={"slug":{"equals":"..."}}` with no other
+	 * filter/pagination, the query a public page-by-slug lookup actually
+	 * makes, since a public URL never knows a document's internal `id`), the
+	 * whole unfiltered collection (`GET /:collection` with no `where`/
+	 * `limit`/`page` at all, the query a nav-tree/index view actually makes),
+	 * and a single global (`GET /globals/:slug`, also reused by the aggregate
+	 * `GET /globals`). A genuinely filtered/paginated list still has no
+	 * single natural cache key the way any of these does, so it stays
+	 * uncached, see `content-cache.ts`'s own doc comment.
 	 */
 	cache?: KVNamespaceLike
 	/**
@@ -226,6 +239,48 @@ const listQuerySchema = z.object({
 	limit: z.coerce.number().int().positive().optional(),
 	page: z.coerce.number().int().positive().optional()
 })
+
+/**
+ * What an anonymous visitor's own `read` access would resolve to for this
+ * collection, recomputed after every write specifically to decide what to
+ * warm the public cache with. Deliberately **not** whatever the actual
+ * writer's own access resolved to: an authenticated editor's `resolveAccess`
+ * call already returns `true` (sees everything, drafts included) for their
+ * own request, which says nothing about what a real anonymous visitor would
+ * be shown, and warming the public cache with an editor's-eye view of a
+ * draft would leak it.
+ */
+function publicAccessWhere(collectionAccess: CollectionAccess | undefined) {
+	return resolveAccess(collectionAccess?.read, { req: { user: undefined } })
+}
+
+/**
+ * Whether `row` is actually visible under `where`, replicated in memory
+ * rather than re-querying D1: safe because `WhereCondition` is deliberately
+ * narrow, `status`/`slug` equality only (`content-queries.ts`'s own doc
+ * comment), the same two fields already sitting on `row`. Used right after a
+ * write, on the row the write itself already returned, to decide whether
+ * warming the document/slug cache with it would actually match what a real
+ * anonymous `GET` would find.
+ */
+function matchesWhere(row: DocumentRow, where: WhereCondition): boolean {
+	if (where.status && row.status !== where.status.equals) return false
+	if (where.slug && row.slug !== where.slug.equals) return false
+	return true
+}
+
+/** The exact single-document `PaginatedResult` envelope a real `GET /:collection?where={"slug":...}` would produce for one match, built in memory instead of re-querying D1, to warm `{kind: 'document-slug'}` from a write's own returned row. */
+function singleDocResult(row: DocumentRow) {
+	return {
+		docs: [row],
+		totalDocs: 1,
+		limit: 1,
+		page: 1,
+		totalPages: 1,
+		hasNextPage: false,
+		hasPrevPage: false
+	}
+}
 
 /**
  * Content CRUD, factored out as a plain Hono app rather than something a
@@ -323,6 +378,91 @@ export function createContentRoute({
 		return result
 	}
 
+	/**
+	 * Called after every global write (`PATCH`/prune): globals have no
+	 * draft/published concept (`GlobalAccess['read']` is boolean-only, never
+	 * a `WhereCondition`, unlike a collection's `read`), so whoever can read
+	 * this slug at all sees the exact same row, warming straight from the
+	 * write's own result is always safe once anonymous access isn't outright
+	 * denied.
+	 */
+	async function warmGlobalCache(
+		slug: string,
+		globalAccess: GlobalAccess | undefined,
+		row: { data: Record<string, unknown>; updatedAt: Date }
+	) {
+		if (!cache) return
+		const allowedAnonymously =
+			(await resolveAccess(globalAccess?.read, {
+				req: { user: undefined }
+			})) !== false
+		if (allowedAnonymously) {
+			await cache.put({ kind: 'global', slug }, { slug, ...row })
+		} else {
+			await cache.delete({ kind: 'global', slug })
+		}
+	}
+
+	/**
+	 * Called after every collection write that still has a live `row`
+	 * (`POST`/`PATCH`/prune, **not** `DELETE`, nothing to warm a document with
+	 * there): shifts the D1 cost of repopulating the public cache from "the
+	 * next visitor's read" to "this write," so a publish is what pays for a
+	 * fresh cache, not whoever happens to load the page first afterward.
+	 * `{kind: 'document'}`/`{kind: 'document-slug'}` are warmed straight from
+	 * `row` already in memory, no extra D1 call; `{kind: 'list'}` genuinely
+	 * needs a fresh `listDocuments` call (a single write can't know the
+	 * *rest* of the collection), one D1 read paid once per write rather than
+	 * once per stale-cache visitor. Never warms with a row an anonymous
+	 * visitor wouldn't actually be allowed to see, see `publicAccessWhere`'s
+	 * own doc comment for why that's recomputed here rather than trusted from
+	 * the write's own caller.
+	 */
+	async function warmPublicCaches(
+		collection: string,
+		collectionAccess: CollectionAccess | undefined,
+		row: DocumentRow
+	) {
+		if (!cache) return
+		const publicWhere = await publicAccessWhere(collectionAccess)
+		if (publicWhere === false) {
+			await cache.delete({ kind: 'list', collection })
+			return
+		}
+		if (publicWhere === true || matchesWhere(row, publicWhere)) {
+			await cache.put({ kind: 'document', collection, id: row.id }, row)
+			if (row.slug) {
+				await cache.put(
+					{ kind: 'document-slug', collection, slug: row.slug },
+					singleDocResult(row)
+				)
+			}
+		}
+		const listAccessWhere = publicWhere === true ? undefined : publicWhere
+		const freshList = await listDocuments(db, collection, {
+			accessWhere: listAccessWhere
+		})
+		await cache.put({ kind: 'list', collection }, freshList)
+	}
+
+	/** Same idea as `warmPublicCaches`, for `DELETE`: no surviving `row` to warm a document with, just the `{kind: 'list'}` refresh. */
+	async function refreshListCache(
+		collection: string,
+		collectionAccess: CollectionAccess | undefined
+	) {
+		if (!cache) return
+		const publicWhere = await publicAccessWhere(collectionAccess)
+		if (publicWhere === false) {
+			await cache.delete({ kind: 'list', collection })
+			return
+		}
+		const listAccessWhere = publicWhere === true ? undefined : publicWhere
+		const freshList = await listDocuments(db, collection, {
+			accessWhere: listAccessWhere
+		})
+		await cache.put({ kind: 'list', collection }, freshList)
+	}
+
 	const withEndpoints = (endpoints ?? []).reduce(
 		(current, endpoint) =>
 			current.on(
@@ -386,7 +526,7 @@ export function createContentRoute({
 					user: c.get('session')?.user,
 					overrideAccess: false
 				})
-				if (cache) await cache.delete({ kind: 'global', slug })
+				await warmGlobalCache(slug, globalAccess, row)
 				return c.json({ slug, ...row })
 			}
 		)
@@ -408,7 +548,7 @@ export function createContentRoute({
 					}
 				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
-				if (cache) await cache.delete({ kind: 'global', slug })
+				await warmGlobalCache(slug, globalAccess, row)
 				return c.json({ slug, ...row })
 			}
 		)
@@ -434,17 +574,25 @@ export function createContentRoute({
 			const accessWhere = readResult === true ? undefined : readResult
 			const { where, limit, page } = c.req.valid('query')
 
-			// The one list shape a public page-by-slug lookup actually makes
-			// (`?where={"slug":{"equals":"..."}}`, no other filter/pagination):
-			// a public URL resolves to a document by slug, never by id, so
-			// this is the query that actually needs caching for a page to load
-			// fast; a plain unfiltered/paginated list has no single cache key
-			// the way one slug lookup does, so it stays uncached. Only a
-			// genuinely scoped (non-`true`) read is ever cacheable, see
-			// `ContentRouteBindings['cache']`'s own doc comment.
+			// Two cacheable list shapes, both only ever reachable for a
+			// genuinely scoped (non-`true`) read, see
+			// `ContentRouteBindings['cache']`'s own doc comment:
+			// - a single document by slug (`?where={"slug":{"equals":"..."}}`,
+			//   no other filter/pagination), the query a public page-by-slug
+			//   lookup actually makes, since a public URL never knows a
+			//   document's internal `id`.
+			// - the whole, unfiltered, unpaginated collection (no `where` at
+			//   all), the query a nav-tree/index view actually makes, see
+			//   `content-cache.ts`'s own `{kind: 'list'}` doc comment for why
+			//   one key per collection is safe here specifically.
+			// A genuinely filtered/paginated list (any other combination)
+			// still has no single natural cache key the way either of these
+			// does, so it stays uncached.
 			const slug = where?.slug?.equals
 			const cacheableSlugLookup =
 				cache && accessWhere && slug && !where?.status && !limit && !page
+			const cacheableListLookup =
+				cache && accessWhere && !slug && !where?.status && !limit && !page
 
 			if (cacheableSlugLookup) {
 				const cached = await cache.get({
@@ -452,6 +600,10 @@ export function createContentRoute({
 					collection,
 					slug
 				})
+				if (cached) return c.json(cached)
+			}
+			if (cacheableListLookup) {
+				const cached = await cache.get({ kind: 'list', collection })
 				if (cached) return c.json(cached)
 			}
 
@@ -468,6 +620,14 @@ export function createContentRoute({
 			// stay invisible until something else happened to invalidate it.
 			if (cacheableSlugLookup && result.docs.length > 0) {
 				await cache.put({ kind: 'document-slug', collection, slug }, result)
+			}
+			// Unlike the slug shape, an empty result is safe to cache here:
+			// there's exactly one `list` key per collection, so a later
+			// `POST` (create) trivially invalidates it regardless of whether
+			// it was previously cached empty or non-empty, no "previously
+			// missed slug" problem to worry about.
+			if (cacheableListLookup) {
+				await cache.put({ kind: 'list', collection }, result)
 			}
 
 			return c.json(result)
@@ -518,6 +678,7 @@ export function createContentRoute({
 						overrideAccess: false
 					}
 				)
+				await warmPublicCaches(collection, collectionAccess, row)
 				return c.json(row, 201)
 			}
 		)
@@ -552,11 +713,12 @@ export function createContentRoute({
 					}
 				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
-				// Invalidate rather than recompute-and-repopulate here: covers
-				// publish, unpublish, and a plain draft edit alike (the next
-				// public read repopulates correctly either way, including
-				// caching nothing at all if the doc isn't publicly visible).
 				if (cache) {
+					// Invalidate the *old* shape first, unconditionally: covers a
+					// slug rename or a document that just became unpublished,
+					// neither of which `warmPublicCaches` below would otherwise
+					// know to clean up (it only ever writes the *current* row's
+					// own resources).
 					await cache.delete({ kind: 'document', collection, id })
 					if (existing?.slug) {
 						await cache.delete({
@@ -572,6 +734,11 @@ export function createContentRoute({
 							slug: row.slug
 						})
 					}
+					// Then warm: covers publish, unpublish, and a plain draft
+					// edit alike, repopulating exactly what a real anonymous
+					// read would now find (nothing, if the edit made the doc
+					// non-public), see `warmPublicCaches`' own doc comment.
+					await warmPublicCaches(collection, collectionAccess, row)
 				}
 				return c.json(row)
 			}
@@ -612,6 +779,9 @@ export function createContentRoute({
 							slug: existing.slug
 						})
 					}
+					// The list cache holds full rows, `data` included, so a
+					// prune (it only ever touches `data`) still needs a warm.
+					await warmPublicCaches(collection, collectionAccess, row)
 				}
 				return c.json(row)
 			}
@@ -638,6 +808,9 @@ export function createContentRoute({
 						slug: existing.slug
 					})
 				}
+				// No surviving row to warm a document with, but the unfiltered
+				// list no longer includes it, worth a fresh warm too.
+				await refreshListCache(collection, collectionAccess)
 			}
 			return c.json({ ok: true })
 		})
