@@ -147,6 +147,16 @@ export function collectionPath(
 	slug: string
 ): string {
 	const prefix = config.path?.replace(/^\/+|\/+$/g, '')
+	// `'home'` is a reserved slug on a root-level (no `path` prefix)
+	// collection, matching `(pages)/$.tsx`'s own default (`_splat = 'home'`
+	// when the URL path is empty): the document literally slugged `home` IS
+	// the site root, reachable at `/`, never at a real `/home` sub-path.
+	// Without this, `LinkModeFields`' own auto-sync (`collectionPath(...,
+	// value.slug)`, this function's one real caller) stores a literal
+	// `/home` for any reference picking that document, a link a production
+	// build's prerendered/static-asset routing doesn't resolve the same way
+	// the dynamic SSR catch-all does (confirmed: `/` works, `/home` 404s).
+	if (!prefix && slug === 'home') return '/'
 	return prefix ? `/${prefix}/${slug}` : `/${slug}`
 }
 

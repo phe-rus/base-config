@@ -257,22 +257,21 @@ export async function listDocuments(
 			? sql` WHERE ${sql.join(conditions, sql` AND `)}`
 			: sql``
 
-	const countRow = await dbGet<{ totalDocs: number }>(
-		db,
-		sql`SELECT count(*) as totalDocs FROM ${table}${whereSql}`,
-		collection
-	)
-	const totalDocs = countRow?.totalDocs ?? 0
-
 	const page = options?.limit ? (options.page ?? 1) : 1
 	const limitSql = options?.limit
 		? sql` LIMIT ${options.limit} OFFSET ${(page - 1) * options.limit}`
 		: sql``
-	const rows = await dbAll<RawDocumentRow>(
+	// `COUNT(*) OVER()` rides along on the same query as the real rows,
+	// the total-before-LIMIT match count on every returned row, one D1
+	// round trip instead of a separate `SELECT count(*)` query first. A
+	// genuinely empty result has no row to carry it on, so `totalDocs`
+	// falls back to `0` below rather than reading `rows[0]` unconditionally.
+	const rows = await dbAll<RawDocumentRow & { totalDocs: number }>(
 		db,
-		sql`SELECT * FROM ${table}${whereSql} ORDER BY updatedAt DESC${limitSql}`,
+		sql`SELECT *, COUNT(*) OVER() as totalDocs FROM ${table}${whereSql} ORDER BY updatedAt DESC${limitSql}`,
 		collection
 	)
+	const totalDocs = rows[0]?.totalDocs ?? 0
 
 	const limit = options?.limit ?? totalDocs
 	const totalPages = limit > 0 ? Math.ceil(totalDocs / limit) : 1
@@ -473,6 +472,11 @@ export async function pruneGlobal(
 	return row ? toGlobalRow(row) : undefined
 }
 
+/** Whether `createTableSql` (a `sqlite_master.sql` DDL string) declares a column named `columnName`, matched against `drizzle-kit`'s own consistent backtick-quoted-identifier output (see `content-schema.ts`), e.g. `` `data` text DEFAULT '{}' NOT NULL ``. A plain substring check on the quoted name: cheap, and safe here specifically because every column this ever checks (`data`/`status`) is a fixed, code-controlled name, never user input that could contain the same substring some other way. */
+function ddlHasColumn(createTableSql: string, columnName: string): boolean {
+	return createTableSql.includes(`\`${columnName}\``)
+}
+
 /**
  * Every real global's own table, discovered directly from the live
  * database rather than a JS-side registry (see `UnknownTableError`'s own
@@ -484,10 +488,20 @@ export async function pruneGlobal(
  * so is anything that isn't a `cn-`-prefixed content table (`isContentTableName`,
  * see `table-name.ts`), before the real table name is translated back into
  * the bare slug callers expect (`slugFromContentTableName`).
+ *
+ * **One query, not `1 + N`.** `sqlite_master` already carries each table's
+ * own `CREATE TABLE` text in its `sql` column, so the `data`/`status`
+ * column check below reads straight out of that (`ddlHasColumn()`) instead
+ * of a separate `pragma_table_info(name)` round-trip per table, the
+ * previous shape, a real, measured cost: this is called on every admin
+ * global fetch (`globalsCollection`'s `listGlobals()`, `db/collections.ts`)
+ * with no caching (unlike a single global's own `content-cache.ts` entry,
+ * "which globals exist at all" has no natural per-resource cache key), so
+ * `1 + N` queries here means `1 + N` D1 round trips on every single call.
  */
 export async function listGlobalSlugs(db: ContentDatabase): Promise<string[]> {
-	const tables = await db.all<{ name: string }>(sql`
-		SELECT name FROM sqlite_master
+	const tables = await db.all<{ name: string; sql: string }>(sql`
+		SELECT name, sql FROM sqlite_master
 		WHERE type = 'table'
 			AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\'
 			AND name NOT LIKE 'd1\\_%' ESCAPE '\\'
@@ -495,13 +509,12 @@ export async function listGlobalSlugs(db: ContentDatabase): Promise<string[]> {
 	`)
 
 	const slugs: string[] = []
-	for (const { name } of tables) {
+	for (const { name, sql: createTableSql } of tables) {
 		if (!isContentTableName(name)) continue
-		const columns = await db.all<{ name: string }>(
-			sql`SELECT name FROM pragma_table_info(${name})`
-		)
-		const columnNames = new Set(columns.map((column) => column.name))
-		if (columnNames.has('data') && !columnNames.has('status')) {
+		if (
+			ddlHasColumn(createTableSql, 'data') &&
+			!ddlHasColumn(createTableSql, 'status')
+		) {
 			slugs.push(slugFromContentTableName(name))
 		}
 	}

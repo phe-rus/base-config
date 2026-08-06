@@ -14,12 +14,11 @@ export const Route = createFileRoute('/(frontend)/(pages)/$')({
 		}
 	},
 	beforeLoad: async ({ context, params: { _splat } }) => {
-		// A last path segment with a dot (favicon.ico, robots.txt,
-		// apple-touch-icon.png, /.well-known/*, ...) is a static asset request
-		// a browser or crawler makes automatically, never a real page slug:
-		// skip the CMS lookup entirely rather than resolving to "not found"
-		// the expensive way (a real `/api/pages` query, every time).
-		if (_splat.split('/').pop()?.includes('.')) {
+		if (
+			_splat.match(
+				/\.(png|jpg|jpeg|gif|webp|avif|svg|ico|txt|json|md|css|js|ts|tsx|html|map)$/i
+			)
+		) {
 			return { page: null }
 		}
 		const pageLists = await context.query.ensureQueryData(
