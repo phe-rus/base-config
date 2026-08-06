@@ -19,6 +19,7 @@ export interface Docs {
 	parent?: string
 	order?: number
 	slug?: string
+	metadata?: MetaValue
 }
 
 export interface Topbar {

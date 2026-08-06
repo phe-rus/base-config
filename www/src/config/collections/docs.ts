@@ -68,6 +68,11 @@ export const docs: CollectionConfig = defineCollection({
 					}
 				}
 			]
+		},
+		{
+			tab: 'metadata',
+			label: 'Metadata',
+			fields: [{ name: 'metadata', type: 'meta' }]
 		}
 	]
 })
