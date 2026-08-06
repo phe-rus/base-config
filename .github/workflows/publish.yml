@@ -73,11 +73,21 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      # Scoped to just the four published packages, deliberately: `www`
+      # (the reference/demo app) and `templates/*` aren't published and
+      # were never meant to gate a release, a plain `turbo run
+      # build`/`typecheck` with no filter builds every workspace, `www`
+      # included, and a `www`-only problem (its own vite config, a
+      # Cloudflare binding setting, anything specific to running that one
+      # app) has no business failing a library publish. `--filter` also
+      # pulls in each package's own real dependencies (`core` needs `ui`
+      # built first, `plugin-form-builder` needs both), same as the
+      # unfiltered run already relied on turbo's own task graph for.
       - name: Typecheck
-        run: bunx turbo run typecheck
+        run: bunx turbo run typecheck --filter=@baseconfig/core --filter=@baseconfig/ui --filter=@baseconfig/cli --filter=@baseconfig/plugin-form-builder
 
       - name: Build
-        run: bunx turbo run build
+        run: bunx turbo run build --filter=@baseconfig/core --filter=@baseconfig/ui --filter=@baseconfig/cli --filter=@baseconfig/plugin-form-builder
 
       # `packages/config`/`packages/ui`/`plugins/plugin-form-builder` are
       # tightly coupled (config depends on ui, plugin-form-builder depends on

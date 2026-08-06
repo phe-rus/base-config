@@ -45,11 +45,31 @@ export default defineConfig(({ command }) => {
 			tanstackStart({
 				prerender: {
 					enabled: true,
-					crawlLinks: true // Discovers all linkable pages
+					crawlLinks: true, // Discovers all linkable pages
+					// `/admin*` (the authenticated SPA shell, never meant for
+					// search engines or a static prerender) and `/api*` (JSON
+					// endpoints, not real pages, the crawler shouldn't
+					// discover these from links anyway, excluded here
+					// defensively). Returning `false` only stops these from
+					// being *prerendered*: a crawled page is pushed into
+					// `startConfig.pages` (the sitemap step's own source
+					// list) before this filter ever runs, so `false` alone
+					// still leaves it in the sitemap. Setting `sitemap.exclude`
+					// as a side effect here works because the crawler hands
+					// this filter the *same* page object it already pushed,
+					// mutating it here is visible there too.
+					filter: (page) => {
+						const isAdminOrApi =
+							page.path.startsWith('/admin') || page.path.startsWith('/api')
+						if (isAdminOrApi) {
+							page.sitemap = { ...page.sitemap, exclude: true }
+						}
+						return !isAdminOrApi
+					}
 				},
 				sitemap: {
 					enabled: true,
-					host: process.env.VITE_ORIGIN
+					host: 'https://baseconfig.pherus.org'
 				}
 			}),
 			viteReact(),

@@ -16,8 +16,11 @@ export const Route = createFileRoute('/(frontend)/(pages)/$')({
 	beforeLoad: async ({ context, params: { _splat } }) => {
 		if (
 			_splat.match(
-				/\.(png|jpg|jpeg|gif|webp|avif|svg|ico|txt|json|md|css|js|ts|tsx|html|map)$/i
-			)
+				/\.(png|jpg|jpeg|gif|webp|avif|svg|ico|txt|json|xml|md|css|js|ts|tsx|html|map)$/i
+			) ||
+			_splat.includes('/well-known') ||
+			_splat.includes('/api') ||
+			_splat.includes('/admin')
 		) {
 			return { page: null }
 		}
@@ -87,7 +90,11 @@ export const Route = createFileRoute('/(frontend)/(pages)/$')({
 					}`
 				},
 				{ property: 'og:site_name', content: 'Baseconfig' },
-				{ name: 'twitter:card', content: 'summary_large_image' }
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{
+					rel: 'canonical',
+					href: `${import.meta.env.VITE_ORIGIN}/${loaderData.page?.slug === 'home' ? '' : loaderData.page?.slug}`
+				}
 			]
 		}
 	},
