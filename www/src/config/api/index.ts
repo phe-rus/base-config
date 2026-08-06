@@ -11,7 +11,7 @@ const app = createHandler({
 	auth: auth,
 	bindings: {
 		isdev: isDevelopment,
-		r2: env.MEDIA,
+		r2: env.R2,
 		kv: env.CACHE
 	}
 })
