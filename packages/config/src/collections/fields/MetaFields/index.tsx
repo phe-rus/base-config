@@ -1,13 +1,13 @@
+import { useSelector } from '@tanstack/react-store'
 import {
 	StorageWidget,
 	type StorageWidgetTriggerProps
 } from '../../../admin/widgets/storage-widget'
-import { uploadFile } from '../../../fields/upload'
 import { useKeywordSuggestions } from '../../../db/collections'
-import { useSelector } from '@tanstack/react-store'
+import { uploadFile } from '../../../fields/upload'
 import { collectionsBySlug } from '../../registry'
-import { collectionPath } from '../../types'
 import type { CollectionFieldsProps } from '../../types'
+import { collectionPath } from '../../types'
 
 export function MetaFields({
 	form,
@@ -55,7 +55,7 @@ export function MetaFields({
 						label='Description'
 						placeholder='SEO Description'
 						maxLength={160}
-						minLength={100}
+						minLength={1}
 						description='This should be between 100 and 160 characters. Auto-generation will format a description using the page content. For help in writing quality meta descriptions,'
 					/>
 				)}
