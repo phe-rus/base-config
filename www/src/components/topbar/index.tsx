@@ -104,18 +104,14 @@ export const Topbar = () => {
 						}}
 						className='flex items-center gap-1'
 					>
-						<Link
-							to='/$'
-							params={{
-								_splat: ''
-							}}
+						<span
 							className={buttonVariants({
 								size: 'icon-sm',
 								className: 'rounded-full!'
 							})}
 						>
 							<IconGitFork />
-						</Link>
+						</span>
 						<span className='text-xs px-1'>Github</span>
 					</Link>
 					<Link

@@ -140,7 +140,18 @@ export const base = {
 			queryFn: () =>
 				requireContentDataSource().client.find(options) as Promise<
 					ContentPaginatedResult<TypedDocumentRow<TSlug>>
-				>
+				>,
+			// Same reasoning `contentCollections` (`db/collections.ts`) already
+			// has for its own `staleTime: Infinity`: every mutation below
+			// (`createMutation`/`updateMutation`/`deleteMutation`) already
+			// invalidates this exact query key on success, so there's a real
+			// signal for "this is stale now" independent of time. Without
+			// this, a component mounting with data an SSR loader already
+			// fetched moments ago (`ensureQueryData`) treats it as stale
+			// immediately and re-fetches on mount regardless, a real,
+			// confirmed doubling of every `find`/`findGlobal`/`findByID` call
+			// a page makes.
+			staleTime: Number.POSITIVE_INFINITY
 		}),
 
 	findByID: <TSlug extends GeneratedCollectionSlug>(
@@ -151,7 +162,9 @@ export const base = {
 			queryFn: () =>
 				requireContentDataSource().client.findByID(options) as Promise<
 					TypedDocumentRow<TSlug>
-				>
+				>,
+			// See `find`'s own `staleTime` comment above.
+			staleTime: Number.POSITIVE_INFINITY
 		}),
 
 	findGlobal: <TSlug extends GeneratedGlobalSlug>(
@@ -162,7 +175,9 @@ export const base = {
 			queryFn: () =>
 				requireContentDataSource().client.findGlobal(
 					options
-				) as Promise<TypedGlobalRow<TSlug> | null>
+				) as Promise<TypedGlobalRow<TSlug> | null>,
+			// See `find`'s own `staleTime` comment above.
+			staleTime: Number.POSITIVE_INFINITY
 		}),
 
 	createMutation: <TSlug extends GeneratedCollectionSlug>(collection: TSlug) =>

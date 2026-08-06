@@ -201,7 +201,7 @@ export const Upload = ({
 					)}
 				>
 					<img
-						src='/favicon.png'
+						src='/placeholder.png'
 						alt='placeholder'
 						className='size-12 shrink-0 rounded-none'
 					/>

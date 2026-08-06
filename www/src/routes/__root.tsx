@@ -19,9 +19,31 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 		meta: [
 			{ charSet: 'utf-8' },
 			{ name: 'viewport', content: 'width=device-width, initial-scale=1' },
-			{ title: 'Basics - Baseconfig Templete reference app' }
+			{
+				title: 'Baseconfig - local first, edge native, tanstack, cloudflare cms'
+			},
+			{
+				name: 'description',
+				content:
+					'The edge native, local first content management system for TanStack Start.'
+			},
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ property: 'og:type', content: 'website' },
+			{
+				property: 'og:url',
+				content: `${import.meta.env.VITE_ORIGIN}/`
+			},
+			{ property: 'og:site_name', content: 'Baseconfig' }
 		],
-		links: [{ rel: 'stylesheet', href: stylesheet }]
+		links: [
+			{ rel: 'stylesheet', href: stylesheet },
+			{ rel: 'shortcut-icon', type: 'image/x-icon', href: '/favicon.ico' },
+			{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+			{ rel: 'icon', type: 'image/png', href: '/favicon.png' },
+			{ rel: 'apple-touch-icon', href: '/favicon.png' },
+			{ rel: 'apple-touch-icon-precomposed', href: '/favicon.png' },
+			{ rel: 'canonical', href: `${import.meta.env.VITE_ORIGIN}/` }
+		]
 	}),
 	shellComponent: RootDocument
 })

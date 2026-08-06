@@ -18,7 +18,7 @@ export default baseConfig({
 	auth: authClient,
 	config: {
 		adminPath: 'admin',
-		adminIcon: '/icon.png'
+		adminIcon: '/favicon.png'
 	},
 	blocks: [...blocks],
 	collections: [users, pages, docs],
