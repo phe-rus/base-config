@@ -28,6 +28,16 @@ name: Publish
 on:
   push:
     branches: [main]
+  # A manual fallback: GitHub's own `push` delivery to Actions occasionally
+  # stalls for a repo (confirmed the hard way: several `final:publish`
+  # pushes in a row, no path filters, workflow otherwise healthy, zero
+  # runs ever queued for their SHAs). `workflow_dispatch` triggers over the
+  # Actions API directly, a completely different delivery path from the
+  # push webhook, so it still works when that one is stuck. No inputs: a
+  # manual run always means "publish now," the push trigger's own
+  # `final:publish` prefix check is how that same intent is expressed via
+  # a commit instead.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -35,7 +45,10 @@ permissions:
 
 jobs:
   publish:
-    if: startsWith(github.event.head_commit.message, 'final:publish')
+    # `head_commit` only exists on a `push` event; a manual `workflow_dispatch`
+    # run has no commit message to check against, and dispatching it *is*
+    # the "publish now" signal, so it always proceeds.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'final:publish')
     runs-on: ubuntu-latest
     environment: npm-publish
     steps:
