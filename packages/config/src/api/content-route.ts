@@ -26,25 +26,16 @@ import {
 	UnknownTableError
 } from '../db/content-queries'
 import type { ContentDatabase } from '../db/content-queries'
+import { createKVContentCache } from './content-cache'
+import type { KVNamespaceLike } from './content-cache'
+
+export type { KVNamespaceLike } from './content-cache'
 
 type SessionLike = { user: AccessUser }
 
 type ContentRouteEnv = { Variables: { session?: SessionLike } }
 
 export type ContentRouteType = ReturnType<typeof createContentRoute>
-
-/**
- * The exact slice of Cloudflare's real `KVNamespace` this route calls on,
- * structural, same trade-off `R2BucketLike`/`BetterAuthAdminClient` already
- * make so this package never needs `@cloudflare/workers-types` as a
- * dependency for one binding's ambient type. A consumer's real `env.CACHE`
- * satisfies this without a cast.
- */
-export type KVNamespaceLike = {
-	get: (key: string) => Promise<string | null>
-	put: (key: string, value: string) => Promise<void>
-	delete: (key: string) => Promise<void>
-}
 
 /**
  * A Payload-style custom endpoint (https://payloadcms.com/docs/rest-api/overview):
@@ -120,28 +111,31 @@ export type EndpointFactory = (
 export type ContentRouteBindings = {
 	db: ContentDatabase
 	/**
-	 * Optional public-read cache, omit for no caching at all (every read
-	 * goes straight to D1). Only ever consulted/populated for a genuinely
-	 * scoped document read (`access.read` returned a `WhereCondition`, not a
-	 * plain `true`, see `resolveAccess()`'s own doc comment), and every
-	 * global read (globals have no draft/published concept at all); a
-	 * request whose `access.read` resolved to `true` (sees everything,
-	 * potentially drafts included) always bypasses it, caching that response
-	 * under a key with no per-session component would leak it to the next,
-	 * less-privileged request hitting the same key. A cache-aside pattern,
-	 * not "populate on publish": every write
-	 * (`PATCH`/`DELETE`) just invalidates the relevant key(s), and the next
-	 * public read repopulates it, simpler and harder to get subtly wrong
-	 * than trying to compute what a fresh read *would* return at write
-	 * time. Covers three shapes: a single document by `id`
-	 * (`GET /:collection/:id`), a single document by `slug`
-	 * (`GET /:collection?where={"slug":{"equals":"..."}}` with no other
-	 * filter/pagination, the one list query a public page-by-slug lookup
-	 * actually makes, since a public URL never knows a document's internal
-	 * `id`), and a single global (`GET /globals/:slug`, also reused by the
-	 * aggregate `GET /globals`). A plain unfiltered/paginated list has no
-	 * single natural cache key the way one document does, so it's still
-	 * never cached.
+	 * Optional public-read cache binding, omit for no caching at all (every
+	 * read goes straight to D1). Wrapped in `createKVContentCache`
+	 * (`content-cache.ts`) at the top of `createContentRoute`, so every route
+	 * handler below reads/writes through the resulting `ContentCache`
+	 * (`get`/`put`/`delete` keyed by a `CacheResource`), never this raw
+	 * binding directly. Only ever consulted/populated for a genuinely scoped
+	 * document read (`access.read` returned a `WhereCondition`, not a plain
+	 * `true`, see `resolveAccess()`'s own doc comment), and every global read
+	 * (globals have no draft/published concept at all); a request whose
+	 * `access.read` resolved to `true` (sees everything, potentially drafts
+	 * included) always bypasses it, caching that response under a key with no
+	 * per-session component would leak it to the next, less-privileged
+	 * request hitting the same key. A cache-aside pattern, not "populate on
+	 * publish": every write (`PATCH`/`DELETE`) just invalidates the relevant
+	 * resource(s), and the next public read repopulates it, simpler and
+	 * harder to get subtly wrong than trying to compute what a fresh read
+	 * *would* return at write time. Covers three `CacheResource` kinds: a
+	 * single document by `id` (`GET /:collection/:id`), a single document by
+	 * `slug` (`GET /:collection?where={"slug":{"equals":"..."}}` with no
+	 * other filter/pagination, the one list query a public page-by-slug
+	 * lookup actually makes, since a public URL never knows a document's
+	 * internal `id`), and a single global (`GET /globals/:slug`, also reused
+	 * by the aggregate `GET /globals`). A plain unfiltered/paginated list has
+	 * no single natural cache key the way one document does, so it's still
+	 * never cached, see `content-cache.ts`'s own doc comment.
 	 */
 	cache?: KVNamespaceLike
 	/**
@@ -165,25 +159,6 @@ export type ContentRouteBindings = {
 	access?: Record<string, CollectionAccess | GlobalAccess>
 	/** See `ContentEndpoint`'s own doc comment. */
 	endpoints?: ContentEndpoint[]
-}
-
-function documentCacheKey(collection: string, id: string): string {
-	return `content:${collection}:${id}`
-}
-
-/**
- * A second cache key for the exact same document, this one reachable by
- * `slug` rather than `id`: a public page is looked up by its URL slug, not
- * its internal id, so the id-keyed cache above is never actually hit by
- * that lookup. Populated/invalidated alongside `documentCacheKey`, never on
- * its own.
- */
-function slugCacheKey(collection: string, slug: string): string {
-	return `content:${collection}:slug:${slug}`
-}
-
-function globalCacheKey(slug: string): string {
-	return `content:global:${slug}`
 }
 
 const createDocumentSchema = z.object({
@@ -320,11 +295,13 @@ const listQuerySchema = z.object({
  */
 export function createContentRoute({
 	db,
-	cache,
+	cache: cacheBinding,
 	hooks,
 	access,
 	endpoints
 }: ContentRouteBindings) {
+	const cache = cacheBinding ? createKVContentCache(cacheBinding) : undefined
+
 	/**
 	 * Shared by both globals routes below (`GET /globals` and
 	 * `GET /globals/:slug`) so the aggregate list route benefits from the
@@ -335,13 +312,13 @@ export function createContentRoute({
 	 */
 	async function getCachedGlobal(slug: string) {
 		if (cache) {
-			const cached = await cache.get(globalCacheKey(slug))
-			if (cached) return JSON.parse(cached)
+			const cached = await cache.get({ kind: 'global', slug })
+			if (cached) return cached
 		}
 		const row = await getGlobal(db, slug)
 		const result = row ? { slug, ...row } : null
 		if (cache && result) {
-			await cache.put(globalCacheKey(slug), JSON.stringify(result))
+			await cache.put({ kind: 'global', slug }, result)
 		}
 		return result
 	}
@@ -409,7 +386,7 @@ export function createContentRoute({
 					user: c.get('session')?.user,
 					overrideAccess: false
 				})
-				if (cache) await cache.delete(globalCacheKey(slug))
+				if (cache) await cache.delete({ kind: 'global', slug })
 				return c.json({ slug, ...row })
 			}
 		)
@@ -431,7 +408,7 @@ export function createContentRoute({
 					}
 				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
-				if (cache) await cache.delete(globalCacheKey(slug))
+				if (cache) await cache.delete({ kind: 'global', slug })
 				return c.json({ slug, ...row })
 			}
 		)
@@ -470,8 +447,12 @@ export function createContentRoute({
 				cache && accessWhere && slug && !where?.status && !limit && !page
 
 			if (cacheableSlugLookup) {
-				const cached = await cache.get(slugCacheKey(collection, slug))
-				if (cached) return c.json(JSON.parse(cached))
+				const cached = await cache.get({
+					kind: 'document-slug',
+					collection,
+					slug
+				})
+				if (cached) return c.json(cached)
 			}
 
 			const result = await listDocuments(db, collection, {
@@ -486,7 +467,7 @@ export function createContentRoute({
 			// document created later under a previously-missed slug would
 			// stay invisible until something else happened to invalidate it.
 			if (cacheableSlugLookup && result.docs.length > 0) {
-				await cache.put(slugCacheKey(collection, slug), JSON.stringify(result))
+				await cache.put({ kind: 'document-slug', collection, slug }, result)
 			}
 
 			return c.json(result)
@@ -507,13 +488,13 @@ export function createContentRoute({
 			// a `true` result can see everything, including drafts, and this
 			// cache has no per-session key component to safely store that under.
 			if (cache && accessWhere) {
-				const cached = await cache.get(documentCacheKey(collection, id))
-				if (cached) return c.json(JSON.parse(cached))
+				const cached = await cache.get({ kind: 'document', collection, id })
+				if (cached) return c.json(cached)
 			}
 			const row = await getDocument(db, collection, id, { accessWhere })
 			if (!row) return c.json({ error: 'Not found' }, 404)
 			if (cache && accessWhere) {
-				await cache.put(documentCacheKey(collection, id), JSON.stringify(row))
+				await cache.put({ kind: 'document', collection, id }, row)
 			}
 			return c.json(row)
 		})
@@ -576,12 +557,20 @@ export function createContentRoute({
 				// public read repopulates correctly either way, including
 				// caching nothing at all if the doc isn't publicly visible).
 				if (cache) {
-					await cache.delete(documentCacheKey(collection, id))
+					await cache.delete({ kind: 'document', collection, id })
 					if (existing?.slug) {
-						await cache.delete(slugCacheKey(collection, existing.slug))
+						await cache.delete({
+							kind: 'document-slug',
+							collection,
+							slug: existing.slug
+						})
 					}
 					if (row.slug && row.slug !== existing?.slug) {
-						await cache.delete(slugCacheKey(collection, row.slug))
+						await cache.delete({
+							kind: 'document-slug',
+							collection,
+							slug: row.slug
+						})
 					}
 				}
 				return c.json(row)
@@ -615,9 +604,13 @@ export function createContentRoute({
 				if (!row) return c.json({ error: 'Not found' }, 404)
 
 				if (cache) {
-					await cache.delete(documentCacheKey(collection, id))
+					await cache.delete({ kind: 'document', collection, id })
 					if (existing?.slug) {
-						await cache.delete(slugCacheKey(collection, existing.slug))
+						await cache.delete({
+							kind: 'document-slug',
+							collection,
+							slug: existing.slug
+						})
 					}
 				}
 				return c.json(row)
@@ -637,9 +630,13 @@ export function createContentRoute({
 				overrideAccess: false
 			})
 			if (cache) {
-				await cache.delete(documentCacheKey(collection, id))
+				await cache.delete({ kind: 'document', collection, id })
 				if (existing?.slug) {
-					await cache.delete(slugCacheKey(collection, existing.slug))
+					await cache.delete({
+						kind: 'document-slug',
+						collection,
+						slug: existing.slug
+					})
 				}
 			}
 			return c.json({ ok: true })
