@@ -6,6 +6,7 @@ type EmailProps = BaseFieldProps & {
 	placeholder?: string
 	className?: string
 	autoComplete?: string
+	dir?: 'ltr' | 'rtl' | 'auto'
 }
 
 /** A preset `Input` (`type='email'`, mail icon), not a separate implementation. Reads/writes the same field context `Input` does (`useFieldState()` resolves by the enclosing `form.AppField`, not by which component calls it), so wrapping is safe. */

@@ -23,17 +23,64 @@ type BaseFieldConfig = {
 	 * Admin-only presentation settings, Payload's own `admin` option
 	 * (https://payloadcms.com/docs/fields/overview#admin). `description`
 	 * renders helper text under the field's label; `position` moves the
-	 * field into the sidebar column instead of the main content column.
+	 * field into the sidebar column instead of the main content column;
+	 * `readOnly` renders the field disabled, Payload's own name for this
+	 * (https://payloadcms.com/docs/fields/overview#admin-options), an alias
+	 * for the top-level `disabled` below (`renderer.tsx` checks both), not a
+	 * replacement: `disabled` predates this and real consumers already rely
+	 * on it (`users.ts`'s server-managed fields, `plugin-form-builder`'s
+	 * submission fields), so it stays exactly as it was rather than forcing
+	 * a rename across every existing collection config.
 	 */
 	admin?: {
 		description?: string
 		position?: 'sidebar' | 'default'
+		readOnly?: boolean
+		/**
+		 * Removes this field from the rendered form entirely (Payload's own
+		 * `admin.hidden`, https://payloadcms.com/docs/fields/overview#admin-options),
+		 * while it keeps participating in schema/default-value derivation like
+		 * any other field, unlike the dedicated `hidden` field *type*, which
+		 * is for a value with no UI concept at all (a server-assigned id).
+		 * This is for a real, editable-in-principle field an admin just
+		 * shouldn't see on this particular collection, a static flag, not a
+		 * conditional (`admin.condition`, Payload's per-value visibility
+		 * toggle, isn't built here, see this file's own doc comment).
+		 */
+		hidden?: boolean
+		/**
+		 * Forwarded straight to the underlying native `<input>`'s
+		 * `autocomplete` attribute (Payload's own `admin.autoComplete`),
+		 * only meaningful for the `Input`-backed leaf types (`text`, `email`,
+		 * `password`, `confirmPassword`, `slug`), a no-op everywhere else.
+		 */
+		autoComplete?: string
+		/**
+		 * Sets `dir="rtl"` on the underlying input/textarea (Payload's own
+		 * `admin.rtl`), for a field whose *value* is right-to-left content
+		 * regardless of the admin UI's own locale. Same `Input`/`Textarea`-only
+		 * scope as `autoComplete` above.
+		 */
+		rtl?: boolean
 	}
 	placeholder?: string
 	required?: boolean
 	disabled?: boolean
 	/** Only set when a field should have a value out of the box, otherwise it's simply undefined. See `deriveDefaultValues` in `schema.ts`. */
 	defaultValue?: unknown
+	/**
+	 * Custom validation beyond schema type/bounds, Payload's own `validate`
+	 * field option (https://payloadcms.com/docs/fields/overview#validation),
+	 * scoped down to a single-value function: `(value) => true | string`, no
+	 * `siblingData`/whole-document access, that's still a whole-schema
+	 * `.refine()` on the collection's own schema, the same boundary
+	 * `confirmPassword`'s own doc comment already documents (a field can
+	 * never see a sibling field's value here). Return `true` when valid, or
+	 * a string error message. Runs as a `superRefine` on top of the field's
+	 * own base schema, skipped entirely when the field is optional and
+	 * empty (zod's own `.optional()` short-circuits before it ever runs).
+	 */
+	validate?: (value: unknown) => true | string
 }
 
 export type TextFieldConfig = BaseFieldConfig & {

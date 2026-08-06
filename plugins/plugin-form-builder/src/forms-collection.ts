@@ -44,7 +44,7 @@ export type FormData = {
 export const formsCollection = defineCollection({
 	slug: 'forms',
 	label: 'Forms',
-	columns: [{ key: 'title', label: 'Title' }],
+	admin: { defaultColumns: ['title'] },
 	tabs: [
 		{
 			tab: 'fields',

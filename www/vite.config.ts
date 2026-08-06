@@ -21,15 +21,15 @@ export default defineConfig(({ command }) => {
 				// server's connections on every edit).
 				...(dev
 					? {
-							'@baseconfig/core': path.resolve(
-								import.meta.dirname,
-								'../packages/config/src'
-							),
-							'@baseconfig/ui': path.resolve(
-								import.meta.dirname,
-								'../packages/ui/src'
-							)
-						}
+						'@baseconfig/core': path.resolve(
+							import.meta.dirname,
+							'../packages/config/src'
+						),
+						'@baseconfig/ui': path.resolve(
+							import.meta.dirname,
+							'../packages/ui/src'
+						)
+					}
 					: {})
 			},
 			tsconfigPaths: true
@@ -42,7 +42,16 @@ export default defineConfig(({ command }) => {
 				persistState: true
 			}),
 			tailwindcss(),
-			tanstackStart(),
+			tanstackStart({
+				prerender: {
+					enabled: true,
+					crawlLinks: true, // Discovers all linkable pages
+				},
+				sitemap: {
+					enabled: true,
+					host: import.meta.env.VITE_ORIGIN,
+				},
+			}),
 			viteReact(),
 			// The libraries are pre-built (esbuild, no React Compiler) and are
 			// only pulled in as source here for dev HMR, so keep them out of

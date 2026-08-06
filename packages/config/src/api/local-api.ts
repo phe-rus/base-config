@@ -312,6 +312,7 @@ export function createLocalAPI({ db, hooks }: CreateLocalAPIOptions): LocalAPI {
 				| CollectionAccess
 				| undefined
 			await performDelete(db, collection, id, collectionAccess, {
+				hooks: mergedHooks[collection],
 				user,
 				overrideAccess
 			})

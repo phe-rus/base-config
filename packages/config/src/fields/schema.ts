@@ -276,7 +276,23 @@ export function fieldsToSchema(
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
 	const tree: SchemaTree = {}
 	for (const field of expandFields(fields)) {
-		const base = baseFieldSchema(field, resolvers)
+		let base = baseFieldSchema(field, resolvers)
+		// `.optional()` wraps *outside* this, so an empty optional field never
+		// invokes `validate` at all (zod's `ZodOptional` short-circuits on
+		// `undefined` before its inner type runs), matching how `required`
+		// already behaves for the base type/bounds checks above.
+		if (field.validate) {
+			const validate = field.validate
+			base = base.superRefine((value, ctx) => {
+				const result = validate(value)
+				if (result !== true) {
+					ctx.addIssue({
+						code: 'custom',
+						message: typeof result === 'string' ? result : 'Invalid value'
+					})
+				}
+			})
+		}
 		setPath(tree, field.name, field.required ? base : base.optional())
 	}
 	return treeToZodObject(tree)

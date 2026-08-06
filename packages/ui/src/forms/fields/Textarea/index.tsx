@@ -14,6 +14,8 @@ type TextareaProps = BaseFieldProps & {
 	rows?: number
 	minLength?: number
 	maxLength?: number
+	autoComplete?: string
+	dir?: 'ltr' | 'rtl' | 'auto'
 } & {
 	className?: string
 }
@@ -27,7 +29,9 @@ export const Textarea = ({
 	disabled,
 	className,
 	rows,
-	minLength
+	minLength,
+	autoComplete,
+	dir
 }: TextareaProps) => {
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
 		useFieldState<string>()
@@ -65,6 +69,8 @@ export const Textarea = ({
 					aria-invalid={isInvalid}
 					required={required}
 					disabled={disabled}
+					autoComplete={autoComplete}
+					dir={dir}
 				/>
 				{(maxLength || minLength) && (
 					<InputGroupAddon align='block-end'>

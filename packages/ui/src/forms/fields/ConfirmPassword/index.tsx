@@ -4,6 +4,7 @@ import type { BaseFieldProps } from '../shared/types'
 type ConfirmPasswordProps = BaseFieldProps & {
 	placeholder?: string
 	className?: string
+	dir?: 'ltr' | 'rtl' | 'auto'
 }
 
 /**

@@ -3,7 +3,7 @@ import type {
 	CollectionAccess,
 	CollectionHooks,
 	GlobalAccess,
-	HookContext
+	HookRequestContext
 } from '../base.types'
 import {
 	createDocument,
@@ -68,9 +68,10 @@ export async function resolveAccess<TUser>(
 /**
  * Shared by both `content-route.ts` (HTTP) and `api/local-api.ts` (in-process):
  * the validate-then-hook-then-persist shape every *write* operation follows,
- * so a collection's `beforeChange`/`afterChange` hooks and its `access`
- * rules can't drift between the two entry points, one calls `content-queries.ts`
- * directly, the other reimplements this same bundling a second time.
+ * so a collection's `beforeValidate`/`beforeChange`/`afterChange` hooks and
+ * its `access` rules can't drift between the two entry points, one calls
+ * `content-queries.ts` directly, the other reimplements this same bundling a
+ * second time.
  *
  * **Reads (`find`/`findByID`/`findGlobal`/`listGlobals`) are deliberately
  * NOT wrapped the same way here.** Unlike a write, a read's surrounding
@@ -86,12 +87,24 @@ export async function resolveAccess<TUser>(
  * gap: the one thing that actually needs to stay identical (which access
  * function runs, and what "unset means open" resolves to) already does,
  * since both call the exact same `resolveAccess()`.
+ *
+ * **`beforeOperation`/`afterOperation`/`beforeRead`/`afterRead`/`afterError`
+ * are not called from this file.** Those wrap the *whole* operation
+ * (including access control, and, for reads, a code path this file has no
+ * function for at all), so they're each caller's own job: `content-route.ts`
+ * calls them directly around its route handlers (every operation, including
+ * reads), `api/local-api.ts` does not yet (a disclosed, real gap: a Local
+ * API call still runs `beforeValidate`/`beforeChange`/`afterChange`/
+ * `beforeDelete`/`afterDelete` identically to an HTTP request, since those
+ * live here, but not the four operation/read-wrapping hooks).
  */
 export type WriteContext<TUser> = {
-	hooks?: CollectionHooks
+	hooks?: CollectionHooks<Record<string, unknown>, TUser>
 	user?: TUser | null
 	/** Skips the access check entirely (Payload's own Local API default) rather than treating it as always-`true`: a write bypassed this way never even calls the collection's own access function. */
 	overrideAccess?: boolean
+	/** Shared per-operation context threaded into every hook this write triggers, see `HookRequestContext`'s own doc comment. A caller that also runs `beforeOperation`/`afterOperation` around this same operation (`content-route.ts` does) passes the *same* object instance here, so a value one of those hooks wrote is visible to `beforeChange`/`afterChange` too. Defaults to a fresh `{}` when omitted. */
+	context?: HookRequestContext
 }
 
 async function checkWriteAccess<TUser>(
@@ -111,19 +124,25 @@ export async function performCreate<TUser>(
 	collection: string,
 	input: CreateDocumentInput,
 	collectionAccess: CollectionAccess<TUser> | undefined,
-	{ hooks, user, overrideAccess }: WriteContext<TUser>
+	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
 ): Promise<DocumentRow> {
 	await checkWriteAccess(
 		collectionAccess?.create,
 		{ req: { user }, data: input.data },
 		overrideAccess
 	)
-	const ctx: HookContext = { slug: collection, operation: 'create' }
-	const data = hooks?.beforeChange
-		? await hooks.beforeChange(input.data, ctx)
-		: input.data
+	const base = { collection, context, req: { user } } as const
+	let data: Record<string, unknown> = input.data
+	for (const hook of hooks?.beforeValidate ?? []) {
+		data = await hook({ ...base, operation: 'create', data })
+	}
+	for (const hook of hooks?.beforeChange ?? []) {
+		data = await hook({ ...base, operation: 'create', data })
+	}
 	const row = await createDocument(db, collection, { ...input, data })
-	if (hooks?.afterChange) await hooks.afterChange(row, ctx)
+	for (const hook of hooks?.afterChange ?? []) {
+		await hook({ ...base, operation: 'create', doc: row.data })
+	}
 	return row
 }
 
@@ -133,20 +152,54 @@ export async function performUpdate<TUser>(
 	id: string,
 	input: UpdateDocumentInput,
 	collectionAccess: CollectionAccess<TUser> | undefined,
-	{ hooks, user, overrideAccess }: WriteContext<TUser>
+	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
 ): Promise<DocumentRow | undefined> {
 	await checkWriteAccess(
 		collectionAccess?.update,
 		{ req: { user }, id, data: input.fields },
 		overrideAccess
 	)
-	const ctx: HookContext = { slug: collection, operation: 'update' }
-	const fields =
-		hooks?.beforeChange && input.fields
-			? await hooks.beforeChange(input.fields, ctx)
-			: input.fields
+	// Fetched once, up front, whenever either hook chain is actually
+	// registered: `originalDoc` (`beforeValidate`/`beforeChange`) and
+	// `previousDoc` (`afterChange`) both need the pre-write row, no reason to
+	// fetch it twice.
+	const originalDoc =
+		hooks?.beforeValidate?.length ||
+		hooks?.beforeChange?.length ||
+		hooks?.afterChange?.length
+			? await getDocument(db, collection, id)
+			: undefined
+	const base = { collection, context, req: { user } } as const
+	let fields: Record<string, unknown> | undefined = input.fields
+	if (fields) {
+		for (const hook of hooks?.beforeValidate ?? []) {
+			fields = await hook({
+				...base,
+				operation: 'update',
+				data: fields ?? {},
+				originalDoc: originalDoc?.data
+			})
+		}
+		for (const hook of hooks?.beforeChange ?? []) {
+			fields = await hook({
+				...base,
+				operation: 'update',
+				data: fields ?? {},
+				originalDoc: originalDoc?.data
+			})
+		}
+	}
 	const row = await updateDocument(db, collection, id, { ...input, fields })
-	if (row && hooks?.afterChange) await hooks.afterChange(row, ctx)
+	if (row) {
+		for (const hook of hooks?.afterChange ?? []) {
+			await hook({
+				...base,
+				operation: 'update',
+				doc: row.data,
+				previousDoc: originalDoc?.data
+			})
+		}
+	}
 	return row
 }
 
@@ -155,14 +208,28 @@ export async function performDelete<TUser>(
 	collection: string,
 	id: string,
 	collectionAccess: CollectionAccess<TUser> | undefined,
-	{ user, overrideAccess }: Omit<WriteContext<TUser>, 'hooks'>
+	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
 ): Promise<void> {
 	await checkWriteAccess(
 		collectionAccess?.delete,
 		{ req: { user }, id },
 		overrideAccess
 	)
+	const base = { collection, context, req: { user } } as const
+	for (const hook of hooks?.beforeDelete ?? []) {
+		await hook({ ...base, id })
+	}
+	// Only fetched when something will actually use it: no wasted read for
+	// the (default) case where `afterDelete` isn't registered.
+	const existing = hooks?.afterDelete?.length
+		? await getDocument(db, collection, id)
+		: undefined
 	await deleteDocument(db, collection, id)
+	if (existing) {
+		for (const hook of hooks?.afterDelete ?? []) {
+			await hook({ ...base, id, doc: existing.data })
+		}
+	}
 }
 
 /** Prune is treated as an `update` for access purposes, the same trust boundary a hand-edited `update` already crosses, see `content-route.ts`'s own `pruneSchema` doc comment. */
@@ -172,7 +239,7 @@ export async function performPrune<TUser>(
 	id: string,
 	knownPaths: string[],
 	collectionAccess: CollectionAccess<TUser> | undefined,
-	{ user, overrideAccess }: Omit<WriteContext<TUser>, 'hooks'>
+	{ user, overrideAccess }: Omit<WriteContext<TUser>, 'hooks' | 'context'>
 ): Promise<DocumentRow | undefined> {
 	await checkWriteAccess(
 		collectionAccess?.update,
@@ -187,19 +254,33 @@ export async function performUpsertGlobal<TUser>(
 	slug: string,
 	fields: Record<string, unknown>,
 	globalAccess: GlobalAccess<TUser> | undefined,
-	{ hooks, user, overrideAccess }: WriteContext<TUser>
+	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
 ): Promise<GlobalRow> {
 	await checkWriteAccess(
 		globalAccess?.update,
 		{ req: { user }, data: fields },
 		overrideAccess
 	)
-	const ctx: HookContext = { slug, operation: 'update' }
-	const changedFields = hooks?.beforeChange
-		? await hooks.beforeChange(fields, ctx)
-		: fields
+	const base = { collection: slug, context, req: { user } } as const
+	let changedFields = fields
+	for (const hook of hooks?.beforeValidate ?? []) {
+		changedFields = await hook({
+			...base,
+			operation: 'update',
+			data: changedFields
+		})
+	}
+	for (const hook of hooks?.beforeChange ?? []) {
+		changedFields = await hook({
+			...base,
+			operation: 'update',
+			data: changedFields
+		})
+	}
 	const row = await upsertGlobal(db, slug, changedFields)
-	if (hooks?.afterChange) await hooks.afterChange({ slug, ...row }, ctx)
+	for (const hook of hooks?.afterChange ?? []) {
+		await hook({ ...base, operation: 'update', doc: row.data })
+	}
 	return row
 }
 
@@ -209,7 +290,7 @@ export async function performPruneGlobal<TUser>(
 	slug: string,
 	knownPaths: string[],
 	globalAccess: GlobalAccess<TUser> | undefined,
-	{ user, overrideAccess }: Omit<WriteContext<TUser>, 'hooks'>
+	{ user, overrideAccess }: Omit<WriteContext<TUser>, 'hooks' | 'context'>
 ): Promise<GlobalRow | undefined> {
 	await checkWriteAccess(
 		globalAccess?.update,

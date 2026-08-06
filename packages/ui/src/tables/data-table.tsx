@@ -21,6 +21,8 @@ import {
 	createFilteredRowModel,
 	createPaginatedRowModel,
 	createSortedRowModel,
+	filterFn_arrIncludesSome,
+	filterFn_inDateRange,
 	filterFns,
 	flexRender,
 	rowPaginationFeature,
@@ -46,10 +48,21 @@ import {
 import { useMemo, useState, type ReactNode } from 'react'
 import { DataTablePagination } from './pagination'
 
+/**
+ * `filterVariant: 'date'` is the one thing a caller has to opt into
+ * explicitly (`updatedAt`/`createdAt`, or a custom `type: 'date'` column):
+ * unlike an array-valued column (detected automatically below, from the
+ * actual data), a date is just a string or number at runtime, nothing to
+ * sniff it from safely.
+ */
+export type DataTableColumnMeta = {
+	filterVariant?: 'date'
+}
+
 export type DataTableColumnDef<
 	TData extends RowData,
 	TValue = unknown
-> = ColumnDef<DataTableFeatures, TData, TValue>
+> = ColumnDef<DataTableFeatures, TData, TValue> & { meta?: DataTableColumnMeta }
 
 const features = tableFeatures({
 	columnFilteringFeature,
@@ -80,13 +93,44 @@ type DataTableProps<TData extends RowData> = {
 	onSelectedRowsChange?: (rows: TData[]) => void
 }
 
+/** Whether any row actually holds an array for this column, e.g. a `keywords` field like `category`, checked against real data rather than requiring a caller to declare it. */
+function isArrayValuedColumn<TData>(data: TData[], colId: string): boolean {
+	return data.some((row) =>
+		Array.isArray((row as Record<string, unknown>)[colId])
+	)
+}
+
+/**
+ * The quick-filter checkbox list's own candidate values. For a plain scalar
+ * column, one value per distinct cell, same as before. For an array-valued
+ * column (`isArrayColumn`), the individual *items* across every row's array
+ * are what should show up as checkboxes, `category: ['fields']` contributes
+ * `'fields'`, not the array itself, an array would never equal any of the
+ * scalar comparisons the checkbox click handler does, and would previously
+ * get excluded outright anyway (`typeof [] === 'object'`, which is exactly
+ * why a `category` column's filter used to silently show nothing).
+ */
 function useQuickFilterValues<TData>(
 	data: TData[],
 	colId: string,
-	exclude: string[]
+	exclude: string[],
+	isArrayColumn: boolean
 ) {
 	return useMemo(() => {
 		if (exclude.includes(colId)) return []
+		if (isArrayColumn) {
+			const flattened = data.flatMap((row) => {
+				const value = (row as Record<string, unknown>)[colId]
+				return Array.isArray(value) ? value : []
+			})
+			const unique = [
+				...new Set(
+					flattened.filter((v) => v !== null && v !== undefined && v !== '')
+				)
+			]
+			if (unique.length < 2 || unique.length > 20) return []
+			return unique.map((v) => String(v))
+		}
 		const raw = data.map((row) => (row as Record<string, unknown>)[colId])
 		const unique = [
 			...new Set(
@@ -98,7 +142,17 @@ function useQuickFilterValues<TData>(
 		]
 		if (unique.length < 2 || unique.length > 12) return []
 		return unique.map((v) => String(v))
-	}, [data, colId, exclude])
+	}, [data, colId, exclude, isArrayColumn])
+}
+
+function columnIdOf<TData extends RowData>(
+	col: DataTableColumnDef<TData>
+): string | undefined {
+	if ('id' in col && col.id) return col.id
+	if ('accessorKey' in col && typeof col.accessorKey === 'string') {
+		return col.accessorKey
+	}
+	return undefined
 }
 
 function getColumnLabel(column: {
@@ -139,10 +193,35 @@ export function DataTable<TData extends RowData>({
 	const [columnsOpen, setColumnsOpen] = useState(false)
 	const [filtersOpen, setFiltersOpen] = useState(false)
 
+	// A caller's own explicit `filterFn` always wins. Otherwise: a column
+	// marked `meta.filterVariant: 'date'` gets real date-range matching
+	// (`filterFn_inDateRange`, min/max, not a scalar comparison); a column
+	// whose actual data is array-valued (`category`, any `keywords` field)
+	// gets array-contains matching (`filterFn_arrIncludesSome`), the default
+	// `includesString` behavior would otherwise stringify the whole array
+	// (`['fields'].toString()`) and only work by accident for a single-item
+	// array.
+	const augmentedColumns = useMemo(
+		() =>
+			columns.map((col) => {
+				if (col.filterFn) return col
+				const colId = columnIdOf(col)
+				if (!colId) return col
+				if (col.meta?.filterVariant === 'date') {
+					return { ...col, filterFn: filterFn_inDateRange }
+				}
+				if (isArrayValuedColumn(data, colId)) {
+					return { ...col, filterFn: filterFn_arrIncludesSome }
+				}
+				return col
+			}),
+		[columns, data]
+	)
+
 	const table = useTable({
 		features,
 		data,
-		columns,
+		columns: augmentedColumns,
 		enableRowSelection: true,
 		state: { sorting, columnFilters, columnVisibility, rowSelection },
 		onSortingChange: setSorting,
@@ -260,13 +339,14 @@ export function DataTable<TData extends RowData>({
 							<div className='flex items-center justify-between'>
 								<h3 className='text-xs!'>Columns</h3>
 								{hiddenCount > 0 && (
-									<button
-										type='button'
+									<Button
+										variant='ghost'
+										size='xs'
 										onClick={() => table.resetColumnVisibility()}
-										className='text-[11px] text-muted-foreground hover:text-foreground transition-colors'
+										className='text-muted-foreground hover:text-foreground'
 									>
 										Show all
-									</button>
+									</Button>
 								)}
 							</div>
 							<div className='flex flex-wrap items-center gap-5'>
@@ -305,18 +385,19 @@ export function DataTable<TData extends RowData>({
 							<div className='flex items-center justify-between'>
 								<h3 className='text-xs!'>Filters</h3>
 								{activeFilterCount > 0 && (
-									<button
-										type='button'
+									<Button
+										variant='ghost'
+										size='xs'
 										onClick={() =>
 											setColumnFilters((prev) =>
 												prev.filter((f) => f.id === filterKey)
 											)
 										}
-										className='flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors'
+										className='text-muted-foreground hover:text-foreground'
 									>
 										<IconX className='size-3' />
 										Clear all
-									</button>
+									</Button>
 								)}
 							</div>
 
@@ -332,6 +413,11 @@ export function DataTable<TData extends RowData>({
 											column={column}
 											data={data}
 											skip={skip}
+											isArrayColumn={isArrayValuedColumn(data, column.id)}
+											isDateColumn={
+												(column.columnDef as { meta?: DataTableColumnMeta })
+													.meta?.filterVariant === 'date'
+											}
 										/>
 									))}
 								</div>
@@ -346,13 +432,14 @@ export function DataTable<TData extends RowData>({
 					<span className='text-sm font-medium'>{selectedCount} selected</span>
 					<div className='h-4 w-px bg-input/40' />
 					{bulkActions(selectedRows, clearSelection)}
-					<button
-						type='button'
+					<Button
+						variant='ghost'
+						size='xs'
 						onClick={clearSelection}
-						className='ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors'
+						className='ml-auto text-muted-foreground hover:text-foreground'
 					>
 						Clear
-					</button>
+					</Button>
 				</div>
 			)}
 
@@ -457,15 +544,80 @@ export function DataTable<TData extends RowData>({
 function FilterRow<TData extends RowData>({
 	column,
 	data,
-	skip
+	skip,
+	isArrayColumn,
+	isDateColumn
 }: {
 	column: Column<DataTableFeatures, TData, unknown>
 	data: TData[]
 	skip: string[]
+	isArrayColumn: boolean
+	isDateColumn: boolean
 }) {
-	const uniqueValues = useQuickFilterValues(data, column.id, skip)
-	const activeFilter = column.getFilterValue() as string | undefined
+	const uniqueValues = useQuickFilterValues(
+		data,
+		column.id,
+		skip,
+		isArrayColumn
+	)
 	const label = getColumnLabel(column)
+
+	// A date column never gets the enumerated-values treatment below, every
+	// row realistically has its own distinct timestamp, a checkbox per value
+	// would just be a very long list of dates nobody can use, a from/to
+	// range is what's actually useful (`filterFn_inDateRange`, the `DataTable`
+	// component's own augmentation step).
+	if (isDateColumn) {
+		const [from, to] =
+			(column.getFilterValue() as [string?, string?] | undefined) ?? []
+		return (
+			<div className='flex items-center gap-3'>
+				<span className='w-20 shrink-0 text-[11px] font-medium text-muted-foreground'>
+					{label}
+				</span>
+				<div className='flex items-center gap-2'>
+					<input
+						type='date'
+						value={from ?? ''}
+						onChange={(e) =>
+							column.setFilterValue([e.target.value || undefined, to])
+						}
+						className='h-7 rounded-lg border border-dashed border-input/40 bg-background px-2 text-xs focus:outline-none'
+					/>
+					<span className='text-[11px] text-muted-foreground'>to</span>
+					<input
+						type='date'
+						value={to ?? ''}
+						onChange={(e) =>
+							column.setFilterValue([from, e.target.value || undefined])
+						}
+						className='h-7 rounded-lg border border-dashed border-input/40 bg-background px-2 text-xs focus:outline-none'
+					/>
+					{(from || to) && (
+						<Button
+							variant='ghost'
+							size='icon-xs'
+							onClick={() => column.setFilterValue(undefined)}
+							className='text-muted-foreground hover:text-foreground'
+						>
+							<IconX className='size-3' />
+						</Button>
+					)}
+				</div>
+			</div>
+		)
+	}
+
+	// `activeFilter` is a bare value for a plain scalar column, or a
+	// one-element array for an array-valued column (`filterFn_arrIncludesSome`
+	// needs an array of values to check for overlap, even when only one is
+	// ever picked here).
+	const activeFilter = column.getFilterValue() as string | string[] | undefined
+	const activeValue = isArrayColumn
+		? Array.isArray(activeFilter)
+			? activeFilter[0]
+			: undefined
+		: (activeFilter as string | undefined)
 
 	if (uniqueValues.length > 0) {
 		return (
@@ -473,7 +625,11 @@ function FilterRow<TData extends RowData>({
 				<span className='text-xs!'>{label}</span>
 				<div className='flex flex-wrap items-center gap-2'>
 					{uniqueValues.map((value) => {
-						const active = activeFilter === value
+						const active = activeValue === value
+						const setActive = () =>
+							column.setFilterValue(
+								active ? undefined : isArrayColumn ? [value] : value
+							)
 						return (
 							<div
 								key={value}
@@ -481,30 +637,27 @@ function FilterRow<TData extends RowData>({
 									'flex items-center gap-2 transition-colors',
 									'cursor-pointer'
 								)}
-								onClick={() =>
-									column.setFilterValue(active ? undefined : value)
-								}
+								onClick={setActive}
 							>
 								<Checkbox
 									checked={active}
-									onCheckedChange={() =>
-										column.setFilterValue(active ? undefined : value)
-									}
+									onCheckedChange={setActive}
 									className='size-3! pointer-events-none'
 								/>
 								<span className='text-xs!'>{value}</span>
 							</div>
 						)
 					})}
-					{activeFilter && (
-						<button
-							type='button'
+					{activeValue && (
+						<Button
+							variant='ghost'
+							size='xs'
 							onClick={() => column.setFilterValue(undefined)}
-							className='flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors'
+							className='text-muted-foreground hover:text-foreground'
 						>
 							<IconX className='size-3' />
 							Clear
-						</button>
+						</Button>
 					)}
 				</div>
 			</div>
@@ -520,18 +673,27 @@ function FilterRow<TData extends RowData>({
 				<input
 					type='text'
 					placeholder={`Filter ${label.toLowerCase()}…`}
-					value={activeFilter ?? ''}
-					onChange={(e) => column.setFilterValue(e.target.value || undefined)}
+					value={activeValue ?? ''}
+					onChange={(e) =>
+						column.setFilterValue(
+							e.target.value
+								? isArrayColumn
+									? [e.target.value]
+									: e.target.value
+								: undefined
+						)
+					}
 					className='h-7 w-full rounded-lg border border-dashed border-input/40 bg-background px-2.5 text-xs placeholder:text-muted-foreground/40 focus:outline-none'
 				/>
-				{activeFilter && (
-					<button
-						type='button'
+				{activeValue && (
+					<Button
+						variant='ghost'
+						size='icon-xs'
 						onClick={() => column.setFilterValue(undefined)}
-						className='absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+						className='absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
 					>
 						<IconX className='size-3' />
-					</button>
+					</Button>
 				)}
 			</div>
 		</div>

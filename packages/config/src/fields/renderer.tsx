@@ -233,6 +233,13 @@ export function renderField(
 		return <Component key={containerKey(prefix, index)} />
 	}
 
+	// A static "an admin shouldn't see this at all" flag, distinct from the
+	// dedicated `hidden` field *type* below (a value with no UI concept),
+	// see `BaseFieldConfig['admin']['hidden']`'s own doc comment. The field
+	// still gets a real `form.AppField`/schema entry, so its value survives
+	// untouched, it's just never rendered here.
+	if (field.admin?.hidden) return null
+
 	const name = prefix ? `${prefix}.${field.name}` : field.name
 
 	// `meta` (as currently implemented) hardcodes its own paths/props rather
@@ -362,7 +369,9 @@ export function renderField(
 								placeholder={field.placeholder}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
+								autoComplete={field.admin?.autoComplete}
+								dir={field.admin?.rtl ? 'rtl' : undefined}
 							/>
 						)
 					case 'textarea':
@@ -372,7 +381,9 @@ export function renderField(
 								placeholder={field.placeholder}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
+								autoComplete={field.admin?.autoComplete}
+								dir={field.admin?.rtl ? 'rtl' : undefined}
 							/>
 						)
 					case 'richtext': {
@@ -404,7 +415,7 @@ export function renderField(
 								label={field.label}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'switch':
@@ -413,7 +424,7 @@ export function renderField(
 								label={field.label}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'date':
@@ -423,7 +434,7 @@ export function renderField(
 								description={field.admin?.description}
 								placeholder={field.placeholder}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'select':
@@ -435,7 +446,7 @@ export function renderField(
 								options={field.options}
 								defaultValue={field.defaultValue as string | undefined}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'radio':
@@ -445,7 +456,7 @@ export function renderField(
 								description={field.admin?.description}
 								options={field.options}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'email':
@@ -455,7 +466,9 @@ export function renderField(
 								placeholder={field.placeholder}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
+								autoComplete={field.admin?.autoComplete}
+								dir={field.admin?.rtl ? 'rtl' : undefined}
 							/>
 						)
 					case 'number':
@@ -468,7 +481,7 @@ export function renderField(
 								max={field.max}
 								step={field.step}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'password':
@@ -478,7 +491,9 @@ export function renderField(
 								placeholder={field.placeholder}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
+								autoComplete={field.admin?.autoComplete}
+								dir={field.admin?.rtl ? 'rtl' : undefined}
 							/>
 						)
 					case 'confirmPassword':
@@ -488,12 +503,16 @@ export function renderField(
 								placeholder={field.placeholder}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
+								dir={field.admin?.rtl ? 'rtl' : undefined}
 							/>
 						)
 					case 'hidden':
 						return (
-							<f.Hidden required={field.required} disabled={field.disabled} />
+							<f.Hidden
+								required={field.required}
+								disabled={field.disabled || field.admin?.readOnly}
+							/>
 						)
 					case 'code':
 						return (
@@ -503,7 +522,7 @@ export function renderField(
 								description={field.admin?.description}
 								language={field.language}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'json':
@@ -513,7 +532,7 @@ export function renderField(
 								placeholder={field.placeholder}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'slug':
@@ -523,7 +542,8 @@ export function renderField(
 								placeholder={field.placeholder}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								dir={field.admin?.rtl ? 'rtl' : undefined}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'point':
@@ -532,7 +552,7 @@ export function renderField(
 								label={field.label}
 								description={field.admin?.description}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
 					case 'upload': {
@@ -545,7 +565,7 @@ export function renderField(
 								description={field.admin?.description}
 								accept={field.accept}
 								required={field.required}
-								disabled={field.disabled}
+								disabled={field.disabled || field.admin?.readOnly}
 								onUpload={(file: File) =>
 									uploadFile(file, uploadPrefix || undefined)
 								}

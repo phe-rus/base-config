@@ -6,7 +6,9 @@ import type {
 	AccessUser,
 	CollectionAccess,
 	CollectionHooks,
-	GlobalAccess
+	GlobalAccess,
+	HookOperation,
+	HookRequestContext
 } from '../base.types'
 import {
 	AccessDeniedError,
@@ -463,6 +465,98 @@ export function createContentRoute({
 		await cache.put({ kind: 'list', collection }, freshList)
 	}
 
+	/**
+	 * The four hook types that wrap a *whole* operation rather than a single
+	 * write (`content-operations.ts`'s own top-of-file doc comment explains
+	 * why those live here, not there): `beforeOperation` at the very start
+	 * (before access control), `afterOperation` wrapping the final result,
+	 * both fired for every route below, reads included, and
+	 * `beforeRead`/`afterRead` around the three routes that actually read a
+	 * document back from D1 (`GET /:collection`, `GET /:collection/:id`,
+	 * `GET /globals/:slug`), see `CollectionBeforeReadHook`'s own doc
+	 * comment for why `GET /globals` (the aggregate list) doesn't also run
+	 * these per-item.
+	 */
+	async function runBeforeOperation(
+		collection: string,
+		operation: HookOperation,
+		user: AccessUser | undefined
+	): Promise<HookRequestContext> {
+		const context: HookRequestContext = {}
+		for (const hook of hooks?.[collection]?.beforeOperation ?? []) {
+			await hook({ collection, context, req: { user }, operation })
+		}
+		return context
+	}
+
+	async function runAfterOperation<TResult>(
+		collection: string,
+		operation: HookOperation,
+		user: AccessUser | undefined,
+		context: HookRequestContext,
+		result: TResult
+	): Promise<TResult> {
+		let out = result
+		for (const hook of hooks?.[collection]?.afterOperation ?? []) {
+			out = (await hook({
+				collection,
+				context,
+				req: { user },
+				operation,
+				result: out
+			})) as TResult
+		}
+		return out
+	}
+
+	async function runBeforeRead(
+		collection: string,
+		user: AccessUser | undefined,
+		context: HookRequestContext,
+		doc: Record<string, unknown>,
+		query?: WhereCondition
+	): Promise<Record<string, unknown>> {
+		let out = doc
+		for (const hook of hooks?.[collection]?.beforeRead ?? []) {
+			out = await hook({ collection, context, req: { user }, doc: out, query })
+		}
+		return out
+	}
+
+	async function runAfterRead(
+		collection: string,
+		user: AccessUser | undefined,
+		context: HookRequestContext,
+		doc: Record<string, unknown>,
+		query?: WhereCondition
+	): Promise<Record<string, unknown>> {
+		let out = doc
+		for (const hook of hooks?.[collection]?.afterRead ?? []) {
+			out = await hook({ collection, context, req: { user }, doc: out, query })
+		}
+		return out
+	}
+
+	/** `beforeRead`/`afterRead`, run back-to-back around one already-fetched row, see those hook types' own doc comment for why there's no real transform step between them here. Skipped entirely (returns `row.data` unchanged) when the collection has neither registered, the common case. */
+	async function readDocument(
+		collection: string,
+		user: AccessUser | undefined,
+		context: HookRequestContext,
+		row: DocumentRow,
+		query?: WhereCondition
+	): Promise<DocumentRow> {
+		const collectionHooks = hooks?.[collection]
+		if (
+			!collectionHooks?.beforeRead?.length &&
+			!collectionHooks?.afterRead?.length
+		) {
+			return row
+		}
+		let data = await runBeforeRead(collection, user, context, row.data, query)
+		data = await runAfterRead(collection, user, context, data, query)
+		return { ...row, data }
+	}
+
 	const withEndpoints = (endpoints ?? []).reduce(
 		(current, endpoint) =>
 			current.on(
@@ -470,7 +564,7 @@ export function createContentRoute({
 				`/${endpoint.collection}${endpoint.path}`,
 				endpoint.handler
 			),
-		new Hono<ContentRouteEnv>().onError((error, c) => {
+		new Hono<ContentRouteEnv>().onError(async (error, c) => {
 			if (error instanceof UnknownTableError) {
 				return c.json({ error: 'Not found' }, 404)
 			}
@@ -478,11 +572,33 @@ export function createContentRoute({
 				return c.text('Unauthorized', 401)
 			}
 			console.error(error)
-			return c.json({ error: 'Internal Server Error' }, 500)
+			// Route params are still readable here (the error happened during
+			// or after routing matched), `collection`/`slug` covers both the
+			// `/:collection*` and `/globals/:slug` shapes, `''` when neither
+			// resolved (a malformed request that never matched either).
+			const collection = c.req.param('collection') ?? c.req.param('slug') ?? ''
+			let result = { error: 'Internal Server Error' }
+			for (const hook of hooks?.[collection]?.afterError ?? []) {
+				const replacement = await hook({
+					collection,
+					context: {},
+					req: { user: c.get('session')?.user },
+					error,
+					result
+				})
+				if (replacement) result = replacement
+			}
+			return c.json(result, 500)
 		})
 	)
 
 	const app = withEndpoints
+		// No `beforeOperation`/`afterOperation`/`beforeRead`/`afterRead` on
+		// this one route: it's an aggregate over *every* registered global,
+		// not one collection/global slug, and every hook type here is keyed
+		// per-slug, there's no single natural slug to look hooks up under
+		// for the response as a whole (each individual global's own
+		// `GET /globals/:slug` below still runs them normally).
 		.get('/globals', async (c) => {
 			const user = c.get('session')?.user
 			const slugs = await listGlobalSlugs(db)
@@ -507,27 +623,49 @@ export function createContentRoute({
 		})
 		.get('/globals/:slug', async (c) => {
 			const slug = c.req.param('slug')
+			const user = c.get('session')?.user
+			const context = await runBeforeOperation(slug, 'findByID', user)
 			const globalAccess = access?.[slug] as GlobalAccess | undefined
 			const allowed = await resolveAccess(globalAccess?.read, {
-				req: { user: c.get('session')?.user }
+				req: { user }
 			})
 			if (allowed === false) return c.json({ error: 'Not found' }, 404)
-			return c.json(await getCachedGlobal(slug))
+			const cached = await getCachedGlobal(slug)
+			let result: {
+				slug: string
+				data: Record<string, unknown>
+				updatedAt: Date
+			} | null = cached
+			if (result) {
+				let data = await runBeforeRead(slug, user, context, result.data)
+				data = await runAfterRead(slug, user, context, data)
+				result = { ...result, data }
+			}
+			return c.json(
+				await runAfterOperation(slug, 'findByID', user, context, result)
+			)
 		})
 		.patch(
 			'/globals/:slug',
 			zValidator('json', upsertGlobalSchema),
 			async (c) => {
 				const slug = c.req.param('slug')
+				const user = c.get('session')?.user
+				const context = await runBeforeOperation(slug, 'update', user)
 				const globalAccess = access?.[slug] as GlobalAccess | undefined
 				const fields = c.req.valid('json')
 				const row = await performUpsertGlobal(db, slug, fields, globalAccess, {
 					hooks: hooks?.[slug],
-					user: c.get('session')?.user,
-					overrideAccess: false
+					user,
+					overrideAccess: false,
+					context
 				})
 				await warmGlobalCache(slug, globalAccess, row)
-				return c.json({ slug, ...row })
+				const result = await runAfterOperation(slug, 'update', user, context, {
+					slug,
+					...row
+				})
+				return c.json(result)
 			}
 		)
 		.post(
@@ -535,6 +673,8 @@ export function createContentRoute({
 			zValidator('json', pruneSchema),
 			async (c) => {
 				const slug = c.req.param('slug')
+				const user = c.get('session')?.user
+				const context = await runBeforeOperation(slug, 'update', user)
 				const globalAccess = access?.[slug] as GlobalAccess | undefined
 				const { knownPaths } = c.req.valid('json')
 				const row = await performPruneGlobal(
@@ -543,25 +683,31 @@ export function createContentRoute({
 					knownPaths,
 					globalAccess,
 					{
-						user: c.get('session')?.user,
+						user,
 						overrideAccess: false
 					}
 				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
 				await warmGlobalCache(slug, globalAccess, row)
-				return c.json({ slug, ...row })
+				const result = await runAfterOperation(slug, 'update', user, context, {
+					slug,
+					...row
+				})
+				return c.json(result)
 			}
 		)
 		.get('/:collection', zValidator('query', listQuerySchema), async (c) => {
 			const collection = c.req.param('collection')
+			const user = c.get('session')?.user
+			const context = await runBeforeOperation(collection, 'find', user)
 			const collectionAccess = access?.[collection] as
 				| CollectionAccess
 				| undefined
 			const readResult = await resolveAccess(collectionAccess?.read, {
-				req: { user: c.get('session')?.user }
+				req: { user }
 			})
 			if (readResult === false) {
-				return c.json({
+				const empty = {
 					docs: [],
 					totalDocs: 0,
 					limit: 0,
@@ -569,7 +715,10 @@ export function createContentRoute({
 					totalPages: 1,
 					hasNextPage: false,
 					hasPrevPage: false
-				})
+				}
+				return c.json(
+					await runAfterOperation(collection, 'find', user, context, empty)
+				)
 			}
 			const accessWhere = readResult === true ? undefined : readResult
 			const { where, limit, page } = c.req.valid('query')
@@ -588,6 +737,13 @@ export function createContentRoute({
 			// A genuinely filtered/paginated list (any other combination)
 			// still has no single natural cache key the way either of these
 			// does, so it stays uncached.
+			//
+			// **`beforeRead`/`afterRead` only run on a fresh D1 fetch below,
+			// never on a cache hit here**: a cached response was already
+			// hook-transformed once, when it was warmed (`warmPublicCaches`
+			// currently warms the raw row, a real, disclosed gap: a
+			// `beforeRead`/`afterRead` hook registered on a *cacheable*
+			// collection won't see a request served straight from cache).
 			const slug = where?.slug?.equals
 			const cacheableSlugLookup =
 				cache && accessWhere && slug && !where?.status && !limit && !page
@@ -600,19 +756,33 @@ export function createContentRoute({
 					collection,
 					slug
 				})
-				if (cached) return c.json(cached)
+				if (cached) {
+					return c.json(
+						await runAfterOperation(collection, 'find', user, context, cached)
+					)
+				}
 			}
 			if (cacheableListLookup) {
 				const cached = await cache.get({ kind: 'list', collection })
-				if (cached) return c.json(cached)
+				if (cached) {
+					return c.json(
+						await runAfterOperation(collection, 'find', user, context, cached)
+					)
+				}
 			}
 
-			const result = await listDocuments(db, collection, {
+			const listResult = await listDocuments(db, collection, {
 				where,
 				accessWhere,
 				limit,
 				page
 			})
+			const docs = await Promise.all(
+				listResult.docs.map(async (row) =>
+					readDocument(collection, user, context, row)
+				)
+			)
+			const result = { ...listResult, docs }
 
 			// Same convention `/:collection/:id` already follows: only a real
 			// hit gets cached, never a "not found" result, otherwise a
@@ -630,15 +800,19 @@ export function createContentRoute({
 				await cache.put({ kind: 'list', collection }, result)
 			}
 
-			return c.json(result)
+			return c.json(
+				await runAfterOperation(collection, 'find', user, context, result)
+			)
 		})
 		.get('/:collection/:id', async (c) => {
 			const { collection, id } = c.req.param()
+			const user = c.get('session')?.user
+			const context = await runBeforeOperation(collection, 'findByID', user)
 			const collectionAccess = access?.[collection] as
 				| CollectionAccess
 				| undefined
 			const readResult = await resolveAccess(collectionAccess?.read, {
-				req: { user: c.get('session')?.user },
+				req: { user },
 				id
 			})
 			if (readResult === false) return c.json({ error: 'Not found' }, 404)
@@ -647,22 +821,39 @@ export function createContentRoute({
 			// Only a genuinely scoped (non-`true`) read ever touches the cache:
 			// a `true` result can see everything, including drafts, and this
 			// cache has no per-session key component to safely store that under.
+			// Same cache-hit caveat as `GET /:collection` above: `beforeRead`/
+			// `afterRead` only run on the fresh-fetch path below.
 			if (cache && accessWhere) {
 				const cached = await cache.get({ kind: 'document', collection, id })
-				if (cached) return c.json(cached)
+				if (cached) {
+					return c.json(
+						await runAfterOperation(
+							collection,
+							'findByID',
+							user,
+							context,
+							cached
+						)
+					)
+				}
 			}
 			const row = await getDocument(db, collection, id, { accessWhere })
 			if (!row) return c.json({ error: 'Not found' }, 404)
+			const hydrated = await readDocument(collection, user, context, row)
 			if (cache && accessWhere) {
-				await cache.put({ kind: 'document', collection, id }, row)
+				await cache.put({ kind: 'document', collection, id }, hydrated)
 			}
-			return c.json(row)
+			return c.json(
+				await runAfterOperation(collection, 'findByID', user, context, hydrated)
+			)
 		})
 		.post(
 			'/:collection',
 			zValidator('json', createDocumentSchema),
 			async (c) => {
 				const collection = c.req.param('collection')
+				const user = c.get('session')?.user
+				const context = await runBeforeOperation(collection, 'create', user)
 				const collectionAccess = access?.[collection] as
 					| CollectionAccess
 					| undefined
@@ -674,12 +865,20 @@ export function createContentRoute({
 					collectionAccess,
 					{
 						hooks: hooks?.[collection],
-						user: c.get('session')?.user,
-						overrideAccess: false
+						user,
+						overrideAccess: false,
+						context
 					}
 				)
 				await warmPublicCaches(collection, collectionAccess, row)
-				return c.json(row, 201)
+				const result = await runAfterOperation(
+					collection,
+					'create',
+					user,
+					context,
+					row
+				)
+				return c.json(result, 201)
 			}
 		)
 		.patch(
@@ -687,6 +886,8 @@ export function createContentRoute({
 			zValidator('json', updateDocumentSchema),
 			async (c) => {
 				const { collection, id } = c.req.param()
+				const user = c.get('session')?.user
+				const context = await runBeforeOperation(collection, 'update', user)
 				const collectionAccess = access?.[collection] as
 					| CollectionAccess
 					| undefined
@@ -708,8 +909,9 @@ export function createContentRoute({
 					collectionAccess,
 					{
 						hooks: hooks?.[collection],
-						user: c.get('session')?.user,
-						overrideAccess: false
+						user,
+						overrideAccess: false,
+						context
 					}
 				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
@@ -740,7 +942,14 @@ export function createContentRoute({
 					// non-public), see `warmPublicCaches`' own doc comment.
 					await warmPublicCaches(collection, collectionAccess, row)
 				}
-				return c.json(row)
+				const result = await runAfterOperation(
+					collection,
+					'update',
+					user,
+					context,
+					row
+				)
+				return c.json(result)
 			}
 		)
 		.post(
@@ -748,6 +957,8 @@ export function createContentRoute({
 			zValidator('json', pruneSchema),
 			async (c) => {
 				const { collection, id } = c.req.param()
+				const user = c.get('session')?.user
+				const context = await runBeforeOperation(collection, 'update', user)
 				const collectionAccess = access?.[collection] as
 					| CollectionAccess
 					| undefined
@@ -764,7 +975,7 @@ export function createContentRoute({
 					knownPaths,
 					collectionAccess,
 					{
-						user: c.get('session')?.user,
+						user,
 						overrideAccess: false
 					}
 				)
@@ -783,11 +994,20 @@ export function createContentRoute({
 					// prune (it only ever touches `data`) still needs a warm.
 					await warmPublicCaches(collection, collectionAccess, row)
 				}
-				return c.json(row)
+				const result = await runAfterOperation(
+					collection,
+					'update',
+					user,
+					context,
+					row
+				)
+				return c.json(result)
 			}
 		)
 		.delete('/:collection/:id', async (c) => {
 			const { collection, id } = c.req.param()
+			const user = c.get('session')?.user
+			const context = await runBeforeOperation(collection, 'delete', user)
 			const collectionAccess = access?.[collection] as
 				| CollectionAccess
 				| undefined
@@ -796,8 +1016,10 @@ export function createContentRoute({
 			// deleting, since there's nothing left to read it from afterward.
 			const existing = cache ? await getDocument(db, collection, id) : undefined
 			await performDelete(db, collection, id, collectionAccess, {
-				user: c.get('session')?.user,
-				overrideAccess: false
+				hooks: hooks?.[collection],
+				user,
+				overrideAccess: false,
+				context
 			})
 			if (cache) {
 				await cache.delete({ kind: 'document', collection, id })
@@ -812,7 +1034,14 @@ export function createContentRoute({
 				// list no longer includes it, worth a fresh warm too.
 				await refreshListCache(collection, collectionAccess)
 			}
-			return c.json({ ok: true })
+			const result = await runAfterOperation(
+				collection,
+				'delete',
+				user,
+				context,
+				{ ok: true }
+			)
+			return c.json(result)
 		})
 
 	return app

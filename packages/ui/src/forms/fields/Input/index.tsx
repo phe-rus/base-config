@@ -16,6 +16,7 @@ type InputProps = BaseFieldProps & {
 	placeholder?: string
 	type?: HTMLInputTypeAttribute
 	autoComplete?: string
+	dir?: 'ltr' | 'rtl' | 'auto'
 } & {
 	maxLength?: number
 	minLength?: number
@@ -33,7 +34,8 @@ export const Input = ({
 	type,
 	disabled,
 	className,
-	autoComplete
+	autoComplete,
+	dir
 }: InputProps) => {
 	const [showPassword, setShowPassword] = useState(false)
 	const { field, name, value, isInvalid, handleBlur, handleChange } =
@@ -67,6 +69,7 @@ export const Input = ({
 					required={required}
 					disabled={disabled}
 					autoComplete={autoComplete}
+					dir={dir}
 				/>
 
 				{Icon && (

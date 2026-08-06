@@ -340,6 +340,47 @@
 			}
 		}
 
+		/*
+		 * The docs `Preview`'s own line-numbered codeBlock view
+		 * (`@baseconfig/ui/basiccn`'s `nodes/code-block-preview.tsx`):
+		 * the gutter is a plain sibling column, not interleaved into
+		 * the actual code text, that text stays one real, unsplit,
+		 * natively selectable node (a NodeView with no real content
+		 * area is treated as opaque for selection purposes, the same
+		 * way an image node is, splitting the text itself into
+		 * per-line elements was tried first and broke text selection
+		 * entirely). Alignment between the gutter's numbers and the
+		 * code's own line breaks relies on both sharing the exact same
+		 * `font-size`/`line-height`, set explicitly on the gutter
+		 * since `&:where(pre code)`'s own `font-size` above only
+		 * matches a real `<code>` element, not this `span`. The outer
+		 * `<pre>` itself switches from `overflow-x: auto` (its default
+		 * above) to `hidden`, only `.code-block-preview-code` scrolls
+		 * horizontally, so a long line never carries the gutter out of
+		 * view with it.
+		 */
+		.code-block-preview {
+			display: flex;
+			align-items: flex-start;
+			gap: 1em;
+			overflow-x: hidden;
+		}
+		.code-block-gutter {
+			display: flex;
+			flex-direction: column;
+			flex: none;
+			font-size: 0.8rem;
+			text-align: right;
+			color: color-mix(in oklab, currentColor 35%, transparent);
+			user-select: none;
+		}
+		.code-block-preview-code {
+			display: block;
+			flex: 1;
+			overflow-x: auto;
+			white-space: pre;
+		}
+
 		&:where(blockquote) {
 			border-inline-start: 2px solid var(--_rule);
 			padding-inline-start: 1em;

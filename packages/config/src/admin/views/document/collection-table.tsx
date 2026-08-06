@@ -31,10 +31,51 @@ type TableRow = {
 	[key: string]: unknown
 }
 
-const DEFAULT_COLUMNS: NonNullable<CollectionConfig['columns']> = [
+const DEFAULT_COLUMNS: NonNullable<
+	NonNullable<CollectionConfig['admin']>['defaultColumns']
+> = [
 	{ key: 'title', label: 'Title' },
 	{ key: 'slug', label: 'Slug' }
 ]
+
+/**
+ * Stable-sorts `rows` so every row sharing the same `groupBy` value ends up
+ * adjacent, in the order that value first appeared, rows with no value for
+ * it sort last. Doesn't touch column shape or add section headers, this is
+ * ordering only (`CollectionConfig['groupBy']`'s own doc comment).
+ */
+function groupRowsBy(rows: TableRow[], key: string): TableRow[] {
+	const keyOf = (row: TableRow) => {
+		const value = row[key]
+		const first = Array.isArray(value) ? value[0] : value
+		return first === undefined || first === null || first === ''
+			? null
+			: String(first)
+	}
+	const order: string[] = []
+	const seen = new Set<string>()
+	for (const row of rows) {
+		const k = keyOf(row)
+		if (k !== null && !seen.has(k)) {
+			seen.add(k)
+			order.push(k)
+		}
+	}
+	const rank = new Map(order.map((k, i) => [k, i]))
+	return [...rows].sort((a, b) => {
+		const ka = keyOf(a)
+		const kb = keyOf(b)
+		const ra =
+			ka === null
+				? Number.POSITIVE_INFINITY
+				: (rank.get(ka) ?? Number.POSITIVE_INFINITY)
+		const rb =
+			kb === null
+				? Number.POSITIVE_INFINITY
+				: (rank.get(kb) ?? Number.POSITIVE_INFINITY)
+		return ra - rb
+	})
+}
 
 export function CollectionTable({
 	config,
@@ -111,15 +152,18 @@ function CollectionTableLive({
 		? []
 		: draftData.filter((row) => !remoteIds.has(row.id))
 
-	const rows: TableRow[] = [...data, ...draftOnlyRows].map((row) => ({
+	const unsortedRows: TableRow[] = [...data, ...draftOnlyRows].map((row) => ({
 		...(row.data as Record<string, unknown>),
 		id: row.id,
 		status: row.status,
 		updatedAt: row.updatedAt
 	}))
+	const rows = config.admin?.groupBy
+		? groupRowsBy(unsortedRows, config.admin.groupBy)
+		: unsortedRows
 
-	const dataColumns = config.columns ?? DEFAULT_COLUMNS
-	const filterKey = config.filterKey ?? dataColumns[0]?.key
+	const dataColumns = config.admin?.defaultColumns ?? DEFAULT_COLUMNS
+	const filterKey = config.admin?.filterKey ?? dataColumns[0]?.key
 
 	// Purely navigational: no `collection.insert()` here. Generates a fresh
 	// id and opens the editor for it; the document only becomes real once
@@ -197,6 +241,9 @@ function CollectionTableLive({
 					...dataColumns.map((column) => ({
 						accessorKey: column.key,
 						header: column.label,
+						...(column.type === 'date'
+							? { meta: { filterVariant: 'date' as const } }
+							: {}),
 						// A plain `value || '-'` fallback treats `false` the same as
 						// "no value": wrong specifically for boolean-valued columns,
 						// where `false` is a real, meaningful value, not a blank.
@@ -210,6 +257,13 @@ function CollectionTableLive({
 									>
 										{value ? 'True' : 'False'}
 									</Badge>
+								)
+							}
+							if (Array.isArray(value)) {
+								return value.length ? (
+									value.join(', ')
+								) : (
+									<span className='text-muted-foreground'>-</span>
 								)
 							}
 							return value || <span className='text-muted-foreground'>-</span>
@@ -234,6 +288,7 @@ function CollectionTableLive({
 					{
 						accessorKey: 'updatedAt',
 						header: 'Updated',
+						meta: { filterVariant: 'date' },
 						cell: ({ row }) => format(new Date(row.original.updatedAt), 'PPP')
 					},
 					{

@@ -19,6 +19,12 @@ export interface Docs {
 	parent?: string
 	order?: number
 	slug?: string
+	author?: {
+		id?: string
+		name?: string
+		email?: string
+		image?: string
+	}
 	metadata?: MetaValue
 }
 

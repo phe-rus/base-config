@@ -4,7 +4,6 @@ import { Document } from '@tiptap/extension-document'
 import { HardBreak } from '@tiptap/extension-hard-break'
 import { Heading } from '@tiptap/extension-heading'
 import { HorizontalRule } from '@tiptap/extension-horizontal-rule'
-import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { Italic } from '@tiptap/extension-italic'
 import { Link } from '@tiptap/extension-link'
 import { ListKit } from '@tiptap/extension-list'
@@ -32,16 +31,28 @@ import { Superscript } from '@tiptap/extension-superscript'
 import { TableKit } from '@tiptap/extension-table'
 import { cn } from '../../lib/utils'
 import type { EditorBrowserProps } from '../types'
+import { CodeBlockEditable } from '../nodes/code-block-editable'
 import { Indent } from './indent'
 import { SlashCommand } from '../plugins/slash'
 import { ImageNode } from '../nodes/image-node'
 
-const lowlight = createLowlight(common)
+/** Shared with `nodes/code-block-preview.tsx`: `Preview`'s own line-numbered `codeBlock` view highlights each line through this exact same registry, so a language name that works in the editor works in the preview too. */
+export const lowlight = createLowlight(common)
 
 export type BasiccnOptions = {
 	placeholder?: string
 	onUpload?: (file: File) => Promise<string>
 	renderBrowser?: (props: EditorBrowserProps) => ReactNode
+	/**
+	 * Which `codeBlock` node implementation to use, an extension instance is
+	 * stateful once attached to an editor, so `Editor` and `Preview` must
+	 * never share the same one. Defaults to `CodeBlockEditable`
+	 * (`nodes/code-block-editable.tsx`, live-typing highlight decorations
+	 * plus a copy button); `Preview` passes `CodeBlockPreview.configure({...})`
+	 * (`nodes/code-block-preview.tsx`, per-line highlighting with line
+	 * numbers plus a copy button) instead.
+	 */
+	codeBlock?: AnyExtension
 }
 
 export interface BasiccnExtensionsArray extends Array<AnyExtension> {
@@ -54,12 +65,13 @@ const buildExtensions = (options?: BasiccnOptions): AnyExtension[] => [
 	Text,
 	HardBreak,
 	Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
-	CodeBlockLowlight.configure({
-		lowlight,
-		enableTabIndentation: true,
-		tabSize: 2,
-		exitOnArrowDown: true
-	}),
+	options?.codeBlock ??
+		CodeBlockEditable.configure({
+			lowlight,
+			enableTabIndentation: true,
+			tabSize: 2,
+			exitOnArrowDown: true
+		}),
 	CharacterCount,
 	Dropcursor,
 	Subscript,

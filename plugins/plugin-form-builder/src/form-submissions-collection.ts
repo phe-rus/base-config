@@ -14,12 +14,11 @@ import { defineCollection } from '@baseconfig/core'
 export const formSubmissionsCollection = defineCollection({
 	slug: 'form-submissions',
 	label: 'Form Submissions',
-	admin: { useAsTitle: 'form' },
-	columns: [
-		{ key: 'form', label: 'Form' },
-		{ key: 'submittedAt', label: 'Submitted' }
-	],
-	filterKey: 'form',
+	admin: {
+		useAsTitle: 'form',
+		defaultColumns: ['form', 'submittedAt'],
+		filterKey: 'form'
+	},
 	tabs: [
 		{
 			tab: 'submission',

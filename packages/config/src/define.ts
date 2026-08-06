@@ -31,6 +31,8 @@ import type {
 	CollectionConfig as BaseCollectionConfig,
 	CollectionHooks,
 	GeneratedBlockSlug,
+	GeneratedCollectionDoc,
+	GeneratedGlobalDoc,
 	GlobalAccess,
 	GlobalConfig as BaseGlobalConfig
 } from './base.types'
@@ -120,6 +122,48 @@ function deriveDefaultColumns(
 	]
 }
 
+/** The five base columns every document has regardless of its own fields (`db/collections.ts`'s `withBaseFields`), a `defaultColumns` entry naming one of these has no real field to look a label up from. */
+const BASE_COLUMN_LABELS: Record<string, string> = {
+	title: 'Title',
+	slug: 'Slug',
+	status: 'Status',
+	updatedAt: 'Updated',
+	createdAt: 'Created'
+}
+
+/**
+ * Turns a consumer's own `admin.defaultColumns: string[]` (`CollectionDefinition`'s
+ * own doc comment on why it's bare field names, not `{key, label}` objects)
+ * into the richer `{key, label, type?}[]` shape `CollectionConfig['admin']['defaultColumns']`/
+ * `CollectionTable` actually consume: each name is looked up against this
+ * collection's own real field list (`flattenTabFields(tabs)`), reusing that
+ * field's own already-declared `label` (or `labelFromSlug(name)`) and `type`
+ * (for `checkbox`/`switch` cell rendering), a name matching no real field
+ * falls back to `BASE_COLUMN_LABELS` (the base id/status/updated/created
+ * columns every document already has), and finally to `labelFromSlug(name)`
+ * itself if it matches neither, rather than silently dropping an unknown key.
+ */
+function resolveDefaultColumns(
+	tabs: TabConfig<any, any>[],
+	keys: string[]
+): { key: string; label: string; type?: string }[] {
+	const fieldsByName = new Map(
+		flattenTabFields(tabs).map((field) => [field.name, field])
+	)
+	return keys.map((key) => {
+		const field = fieldsByName.get(key)
+		if (field) {
+			return {
+				key,
+				label:
+					'label' in field && field.label ? field.label : labelFromSlug(key),
+				type: field.type
+			}
+		}
+		return { key, label: BASE_COLUMN_LABELS[key] ?? labelFromSlug(key) }
+	})
+}
+
 type CollectionDefinition<TSlug extends string> = {
 	slug: TSlug
 	/** Derived from `slug` via `labelFromSlug()` if omitted (e.g. `'blog-posts'` -> `'Blog Posts'`), `slug` is the one required identity, `label` is just its display form. */
@@ -130,12 +174,46 @@ type CollectionDefinition<TSlug extends string> = {
 	path?: string
 	/** Marks this as the real, server-backed users collection, see `CollectionConfig['auth']`. */
 	auth?: boolean
-	/** Which own fields `CollectionTable` shows as columns, see `CollectionConfig['columns']`. Omit to auto-derive every simple (flat-cell-renderable) field via `deriveDefaultColumns`. */
-	columns?: { key: string; label: string; type?: string }[]
-	/** Which column the table searches on, see `CollectionConfig['filterKey']`. Defaults to the first derived/given column. */
-	filterKey?: string
-	/** Admin-display overrides, see `CollectionConfig['admin']`. */
-	admin?: { useAsTitle?: string }
+	/**
+	 * Admin-display overrides, see `CollectionConfig['admin']`'s own doc
+	 * comment for the full field-name-autocomplete story (`defaultColumns`/
+	 * `filterKey`/`groupBy` all key off this collection's own generated
+	 * document shape once `defineCollection<TSlug>`'s slug is passed
+	 * explicitly). `defaultColumns` omitted auto-derives every simple
+	 * (flat-cell-renderable) field via `deriveDefaultColumns`.
+	 *
+	 * **`defaultColumns` is a bare array of field names here**, Payload's
+	 * own exact `admin.defaultColumns: string[]` shape
+	 * (https://payloadcms.com/docs/configuration/collections#admin-options):
+	 * `['title', 'category', 'slug']`, not `[{key, label}, ...]`. A column's
+	 * label is resolved from that field's own already-declared `label` (or
+	 * `labelFromSlug(name)` if it didn't set one), never re-typed a second
+	 * time here, `defineCollection` looks each name up against this same
+	 * `tabs` list below to build the richer `{key, label, type?}` shape
+	 * `CollectionConfig['admin']['defaultColumns']` (and `CollectionTable`)
+	 * actually consume, see `resolveDefaultColumns()`.
+	 */
+	admin?: {
+		useAsTitle?: string
+		defaultColumns?: (
+			| (keyof GeneratedCollectionDoc<TSlug> & string)
+			| 'title'
+			| 'slug'
+			| 'status'
+			| 'updatedAt'
+			| 'createdAt'
+		)[]
+		filterKey?:
+			| (keyof GeneratedCollectionDoc<TSlug> & string)
+			| 'title'
+			| 'slug'
+		groupBy?:
+			| (keyof GeneratedCollectionDoc<TSlug> & string)
+			| 'title'
+			| 'slug'
+			| 'status'
+			| 'updatedAt'
+	}
 	/**
 	 * `TBlockSlug` is the generated `GeneratedBlockSlug` union, not a plain
 	 * `string`, so a `blocks` field's own `blocks: [...]` restriction list
@@ -143,8 +221,16 @@ type CollectionDefinition<TSlug extends string> = {
 	 * `string` in a plugin package or an un-generated consumer).
 	 */
 	tabs: TabConfig<string, GeneratedBlockSlug>[]
-	/** Pure, isomorphic-safe lifecycle hooks, see `CollectionHooks`' own doc comment (`base.types.ts`). */
-	hooks?: CollectionHooks
+	/**
+	 * Pure, isomorphic-safe lifecycle hooks, see `CollectionHooks`' own doc
+	 * comment (`base.types.ts`). Typed against this collection's own real
+	 * generated document shape (`GeneratedCollectionDoc<TSlug>`, once a
+	 * consumer's generated `src/config/base.types.ts` has augmented
+	 * `GeneratedCollectionTypes`), not a bare `Record<string, unknown>`, so
+	 * e.g. `beforeChange`'s `data.authorId` is checked against the real
+	 * field, not `any`.
+	 */
+	hooks?: CollectionHooks<GeneratedCollectionDoc<TSlug>>
 	/** Pure, isomorphic-safe per-operation access control, see `CollectionAccess`'s own doc comment (`base.types.ts`). Omit for open (every operation allowed to everyone). */
 	access?: CollectionAccess
 }
@@ -173,11 +259,17 @@ export function defineCollection<TSlug extends string = CollectionSlug>(
 		tabs: definition.tabs,
 		path: definition.path,
 		auth: definition.auth,
-		admin: definition.admin,
-		columns:
-			definition.columns ??
-			deriveDefaultColumns(definition.tabs, definition.admin?.useAsTitle),
-		filterKey: definition.filterKey,
+		admin: {
+			useAsTitle: definition.admin?.useAsTitle,
+			defaultColumns: definition.admin?.defaultColumns
+				? resolveDefaultColumns(
+						definition.tabs,
+						definition.admin.defaultColumns
+					)
+				: deriveDefaultColumns(definition.tabs, definition.admin?.useAsTitle),
+			filterKey: definition.admin?.filterKey,
+			groupBy: definition.admin?.groupBy
+		},
 		color: definition.color,
 		hooks: definition.hooks,
 		access: definition.access,
@@ -199,7 +291,8 @@ type GlobalDefinition<TSlug extends string> =
 			/** `GeneratedBlockSlug` here for the same reason `CollectionDefinition['tabs']` carries it: a `blocks` field's restriction list autocompletes. */
 			fields: FieldConfig<string, GeneratedBlockSlug>[]
 			component?: never
-			hooks?: CollectionHooks
+			/** Same generic typing as `CollectionDefinition['hooks']`, against `GeneratedGlobalDoc<TSlug>` instead. */
+			hooks?: CollectionHooks<GeneratedGlobalDoc<TSlug>>
 			/** Pure, isomorphic-safe per-operation access control, see `GlobalAccess`'s own doc comment (`base.types.ts`). Omit for open. */
 			access?: GlobalAccess
 	  }

@@ -2,13 +2,16 @@ import { cn } from '../lib/utils'
 import { EditorContent, EditorContext, useEditor } from '@tiptap/react'
 import { useEffect, useMemo } from 'react'
 import { LinkHoverCard } from './components/link-hover-card'
+import { CodeBlockPreview } from './nodes/code-block-preview'
 import { basiccnTheme } from './theme'
 import type { PreviewProps } from './types'
-import { BasiccnExtensions } from './utils/extensions'
+import { BasiccnExtensions, lowlight } from './utils/extensions'
 
 export function Preview({ content, className }: PreviewProps) {
 	const editor = useEditor({
-		extensions: BasiccnExtensions,
+		extensions: BasiccnExtensions.configure({
+			codeBlock: CodeBlockPreview.configure({ lowlight })
+		}),
 		content,
 		editorProps: {
 			attributes: { class: cn(basiccnTheme, className) }
