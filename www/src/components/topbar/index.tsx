@@ -73,28 +73,37 @@ export const Topbar = () => {
 					<Link to={'/' as any} className='font-bold text-primary'>
 						Baseconfig
 					</Link>
-					<nav className='hidden md:flex items-center gap-3 text-sm!'>
-						{items?.data.items?.map((items, index) => {
-							const isTo = items.to?.includes('home') ? '/' : items.to
-							return (
-								<Link
-									key={index}
-									to={isTo as any}
-									activeProps={{
-										className: cn(
-											'underline decoration-wavy! decoration-primary!',
-											'text-primary!'
-										)
-									}}
-								>
-									{items.label}
-								</Link>
-							)
-						})}
-					</nav>
+
+					{items ? (
+						<nav className='hidden md:flex items-center gap-3 text-sm!'>
+							{items.data.items?.map((items, index) => {
+								const isTo = items.to?.includes('home') ? '/' : items.to
+								return (
+									<Link
+										key={index}
+										to={isTo as any}
+										activeProps={{
+											className: cn(
+												'underline decoration-wavy! decoration-primary!',
+												'text-primary!'
+											)
+										}}
+									>
+										{items.label}
+									</Link>
+								)
+							})}
+						</nav>
+					) : null}
 				</div>
 				<nav className='flex items-center gap-1'>
-					<div className='flex items-center gap-1'>
+					<Link
+						to='/$'
+						params={{
+							_splat: ''
+						}}
+						className='flex items-center gap-1'
+					>
 						<Link
 							to='/$'
 							params={{
@@ -108,7 +117,7 @@ export const Topbar = () => {
 							<IconGitFork />
 						</Link>
 						<span className='text-xs px-1'>Github</span>
-					</div>
+					</Link>
 					<Link
 						to='/admin'
 						className={cn(

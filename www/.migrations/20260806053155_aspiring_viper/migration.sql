@@ -1,15 +1,35 @@
-CREATE TABLE `cn-keywords` (
+CREATE TABLE `cn-category` (
 	`data` text DEFAULT '{}' NOT NULL,
 	`updatedAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
 );
 
-CREATE TABLE `cn-posts` (
+CREATE TABLE `cn-docs` (
 	`id` text PRIMARY KEY,
 	`title` text,
 	`slug` text,
 	`status` text DEFAULT 'draft' NOT NULL,
 	`data` text DEFAULT '{}' NOT NULL,
 	`createdAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+	`updatedAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
+);
+
+CREATE TABLE `cn-keywords` (
+	`data` text DEFAULT '{}' NOT NULL,
+	`updatedAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
+);
+
+CREATE TABLE `cn-pages` (
+	`id` text PRIMARY KEY,
+	`title` text,
+	`slug` text,
+	`status` text DEFAULT 'draft' NOT NULL,
+	`data` text DEFAULT '{}' NOT NULL,
+	`createdAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+	`updatedAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
+);
+
+CREATE TABLE `cn-topbar` (
+	`data` text DEFAULT '{}' NOT NULL,
 	`updatedAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
 );
 
@@ -67,7 +87,8 @@ CREATE TABLE `verification` (
 	`updatedAt` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
 );
 
-CREATE UNIQUE INDEX `idx_posts_slug` ON `cn-posts` (`slug`);
+CREATE UNIQUE INDEX `idx_docs_slug` ON `cn-docs` (`slug`);
+CREATE UNIQUE INDEX `idx_pages_slug` ON `cn-pages` (`slug`);
 CREATE UNIQUE INDEX `account_issuer_providerAccountId_uidx` ON `account` (`issuer`,`providerAccountId`);
 CREATE INDEX `account_userId_idx` ON `account` (`userId`);
 CREATE INDEX `session_userId_idx` ON `session` (`userId`);

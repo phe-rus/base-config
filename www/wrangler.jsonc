@@ -1,49 +1,49 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "baseconfig",
-  "compatibility_date": "2026-07-10",
-  "main": "./src/server.ts",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "assets": {
-    "binding": "ASSETS",
-    "directory": "./dist/client",
-    "not_found_handling": "single-page-application",
-  },
-  "placement": {
-    "mode": "smart",
-  },
-  "observability": {
-    "enabled": false
-  },
-  "workers_dev": false,
-  "preview_urls": false,
-  "routes": [
-    {
-      "custom_domain": true,
-      "pattern": "baseconfig.pherus.org"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "CACHE",
-      "id": "00000000000000000000000000000c",
-    },
-  ],
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "baseconfig",
-      "database_id": "00000000-0000-0000-0000-00000000db01",
-      "migrations_dir": ".migrations",
-      "migrations_pattern": ".migrations/*/migration.sql",
-    },
-  ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA",
-      "bucket_name": "baseconfig",
-    },
-  ],
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "baseconfig",
+	"compatibility_date": "2026-07-10",
+	"main": "./src/server.ts",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./dist/client",
+		"not_found_handling": "single-page-application",
+	},
+	"placement": {
+		"mode": "smart",
+	},
+	"observability": {
+		"enabled": false
+	},
+	"workers_dev": false,
+	"preview_urls": false,
+	"routes": [
+		{
+			"custom_domain": true,
+			"pattern": "baseconfig.pherus.org"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "74165d1466c74e17a4b41470f956de49",
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "D1",
+			"database_name": "baseconfig",
+			"database_id": "61c58069-8c86-4d5a-8686-a3e75224b9d4",
+			"migrations_dir": "./.migrations",
+			"migrations_pattern": "./.migrations/*/migration.sql",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2",
+			"bucket_name": "baseconfig",
+		},
+	],
 }

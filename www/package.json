@@ -10,8 +10,8 @@
 		"preview": "vite preview --port=3000",
 		"test": "playwright test",
 		"type-gen": "wrangler types --env-interface Env",
-		"local": "bun x base gen --local",
-		"remote": "bun x base gen --remote"
+		"local": "bun x base gen --d1=baseconfig --local",
+		"remote": "bun x base gen --d1=baseconfig --remote"
 	},
 	"dependencies": {
 		"@baseconfig/core": "workspace:*",
@@ -52,6 +52,6 @@
 		"drizzle-kit": "1.0.0-rc.4",
 		"typescript": "^5.9.3",
 		"vite": "^8",
-		"wrangler": "^4.118.0"
+		"wrangler": "^4.119.0"
 	}
 }

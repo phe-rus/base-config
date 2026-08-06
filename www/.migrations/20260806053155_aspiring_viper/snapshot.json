@@ -1,17 +1,29 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "fdb2a3b5-f3d4-47c0-ae75-83cfb9339386",
+  "id": "3c0875ea-e918-4894-a140-565fb7255829",
   "prevIds": [
-    "65046f19-2c12-4e73-9f6a-4b7c770ab4d7"
+    "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
+    {
+      "name": "cn-category",
+      "entityType": "tables"
+    },
     {
       "name": "cn-docs",
       "entityType": "tables"
     },
     {
       "name": "cn-keywords",
+      "entityType": "tables"
+    },
+    {
+      "name": "cn-pages",
+      "entityType": "tables"
+    },
+    {
+      "name": "cn-topbar",
       "entityType": "tables"
     },
     {
@@ -29,6 +41,26 @@
     {
       "name": "verification",
       "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'{}'",
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "cn-category"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "cn-category"
     },
     {
       "type": "text",
@@ -119,6 +151,96 @@
       "name": "updatedAt",
       "entityType": "columns",
       "table": "cn-keywords"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "cn-pages"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "cn-pages"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slug",
+      "entityType": "columns",
+      "table": "cn-pages"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "cn-pages"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'{}'",
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "cn-pages"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "cn-pages"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "cn-pages"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'{}'",
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "cn-topbar"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "cn-topbar"
     },
     {
       "type": "text",
@@ -555,8 +677,17 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "cn-posts_pk",
+      "name": "cn-docs_pk",
       "table": "cn-docs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "cn-pages_pk",
+      "table": "cn-pages",
       "entityType": "pks"
     },
     {
@@ -608,6 +739,20 @@
       "name": "idx_docs_slug",
       "entityType": "indexes",
       "table": "cn-docs"
+    },
+    {
+      "columns": [
+        {
+          "value": "slug",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_pages_slug",
+      "entityType": "indexes",
+      "table": "cn-pages"
     },
     {
       "columns": [
@@ -688,7 +833,5 @@
       "table": "user"
     }
   ],
-  "renames": [
-    "cn-posts->cn-docs"
-  ]
+  "renames": []
 }

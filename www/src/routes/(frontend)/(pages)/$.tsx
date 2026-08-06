@@ -31,7 +31,7 @@ function RouteComponent() {
 
 	if (!page) {
 		return (
-			<article className='flex flex-col gap-5 mx-auto'>
+			<article className='container flex flex-col my-auto mx-auto'>
 				<h1 className='text-3xl font-bold'>Page not found</h1>
 				<p>
 					The page <code>/{_splat}</code> does not exist.

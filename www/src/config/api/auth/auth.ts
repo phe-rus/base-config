@@ -1,22 +1,15 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter/relations-v2'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
-import { betterAuth } from 'better-auth/minimal'
 import * as authSchema from '../../../../db/schemas/users'
+import { betterAuth } from 'better-auth/minimal'
 import type { User } from 'better-auth/types'
-import { admin } from 'better-auth/plugins'
 import { env } from '@/config/api/lib/envs'
-// Relative, not `@db/db`: the standalone `bun x auth@rc generate` CLI
-// loads this file via its own module loader (jiti), which doesn't resolve
-// tsconfig `paths` the way Vite does; a relative import here works
-// regardless of which tool is loading the file.
+import { admin } from 'better-auth/plugins'
 import { authdb } from '../../../../db/db'
+import { password } from './password'
 
 const isProd = env.ENVIRONMENT === 'production'
 
-// Bring your own real email provider here (Resend, Cloudflare Email, SMTP,
-// whatever); this package ships no default implementation, deliberately.
-// See @baseconfig/plugin-form-builder's own `handleEmail` doc comment for
-// the same reasoning applied to form-submission emails.
 const handleEmail = (
 	kind: 'Email verification' | 'Password reset' | 'Delete account',
 	payload: { url?: string; token?: string; user: User }
@@ -36,8 +29,6 @@ export const auth = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-				// The very first account created becomes admin automatically;
-				// still the only bootstrap-admin path.
 				before: async (user, ctx) => {
 					const adapter = ctx?.context?.adapter
 					let role: 'admin' | 'user' = 'user'
@@ -54,6 +45,7 @@ export const auth = betterAuth({
 		enabled: true,
 		minPasswordLength: 8,
 		requireEmailVerification: false,
+		password: password,
 		sendResetPassword: async ({ user, url, token }) => {
 			handleEmail('Password reset', { url, token, user })
 		}

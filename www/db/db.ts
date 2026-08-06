@@ -10,7 +10,7 @@ import { env } from '@/config/api/lib/envs'
 // tables, see @baseconfig/core's own "Database"/"Content persistence" docs
 // for why (content tables are `cn`-prefixed, so there's no collision risk).
 
-export const authdb = drizzle(env.DB, {
+export const authdb = drizzle(env.D1, {
 	logger: false,
 	relations: {
 		...authRelations
@@ -19,4 +19,4 @@ export const authdb = drizzle(env.DB, {
 
 // No `relations`, @baseconfig/core's query layer is raw SQL against
 // dynamically-resolved table names, not Drizzle's relational query builder.
-export const contentdb = drizzle(env.DB, { logger: false })
+export const contentdb = drizzle(env.D1, { logger: false })
