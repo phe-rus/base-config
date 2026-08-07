@@ -15,7 +15,7 @@ export const revalidateTopbar: CollectionAfterChangeHook<Topbar> = async ({
 
 	const docPaths = docsResult.docs
 		.filter((doc) => doc.slug)
-		.map((doc) => `/docs?slug=${doc.slug}`)
+		.map((doc) => `/docs/${doc.slug}`)
 	const pagePaths = pagesResult.docs
 		.filter((page) => page.slug)
 		.map((page) => (page.slug === 'home' ? '/' : `/${page.slug}`))

@@ -11,7 +11,7 @@ export const revalidateCategory: CollectionAfterChangeHook<Category> = async ({
 	const { docs } = await find('docs', { publishedOnly: true, limit: 1000 })
 	const docPaths = docs
 		.filter((doc) => doc.slug)
-		.map((doc) => `/docs?slug=${doc.slug}`)
+		.map((doc) => `/docs/${doc.slug}`)
 
 	await purgeEdgeCache(origin, ['/docs', '/docs/', ...docPaths])
 }

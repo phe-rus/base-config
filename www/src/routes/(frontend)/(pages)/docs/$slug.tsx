@@ -6,13 +6,14 @@ import {
 } from '@/components/renderers'
 import { createFileRoute } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/(frontend)/(pages)/docs/')({
-	loader: ({ context }) => loadDocsPage(context, undefined),
+export const Route = createFileRoute('/(frontend)/(pages)/docs/$slug')({
+	loader: ({ context, params }) => loadDocsPage(context, params.slug),
 	head: ({ loaderData }) => docsPageHead(loaderData?.activeDoc),
 	pendingComponent: DefaultLoader,
 	component: RouteComponent
 })
 
 function RouteComponent() {
-	return <DocsPageContent slug={undefined} />
+	const { slug } = Route.useParams()
+	return <DocsPageContent slug={slug} />
 }

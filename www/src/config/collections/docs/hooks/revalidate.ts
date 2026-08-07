@@ -14,10 +14,10 @@ export const revalidateDocs: CollectionAfterChangeHook<Docs> = async ({
 	if (!origin) return
 
 	await purgeEdgeCache(origin, ['/docs', '/docs/'])
-	if (slug) await purgeEdgeCache(origin, [`/docs?slug=${slug}`])
+	if (slug) await purgeEdgeCache(origin, [`/docs/${slug}`])
 
 	if (operation === 'update' && previousSlug && previousSlug !== slug) {
-		await purgeEdgeCache(origin, [`/docs?slug=${previousSlug}`])
+		await purgeEdgeCache(origin, [`/docs/${previousSlug}`])
 	}
 }
 
@@ -28,5 +28,5 @@ export const revalidateDocsDelete: CollectionAfterDeleteHook<Docs> = async ({
 	if (!origin) return
 
 	await purgeEdgeCache(origin, ['/docs', '/docs/'])
-	if (slug) await purgeEdgeCache(origin, [`/docs?slug=${slug}`])
+	if (slug) await purgeEdgeCache(origin, [`/docs/${slug}`])
 }

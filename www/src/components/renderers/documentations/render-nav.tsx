@@ -57,8 +57,8 @@ export function RenderNav({ nodes, depth = 0, activeSlug }: RenderNavProps) {
 				return (
 					<div key={item.id}>
 						<Link
-							to='/docs'
-							search={{ slug: item.slug ?? undefined }}
+							to='/docs/$slug'
+							params={{ slug: item.slug ?? '' }}
 							className={cn(
 								'flex items-center gap-1 truncate pl-1 transition-colors',
 								depth > 0 ? 'text-muted-foreground' : 'text-foreground'

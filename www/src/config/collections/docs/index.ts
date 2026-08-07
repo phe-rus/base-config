@@ -5,15 +5,6 @@ import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { revalidateDocs, revalidateDocsDelete } from './hooks/revalidate'
 import { stampAuthor } from './hooks/stamp-author'
 
-// `<'docs'>` is explicit here on purpose: `defineCollection`'s own `TSlug`
-// inference can't reach into `hooks.beforeChange`'s own parameter type from
-// just `slug: 'docs'` (a real TS limitation, generic inference doesn't
-// flow into a contravariant callback-parameter position through a
-// conditional type like `GeneratedCollectionDoc<TSlug>`, confirmed
-// empirically: without this, `data` silently widens to
-// `Partial<Record<string, unknown>>`, the exact untyped shape this generic
-// exists to replace). Naming the slug explicitly is what actually gets
-// `data`/`ctx.user` typed against the real generated `Docs` interface below.
 export const docs: CollectionConfig = defineCollection<'docs'>({
 	slug: 'docs',
 	path: 'docx',
@@ -24,15 +15,7 @@ export const docs: CollectionConfig = defineCollection<'docs'>({
 		delete: authenticated
 	},
 	admin: {
-		// Labels come from each field's own config (`category`'s own `label`
-		// below is "Category"), `CollectionTable` also auto-detects
-		// `category` as array-valued from the real row data and gives it a
-		// checkbox-list quick filter for free (`@baseconfig/ui`'s
-		// `DataTable`).
 		defaultColumns: ['title', 'category', 'slug'],
-		// Docs sharing a category end up next to each other in the table (no
-		// section headers, same flat table, see `admin.groupBy`'s own doc
-		// comment, @baseconfig/core).
 		groupBy: 'category'
 	},
 	tabs: [
