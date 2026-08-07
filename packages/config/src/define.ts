@@ -394,7 +394,13 @@ export function baseConfig(config: BaseConfigProps): BaseConfigProps {
 	const apiOrigin =
 		typeof window !== 'undefined' ? window.location.origin : config.hostDomain
 	const client = hc<BaseConfigRouteType>(`${apiOrigin}/api`, {
-		init: { credentials: 'include' }
+		init: { credentials: 'include' },
+		...(config.fetcher
+			? {
+					fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+						config.fetcher!.fetch(input, init)
+				}
+			: {})
 	})
 
 	registerContentDataSource({

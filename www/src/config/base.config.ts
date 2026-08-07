@@ -11,8 +11,13 @@ import { pages } from './collections/pages'
 import { topbar } from './globals/topbar'
 import { category } from './globals/catagory'
 
+const fetcher = import.meta.env.SSR
+	? (await import('cloudflare:workers')).env.SELF
+	: undefined
+
 export default baseConfig({
 	hostDomain: getBaseURL(),
+	fetcher: fetcher,
 	queryClient: getContext(),
 	offlineFirst: true,
 	auth: authClient,

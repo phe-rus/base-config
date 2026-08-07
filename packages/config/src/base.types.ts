@@ -526,6 +526,29 @@ export type BaseConfigProps = {
 	 * there's no `window` to ask.
 	 */
 	hostDomain: string
+	/**
+	 * A same-thread, no-network stand-in for `fetch()` this package's own
+	 * `/api/*` RPC client (`define.ts`'s `baseConfig()`) uses instead of a
+	 * real outbound request whenever one is provided, e.g. a Cloudflare
+	 * Service binding to this exact Worker (`env.SELF`, once
+	 * `wrangler.jsonc` declares `services: [{binding: "SELF", service:
+	 * "<this worker's own name>"}]`). Server-side only (a browser's own
+	 * `fetch` back to `window.location.origin` is already same-origin and
+	 * reliable, see `hostDomain`'s own doc comment above): a consumer's
+	 * server entry reads its binding and passes it here, guarded so it's
+	 * never bundled or referenced client-side, exact shape depends on the
+	 * runtime a consumer's server entry actually is.
+	 *
+	 * Exists because a Worker's own `fetch()` back to its own public custom
+	 * domain isn't reliable, confirmed via a real production incident
+	 * (`error code: 522`, and separately an HTML SPA-fallback body, coming
+	 * back in place of JSON) entirely independent of the same `/api/*` route
+	 * working fine for a normal, non-self, external request. Omit this and
+	 * nothing changes from this package's previous behavior.
+	 */
+	fetcher?: {
+		fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+	}
 	config: AdminSettings
 	collections: CollectionConfig[]
 	globals: GlobalConfig[]

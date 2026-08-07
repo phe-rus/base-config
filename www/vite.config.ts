@@ -11,14 +11,13 @@ import { baseConfigAuto } from '@baseconfig/core/vite'
 export default defineConfig(({ command }) => {
 	const dev = command === 'serve'
 	return {
+		server: {
+			cors: false
+		},
 		resolve: {
 			alias: {
 				'@': path.resolve(import.meta.dirname, './src'),
 				'@db': path.resolve(import.meta.dirname, './db'),
-				// In dev, resolve the workspace libraries straight to their
-				// source so edits apply live via HMR, with no rebuild step in
-				// the loop (which previously churned dist and reset the dev
-				// server's connections on every edit).
 				...(dev
 					? {
 							'@baseconfig/core': path.resolve(
