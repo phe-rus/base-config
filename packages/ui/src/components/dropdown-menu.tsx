@@ -46,26 +46,6 @@ function DropdownMenuContent({
 	)
 }
 
-function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
-	return <MenuPrimitive.Group data-slot='dropdown-menu-group' {...props} />
-}
-
-function DropdownMenuLabel({
-	className,
-	...props
-}: MenuPrimitive.GroupLabel.Props) {
-	return (
-		<MenuPrimitive.GroupLabel
-			data-slot='dropdown-menu-label'
-			className={cn(
-				'px-2 py-1.5 text-xs font-medium text-muted-foreground',
-				className
-			)}
-			{...props}
-		/>
-	)
-}
-
 function DropdownMenuItem({
 	className,
 	variant = 'default',
@@ -100,9 +80,7 @@ function DropdownMenuSeparator({
 export {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuGroup,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger
 }

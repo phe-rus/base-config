@@ -199,6 +199,7 @@ function fieldTypeSource(
 		case 'textarea':
 		case 'date':
 		case 'select':
+		case 'combobox':
 		case 'radio':
 		case 'password':
 		case 'confirmPassword':

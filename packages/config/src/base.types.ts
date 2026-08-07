@@ -4,7 +4,11 @@ import type { z } from 'zod'
 import type { BlockConfig } from './collections/blocks/shared/types'
 import type { BetterAuthAdminClient } from './db/collections'
 import type { EndpointFactory } from './api/content-route'
-import type { WhereCondition } from './db/content-queries'
+import type {
+	DocumentRow,
+	PaginatedResult,
+	WhereCondition
+} from './db/content-queries'
 import type { FieldConfig, TabConfig } from './fields/types'
 
 // `@baseconfig/core`'s own root shape, independent of any one consumer's actual
@@ -54,11 +58,53 @@ export type HookRequestContext = Record<string, unknown>
  * `collections/fields/Relationship/index.tsx`'s own doc comment), a
  * `beforeChange` hook that wants to stamp e.g. `data.authorId = req.user?.id`
  * onto a plain field is the current way to record who authored something.
+ *
+ * `find` is a small, read-only query capability, Payload's own hooks get
+ * this for free via `req.payload.find(...)` (https://payloadcms.com/docs/hooks/overview#accessing-other-collections),
+ * the exact thing an `afterChange` hook needs to purge a page-level cache
+ * that depends on *other* documents too, e.g. a site-wide nav global
+ * needing every currently-published page's own URL, not just its own. Reads
+ * straight through this package's own `listDocuments` (`db/content-queries.ts`)
+ * against the same `db` the write itself is already running against, no
+ * separate client, no binding beyond what `content-operations.ts` already
+ * has in scope at every hook call site. Read-only on purpose (no
+ * `create`/`update`/`delete` here): a hook mutating a *different* document
+ * mid-write is a real footgun (ordering, re-entrancy) this package doesn't
+ * take a position on yet, `find` alone covers every real use case seen so
+ * far without opening that door.
  */
+export type HookFindOptions = {
+	where?: WhereCondition
+	/** Restricts to `status: 'published'`, same meaning as `content-queries.ts`'s own `ReadOptions['publishedOnly']`, the direct way to scope out drafts a public-facing hook (e.g. a cache purge) should never see. */
+	publishedOnly?: boolean
+	limit?: number
+	page?: number
+}
+export type HookFind = (
+	collection: string,
+	options?: HookFindOptions
+) => Promise<PaginatedResult<DocumentRow>>
+
 export type HookArgs<TUser = AccessUser> = {
 	collection: string
 	context: HookRequestContext
 	req: { user?: TUser | null }
+	find: HookFind
+	/**
+	 * The public origin (`https://example.com`, no path) of the request that
+	 * triggered this hook, straight off that request's own URL
+	 * (`content-route.ts`'s route handlers all have one). Exists specifically
+	 * so a hook can build an absolute URL, e.g. to purge a specific page from
+	 * an edge cache (`purgeEdgeCache`, `api/edge-cache.ts`) without a
+	 * consumer having to hardcode its own production origin into every hook
+	 * (or worse, into a shared file just to avoid repeating it): using the
+	 * real request's own origin also means this is naturally correct in any
+	 * environment (local dev, preview, production) with zero configuration.
+	 * `undefined` for a Local API call (`api/local-api.ts`): there's no real
+	 * HTTP request to read one off, same reasoning `req.user` is optional
+	 * for the same call path.
+	 */
+	origin?: string
 }
 
 /**
@@ -129,9 +175,18 @@ export type CollectionBeforeChangeHook<
  * Runs once a create/update has actually happened, given the resulting row,
  * Payload's own `afterChange` (https://payloadcms.com/docs/hooks/collections#afterchange).
  * Side-effects only (recomputing a derived value on a *different* document,
- * syncing to an external system, ...), still isomorphic-safe as long as it
- * only calls back into this package's own data layer, never a binding (see
- * `CollectionHooks`' own top-of-file note on that boundary).
+ * syncing to an external system, purging a page-level edge cache by the
+ * document's own public URL, ...), still isomorphic-safe as long as it only
+ * calls back into this package's own data layer, never a binding (see
+ * `CollectionHooks`' own top-of-file note on that boundary). `id`/`slug` are
+ * passed alongside `doc` (which is only ever the document's field-level
+ * `data` blob, see `db/CLAUDE.md`'s "one real SQL table per collection" note
+ * on why those live in separate top-level columns, not inside `data`)
+ * specifically so a hook can identify *which* document changed without a
+ * second read back through this package's own data layer. Both are
+ * `undefined` for a global write (`performUpsertGlobal`): a global has no
+ * document id, and is already fully identified by `collection` (its own
+ * slug).
  */
 export type CollectionAfterChangeHook<
 	TDoc = Record<string, unknown>,
@@ -139,9 +194,13 @@ export type CollectionAfterChangeHook<
 > = (
 	args: HookArgs<TUser> & {
 		operation: 'create' | 'update'
+		id?: string
+		slug?: string | null
 		doc: Partial<TDoc>
 		/** The document before changes were applied. `undefined` on a create, there's no "previous" version yet. */
 		previousDoc?: TDoc
+		/** The document's own `slug` before changes were applied, `undefined` on a create. Present even when unchanged; compare against `slug` to detect a rename (e.g. to also purge the old URL from a page-level cache). */
+		previousSlug?: string | null
 	}
 ) => void | Promise<void>
 
@@ -199,13 +258,20 @@ export type CollectionBeforeDeleteHook<TUser = AccessUser> = (
  * `doc` is the row as it was *right before* deletion (`content-operations.ts`'s
  * `performDelete` fetches it first, but only when `afterDelete` is actually
  * registered, no wasted read otherwise), since there's nothing left to read
- * once the row is actually gone. Side-effects only, return value discarded.
+ * once the row is actually gone. `slug` is the same pre-deletion value, for
+ * the same reason `CollectionAfterChangeHook` carries it, identifying the
+ * document's own public URL without a second read. Side-effects only, return
+ * value discarded.
  */
 export type CollectionAfterDeleteHook<
 	TDoc = Record<string, unknown>,
 	TUser = AccessUser
 > = (
-	args: HookArgs<TUser> & { id: string; doc: Partial<TDoc> }
+	args: HookArgs<TUser> & {
+		id: string
+		slug?: string | null
+		doc: Partial<TDoc>
+	}
 ) => void | Promise<void>
 
 /**

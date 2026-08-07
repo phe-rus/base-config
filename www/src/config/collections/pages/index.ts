@@ -1,7 +1,8 @@
 import type { CollectionConfig } from '@baseconfig/core/collections/types'
 import { defineCollection } from '@baseconfig/core'
-import { authenticated } from '../access/authenticated'
-import { authenticatedOrPublished } from '../access/authenticatedOrPublished'
+import { authenticated } from '../../access/authenticated'
+import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
+import { revalidatePage, revalidatePageDelete } from './hooks/revalidate'
 
 export const pages: CollectionConfig = defineCollection({
 	slug: 'pages',
@@ -59,5 +60,9 @@ export const pages: CollectionConfig = defineCollection({
 			label: 'Metadata',
 			fields: [{ name: 'metadata', type: 'meta' }]
 		}
-	]
+	],
+	hooks: {
+		afterChange: [revalidatePage],
+		afterDelete: [revalidatePageDelete]
+	}
 })

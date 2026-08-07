@@ -2,7 +2,7 @@
 
 The engine behind [baseConfig](https://github.com/phe-rus/baseconfig), a config-driven CMS engine for TanStack Start, built edge-first for one Cloudflare Worker. This package owns the field vocabulary, the schema deriver, D1-backed content persistence, the Hono API layer, and the full admin UI shell.
 
-See the [main repo README](https://github.com/phe-rus/baseconfig#readme) for screenshots, the full feature list, and the roadmap. See [`CLAUDE.md`](https://github.com/phe-rus/baseconfig/blob/main/config/CLAUDE.md) for the deep internals.
+See the [main repo README](https://github.com/phe-rus/baseconfig#readme) for screenshots, the full feature list, and the roadmap. See [`CLAUDE.md`](https://github.com/phe-rus/baseconfig/blob/main/packages/config/CLAUDE.md) for the deep internals.
 
 ## Install
 
@@ -19,7 +19,11 @@ import { baseConfig, defineCollection, defineGlobal } from '@baseconfig/core'
 const posts = defineCollection({
 	slug: 'posts',
 	tabs: [
-		{ id: 'content', fields: [{ type: 'text', name: 'title' }, { type: 'richtext', name: 'body' }] }
+		{
+			tab: 'content',
+			label: 'Content',
+			fields: [{ type: 'text', name: 'title' }, { type: 'richtext', name: 'body' }]
+		}
 	]
 })
 

@@ -171,6 +171,7 @@ function baseFieldSchema(
 		}
 		case 'date':
 		case 'select':
+		case 'combobox':
 		case 'radio':
 		case 'password':
 		case 'confirmPassword':
@@ -350,23 +351,6 @@ export function tabsToSchema(
 	resolvers: FieldSchemaResolvers = {}
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
 	return fieldsToSchema(flattenTabFields(tabs), resolvers)
-}
-
-/**
- * Whether any top-level field in this list is positioned into the sidebar
- * column (`admin.position === 'sidebar'`, see `BaseFieldConfig['admin']`,
- * `fields/types.ts`). Only top-level fields participate: the renderer's
- * sidebar split happens once, at the tab-content level, so a `sidebar` flag
- * buried inside a `row`/`group`'s own `fields` is ignored (only a named
- * field has `admin` at all, see `isContainerFieldType`). A form uses this to
- * widen its own single-column wrapper (`md:max-w-lg`) into the full section
- * width when any field needs the second column, so the sidebar isn't crushed
- * into 280px squeezed against a 512px main column.
- */
-export function hasSidebarFields(fields: FieldConfig<any, any>[]): boolean {
-	return fields.some(
-		(field) => 'admin' in field && field.admin?.position === 'sidebar'
-	)
 }
 
 /**

@@ -1,14 +1,16 @@
 import type {
 	AccessArgs,
 	CollectionAccess,
-	CollectionHooks,
 	GlobalAccess,
+	HookFind,
+	CollectionHooks,
 	HookRequestContext
 } from '../base.types'
 import {
 	createDocument,
 	deleteDocument,
 	getDocument,
+	listDocuments,
 	pruneDocument,
 	pruneGlobal,
 	updateDocument,
@@ -22,6 +24,17 @@ import type {
 	UpdateDocumentInput,
 	WhereCondition
 } from './content-queries'
+
+/** Builds the `find` every hook gets, see `HookArgs['find']`'s own doc comment (`base.types.ts`) for why. One per operation, closed over the same `db` the write itself runs against. Exported so `content-route.ts` can build the same thing for the hook types it calls directly (`beforeOperation`/`afterOperation`/`beforeRead`/`afterRead`/`afterError`), not just the write-path ones in this file. */
+export function buildHookFind(db: ContentDatabase): HookFind {
+	return (collection, options) =>
+		listDocuments(db, collection, {
+			where: options?.where,
+			publishedOnly: options?.publishedOnly,
+			limit: options?.limit,
+			page: options?.page
+		})
+}
 
 /**
  * Thrown by every write operation below when `overrideAccess` isn't set and
@@ -105,6 +118,8 @@ export type WriteContext<TUser> = {
 	overrideAccess?: boolean
 	/** Shared per-operation context threaded into every hook this write triggers, see `HookRequestContext`'s own doc comment. A caller that also runs `beforeOperation`/`afterOperation` around this same operation (`content-route.ts` does) passes the *same* object instance here, so a value one of those hooks wrote is visible to `beforeChange`/`afterChange` too. Defaults to a fresh `{}` when omitted. */
 	context?: HookRequestContext
+	/** See `HookArgs['origin']`'s own doc comment (`base.types.ts`). `content-route.ts` passes the triggering request's own origin; omitted entirely by `api/local-api.ts`, which has no request to read one off. */
+	origin?: string
 }
 
 async function checkWriteAccess<TUser>(
@@ -124,14 +139,20 @@ export async function performCreate<TUser>(
 	collection: string,
 	input: CreateDocumentInput,
 	collectionAccess: CollectionAccess<TUser> | undefined,
-	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
+	{ hooks, user, overrideAccess, context = {}, origin }: WriteContext<TUser>
 ): Promise<DocumentRow> {
 	await checkWriteAccess(
 		collectionAccess?.create,
 		{ req: { user }, data: input.data },
 		overrideAccess
 	)
-	const base = { collection, context, req: { user } } as const
+	const base = {
+		collection,
+		context,
+		req: { user },
+		find: buildHookFind(db),
+		origin
+	}
 	let data: Record<string, unknown> = input.data
 	for (const hook of hooks?.beforeValidate ?? []) {
 		data = await hook({ ...base, operation: 'create', data })
@@ -141,7 +162,13 @@ export async function performCreate<TUser>(
 	}
 	const row = await createDocument(db, collection, { ...input, data })
 	for (const hook of hooks?.afterChange ?? []) {
-		await hook({ ...base, operation: 'create', doc: row.data })
+		await hook({
+			...base,
+			operation: 'create',
+			id: row.id,
+			slug: row.slug,
+			doc: row.data
+		})
 	}
 	return row
 }
@@ -152,7 +179,7 @@ export async function performUpdate<TUser>(
 	id: string,
 	input: UpdateDocumentInput,
 	collectionAccess: CollectionAccess<TUser> | undefined,
-	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
+	{ hooks, user, overrideAccess, context = {}, origin }: WriteContext<TUser>
 ): Promise<DocumentRow | undefined> {
 	await checkWriteAccess(
 		collectionAccess?.update,
@@ -169,7 +196,13 @@ export async function performUpdate<TUser>(
 		hooks?.afterChange?.length
 			? await getDocument(db, collection, id)
 			: undefined
-	const base = { collection, context, req: { user } } as const
+	const base = {
+		collection,
+		context,
+		req: { user },
+		find: buildHookFind(db),
+		origin
+	}
 	let fields: Record<string, unknown> | undefined = input.fields
 	if (fields) {
 		for (const hook of hooks?.beforeValidate ?? []) {
@@ -195,8 +228,11 @@ export async function performUpdate<TUser>(
 			await hook({
 				...base,
 				operation: 'update',
+				id: row.id,
+				slug: row.slug,
 				doc: row.data,
-				previousDoc: originalDoc?.data
+				previousDoc: originalDoc?.data,
+				previousSlug: originalDoc?.slug
 			})
 		}
 	}
@@ -208,14 +244,20 @@ export async function performDelete<TUser>(
 	collection: string,
 	id: string,
 	collectionAccess: CollectionAccess<TUser> | undefined,
-	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
+	{ hooks, user, overrideAccess, context = {}, origin }: WriteContext<TUser>
 ): Promise<void> {
 	await checkWriteAccess(
 		collectionAccess?.delete,
 		{ req: { user }, id },
 		overrideAccess
 	)
-	const base = { collection, context, req: { user } } as const
+	const base = {
+		collection,
+		context,
+		req: { user },
+		find: buildHookFind(db),
+		origin
+	}
 	for (const hook of hooks?.beforeDelete ?? []) {
 		await hook({ ...base, id })
 	}
@@ -227,7 +269,7 @@ export async function performDelete<TUser>(
 	await deleteDocument(db, collection, id)
 	if (existing) {
 		for (const hook of hooks?.afterDelete ?? []) {
-			await hook({ ...base, id, doc: existing.data })
+			await hook({ ...base, id, slug: existing.slug, doc: existing.data })
 		}
 	}
 }
@@ -254,14 +296,20 @@ export async function performUpsertGlobal<TUser>(
 	slug: string,
 	fields: Record<string, unknown>,
 	globalAccess: GlobalAccess<TUser> | undefined,
-	{ hooks, user, overrideAccess, context = {} }: WriteContext<TUser>
+	{ hooks, user, overrideAccess, context = {}, origin }: WriteContext<TUser>
 ): Promise<GlobalRow> {
 	await checkWriteAccess(
 		globalAccess?.update,
 		{ req: { user }, data: fields },
 		overrideAccess
 	)
-	const base = { collection: slug, context, req: { user } } as const
+	const base = {
+		collection: slug,
+		context,
+		req: { user },
+		find: buildHookFind(db),
+		origin
+	}
 	let changedFields = fields
 	for (const hook of hooks?.beforeValidate ?? []) {
 		changedFields = await hook({

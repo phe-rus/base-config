@@ -9,8 +9,10 @@ export const keywords: GlobalConfig = defineGlobal({
 			name: 'keywords',
 			type: 'array',
 			label: 'Keywords',
-			description:
-				'The shared pool of keywords available everywhere a Keywords field is used (SEO metadata, related-post keyword filters, …) — typing a new one anywhere adds it here too.',
+			admin: {
+				description:
+					'The shared pool of keywords available everywhere a Keywords field is used (SEO metadata, related-post keyword filters, …) — typing a new one anywhere adds it here too.'
+			},
 			fields: [
 				{
 					name: 'label',

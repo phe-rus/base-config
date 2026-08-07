@@ -5,6 +5,7 @@ import { env } from './lib/envs'
 import '@/config/base.config'
 
 const isDevelopment = env.ENVIRONMENT === 'development'
+export const baseApi = createLocalAPI({ db: contentdb })
 
 const app = createHandler({
 	db: contentdb,
@@ -15,11 +16,5 @@ const app = createHandler({
 		kv: env.CACHE
 	}
 })
-
-// In-process content access for server functions/loaders in this same
-// Worker: no HTTP round-trip to the `app` above, see `createLocalAPI`'s own
-// doc comment (`@baseconfig/core/api`). e.g. `await baseApi.find({
-// collection: 'posts', publishedOnly: true })` from a TanStack Start loader.
-export const baseApi = createLocalAPI({ db: contentdb })
 
 export default app

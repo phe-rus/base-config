@@ -10,6 +10,24 @@
 		"binding": "ASSETS",
 		"directory": "./dist/client",
 		"not_found_handling": "single-page-application",
+		// Without this, any request matching a prerendered static file
+		// (`/`, `/docs`, `/docs/`, `/roadmap`, ...) is served straight from
+		// the asset store and never reaches the Worker at all, real, empirically
+		// confirmed: publishing a new doc or editing the topbar/category
+		// globals had zero effect on these pages until the next `bun run
+		// build && bun run deploy` re-baked the static file, completely
+		// bypassing `server.ts`'s own edge-cache/`Cache-Control` logic (and
+		// the purge-on-publish hooks that depend on it, `config/api/revalidate.ts`).
+		// Listed explicitly rather than `true`: hashed JS/CSS/image assets
+		// under `/assets/*` should still be served directly with zero Worker
+		// invocation, only these content/global-backed page routes need to
+		// run fresh every request.
+		"run_worker_first": [
+			"/",
+			"/docs",
+			"/docs/",
+			"/roadmap"
+		],
 	},
 	"placement": {
 		"mode": "smart",

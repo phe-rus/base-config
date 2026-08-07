@@ -10,11 +10,7 @@ import {
 	pruneGlobal
 } from '../../../db/collections'
 import { useDocument } from '../../../db/use-document'
-import {
-	expandFields,
-	// hasSidebarFields,
-	knownFieldPaths
-} from '../../../fields/schema'
+import { expandFields, knownFieldPaths } from '../../../fields/schema'
 import { DocumentHeader } from './document-header'
 
 type GlobalFormProps = {
@@ -63,11 +59,6 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 		defaultValues: config.defaultValues,
 		knownFieldPaths: knownFieldPaths(expandFields(config.fields ?? []))
 	})
-
-	// Same as `CollectionForm`'s own check: any sidebar-positioned field
-	// (`admin.position === 'sidebar'`)? The renderer's flat-fields split puts
-	// those in a right-hand column, the wrapper has to widen first.
-	//const hasSidebar = hasSidebarFields(config.fields ?? [])
 
 	return (
 		<form
@@ -125,12 +116,7 @@ function GlobalEditor({ config, id }: GlobalFormProps) {
 			/>
 
 			<section className='container flex flex-col gap-2 w-full md:max-w-4xl mx-auto'>
-				<div
-					className={cn(
-						'flex flex-col w-full mr-auto md:max-w-lg'
-						// !hasSidebar && 'md:max-w-lg'
-					)}
-				>
+				<div className={cn('flex flex-col w-full mr-auto md:max-w-lg')}>
 					<config.Fields form={form} id={id} />
 				</div>
 			</section>

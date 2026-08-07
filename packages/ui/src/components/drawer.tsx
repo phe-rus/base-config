@@ -57,10 +57,6 @@ function DrawerPortal({ ...props }: DrawerPrimitive.Portal.Props) {
 	return <DrawerPrimitive.Portal data-slot='drawer-portal' {...props} />
 }
 
-function DrawerClose({ ...props }: DrawerPrimitive.Close.Props) {
-	return <DrawerPrimitive.Close data-slot='drawer-close' {...props} />
-}
-
 function DrawerOverlay({
 	className,
 	...props
@@ -216,7 +212,6 @@ export {
 	DrawerOverlay,
 	DrawerSwipeHandle,
 	DrawerTrigger,
-	DrawerClose,
 	DrawerContent,
 	DrawerHeader,
 	DrawerFooter,

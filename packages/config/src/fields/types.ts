@@ -139,6 +139,14 @@ export type SelectFieldConfig = BaseFieldConfig & {
 	options: SelectOption[]
 }
 
+/** Same value shape as `select` (a single option out of a fixed list), rendered as a searchable combobox instead of a plain dropdown (`@baseconfig/ui/forms`'s `Combobox`), for a list long enough that typing to filter beats scrolling. */
+export type ComboboxFieldConfig = BaseFieldConfig & {
+	type: 'combobox'
+	options: SelectOption[]
+	/** Shown when no option matches the current search text. Default "No results found." */
+	emptyLabel?: string
+}
+
 export type RadioFieldConfig = BaseFieldConfig & {
 	type: 'radio'
 	options: SelectOption[]
@@ -435,6 +443,7 @@ export type FieldConfig<
 	| KeywordsFieldConfig
 	| UploadFieldConfig
 	| SelectFieldConfig
+	| ComboboxFieldConfig
 	| RadioFieldConfig
 	| EmailFieldConfig
 	| NumberFieldConfig

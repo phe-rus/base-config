@@ -1,5 +1,6 @@
 import type { GlobalConfig } from '@baseconfig/core/collections/types'
 import { defineGlobal } from '@baseconfig/core'
+import { revalidateTopbar } from './hooks/revalidate'
 
 export const topbar: GlobalConfig = defineGlobal({
 	slug: 'topbar',
@@ -15,5 +16,8 @@ export const topbar: GlobalConfig = defineGlobal({
 					'Simple links, a single dropdown list, or a full multi-column mega menu.'
 			}
 		}
-	]
+	],
+	hooks: {
+		afterChange: [revalidateTopbar]
+	}
 })

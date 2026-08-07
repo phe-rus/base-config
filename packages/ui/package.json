@@ -46,10 +46,6 @@
 			"types": "./dist/tables/index.d.ts",
 			"default": "./dist/tables/index.js"
 		},
-		"./image": {
-			"types": "./dist/image/index.d.ts",
-			"default": "./dist/image/index.js"
-		},
 		"./components/*": {
 			"types": "./dist/components/*.d.ts",
 			"default": "./dist/components/*.js"

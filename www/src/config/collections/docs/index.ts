@@ -1,7 +1,9 @@
 import type { CollectionConfig } from '@baseconfig/core/collections/types'
 import { defineCollection } from '@baseconfig/core'
-import { authenticated } from '../access/authenticated'
-import { authenticatedOrPublished } from '../access/authenticatedOrPublished'
+import { authenticated } from '../../access/authenticated'
+import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
+import { revalidateDocs, revalidateDocsDelete } from './hooks/revalidate'
+import { stampAuthor } from './hooks/stamp-author'
 
 // `<'docs'>` is explicit here on purpose: `defineCollection`'s own `TSlug`
 // inference can't reach into `hooks.beforeChange`'s own parameter type from
@@ -131,25 +133,9 @@ export const docs: CollectionConfig = defineCollection<'docs'>({
 			fields: [{ name: 'metadata', type: 'meta' }]
 		}
 	],
-	// Stamps `author` with a snapshot of whoever created the document, once,
-	// on create only (an update never overwrites the original author), see
-	// the `author` group field's own description above for why a
-	// denormalized snapshot instead of a real relationship or a bare id.
 	hooks: {
-		beforeChange: [
-			({ operation, data, req }) => {
-				if (operation !== 'create' || data.author) return data
-				if (!req.user) return data
-				return {
-					...data,
-					author: {
-						id: req.user.id,
-						name: req.user.name,
-						email: req.user.email,
-						image: req.user.image ?? undefined
-					}
-				}
-			}
-		]
+		beforeChange: [stampAuthor],
+		afterChange: [revalidateDocs],
+		afterDelete: [revalidateDocsDelete]
 	}
 })

@@ -18,7 +18,6 @@ import { Select } from './Select'
 import { Slug } from './Slug'
 import { Switch } from './Switch'
 import { Textarea } from './Textarea'
-import { Media } from './Media'
 import { Upload } from './Upload'
 
 export const fields = {
@@ -39,7 +38,6 @@ export const fields = {
 	Slug,
 	Switch,
 	Textarea,
-	Media,
 	Upload,
 	RichText,
 	ArrayField,

@@ -1,8 +1,8 @@
 # @baseconfig/plugin-form-builder
 
-A real [baseConfig](https://github.com/phe-rus/base-config) plugin, built entirely on its public extension points (`endpointFactories`/`hooks`/`blocks` registration): a `forms`/`form-submissions` collection pair plus a public contact-form block that posts straight to a generated endpoint.
+A real [baseConfig](https://github.com/phe-rus/baseconfig) plugin, built entirely on its public extension points (`endpointFactories`/`hooks`/`blocks` registration): a `forms`/`form-submissions` collection pair plus a public contact-form block that posts straight to a generated endpoint.
 
-See the [main repo README](https://github.com/phe-rus/base-config#readme) for the bigger picture.
+See the [main repo README](https://github.com/phe-rus/baseconfig#readme) for the bigger picture.
 
 ## Install
 

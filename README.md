@@ -98,7 +98,7 @@ All running from the same Cloudflare Worker.
 
 ## Roadmap
 
-- [x] ~19 field types (text, textarea, richtext, checkbox, switch, date, keywords, upload, select, radio, email, number, password, confirmPassword, hidden, code, json, slug, point), plus composite types (array, blocks, relationship, relations, meta, menu, links) and layout-only types (row, collapsible, group, tabs-as-field, ui)
+- [x] ~20 field types (text, textarea, richtext, checkbox, switch, date, keywords, upload, select, combobox, radio, email, number, password, confirmPassword, hidden, code, json, slug, point), plus composite types (array, blocks, relationship, relations, meta, menu, links) and layout-only types (row, collapsible, group, tabs-as-field, ui)
 - [x] Real D1-backed content persistence, one table per collection/global
 - [x] Local-first drafting (edits live in `localStorage` until published)
 - [x] 7 built-in page blocks (richtext, media, cta, banner, grid, code, relatedPosts)

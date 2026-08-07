@@ -1,5 +1,6 @@
 import type { GlobalConfig } from '@baseconfig/core/collections/types'
 import { defineGlobal } from '@baseconfig/core'
+import { revalidateCategory } from './hooks/revalidate'
 
 export const category: GlobalConfig = defineGlobal({
 	slug: 'category',
@@ -25,10 +26,14 @@ export const category: GlobalConfig = defineGlobal({
 					label: 'Order',
 					defaultValue: 0,
 					admin: {
-						description: 'Override the default order of this category in the nav list.'
+						description:
+							'Override the default order of this category in the nav list.'
 					}
 				}
 			]
 		}
-	]
+	],
+	hooks: {
+		afterChange: [revalidateCategory]
+	}
 })

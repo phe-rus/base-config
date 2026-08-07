@@ -15,3 +15,10 @@ export type {
 	TypedLocalDocumentRow,
 	TypedLocalGlobalRow
 } from './local-api'
+export {
+	cacheControlFor,
+	edgeCache,
+	isCacheableRequest,
+	purgeEdgeCache
+} from './edge-cache'
+export type { EdgeCacheOptions } from './edge-cache'

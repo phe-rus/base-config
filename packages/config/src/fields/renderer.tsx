@@ -449,6 +449,18 @@ export function renderField(
 								disabled={field.disabled || field.admin?.readOnly}
 							/>
 						)
+					case 'combobox':
+						return (
+							<f.Combobox
+								label={field.label}
+								description={field.admin?.description}
+								placeholder={field.placeholder}
+								emptyLabel={field.emptyLabel}
+								options={field.options}
+								required={field.required}
+								disabled={field.disabled || field.admin?.readOnly}
+							/>
+						)
 					case 'radio':
 						return (
 							<f.RadioGroup
@@ -697,32 +709,6 @@ export function createFieldsRenderer<
 		}
 
 		const renderTabColumns = (tab: TabConfig<any, any>) => {
-			/*const sidebar = tab.fields.filter(
-				(field) => 'admin' in field && field.admin?.position === 'sidebar'
-			)
-			if (sidebar.length === 0) {
-				return (
-					<>
-						{tab.fields.map((field, index) =>
-							renderTabField(field, index, tab)
-						)}
-					</>
-				)
-			}
-			const main = tab.fields.filter(
-				(field) => !('admin' in field) || field.admin?.position !== 'sidebar'
-			)
-			return (
-				<div className='grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_280px]'>
-					<div className='flex flex-col gap-5'>
-						{main.map((field, index) => renderTabField(field, index, tab))}
-					</div>
-					<aside className='flex flex-col gap-5'>
-						{sidebar.map((field, index) => renderTabField(field, index, tab))}
-					</aside>
-				</div>
-			) ***/
-
 			return (
 				<>
 					{tab.fields.map((field, index) => renderTabField(field, index, tab))}

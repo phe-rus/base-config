@@ -18,7 +18,6 @@ packages/ui/src/
   basiccn/            the tiptap v3 rich text editor, see `src/basiccn/CLAUDE.md`. Exported as `@baseconfig/ui/basiccn` / `@baseconfig/ui/basiccn/preview`.
   forms/              the useAppForm-based form field system, see `src/forms/CLAUDE.md`. Exported as `@baseconfig/ui/forms`.
   tables/             tanstack-table wrapper (DataTable, pagination). Exported as `@baseconfig/ui/tables`.
-  image/              TanstackImage. Exported as `@baseconfig/ui/image`.
 ```
 
 No bare `.` root export, every subpath is explicit (`@baseconfig/ui/forms`, `@baseconfig/ui/basiccn`, etc.). `@baseconfig/ui/components/*` and `@baseconfig/ui/lib/*` are also real exports (for anything that needs a vendored primitive directly), reached indirectly through `@baseconfig/ui/forms` field components in most places, and directly for the admin UI shell.

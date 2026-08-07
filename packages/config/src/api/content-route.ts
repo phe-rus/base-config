@@ -12,6 +12,7 @@ import type {
 } from '../base.types'
 import {
 	AccessDeniedError,
+	buildHookFind,
 	performCreate,
 	performDelete,
 	performPrune,
@@ -358,6 +359,7 @@ export function createContentRoute({
 	endpoints
 }: ContentRouteBindings) {
 	const cache = cacheBinding ? createKVContentCache(cacheBinding) : undefined
+	const find = buildHookFind(db)
 
 	/**
 	 * Shared by both globals routes below (`GET /globals` and
@@ -484,7 +486,7 @@ export function createContentRoute({
 	): Promise<HookRequestContext> {
 		const context: HookRequestContext = {}
 		for (const hook of hooks?.[collection]?.beforeOperation ?? []) {
-			await hook({ collection, context, req: { user }, operation })
+			await hook({ collection, context, req: { user }, operation, find })
 		}
 		return context
 	}
@@ -503,7 +505,8 @@ export function createContentRoute({
 				context,
 				req: { user },
 				operation,
-				result: out
+				result: out,
+				find
 			})) as TResult
 		}
 		return out
@@ -518,7 +521,14 @@ export function createContentRoute({
 	): Promise<Record<string, unknown>> {
 		let out = doc
 		for (const hook of hooks?.[collection]?.beforeRead ?? []) {
-			out = await hook({ collection, context, req: { user }, doc: out, query })
+			out = await hook({
+				collection,
+				context,
+				req: { user },
+				doc: out,
+				query,
+				find
+			})
 		}
 		return out
 	}
@@ -532,7 +542,14 @@ export function createContentRoute({
 	): Promise<Record<string, unknown>> {
 		let out = doc
 		for (const hook of hooks?.[collection]?.afterRead ?? []) {
-			out = await hook({ collection, context, req: { user }, doc: out, query })
+			out = await hook({
+				collection,
+				context,
+				req: { user },
+				doc: out,
+				query,
+				find
+			})
 		}
 		return out
 	}
@@ -584,7 +601,9 @@ export function createContentRoute({
 					context: {},
 					req: { user: c.get('session')?.user },
 					error,
-					result
+					result,
+					find,
+					origin: new URL(c.req.url).origin
 				})
 				if (replacement) result = replacement
 			}
@@ -658,7 +677,8 @@ export function createContentRoute({
 					hooks: hooks?.[slug],
 					user,
 					overrideAccess: false,
-					context
+					context,
+					origin: new URL(c.req.url).origin
 				})
 				await warmGlobalCache(slug, globalAccess, row)
 				const result = await runAfterOperation(slug, 'update', user, context, {
@@ -867,7 +887,8 @@ export function createContentRoute({
 						hooks: hooks?.[collection],
 						user,
 						overrideAccess: false,
-						context
+						context,
+						origin: new URL(c.req.url).origin
 					}
 				)
 				await warmPublicCaches(collection, collectionAccess, row)
@@ -911,7 +932,8 @@ export function createContentRoute({
 						hooks: hooks?.[collection],
 						user,
 						overrideAccess: false,
-						context
+						context,
+						origin: new URL(c.req.url).origin
 					}
 				)
 				if (!row) return c.json({ error: 'Not found' }, 404)
@@ -1019,7 +1041,8 @@ export function createContentRoute({
 				hooks: hooks?.[collection],
 				user,
 				overrideAccess: false,
-				context
+				context,
+				origin: new URL(c.req.url).origin
 			})
 			if (cache) {
 				await cache.delete({ kind: 'document', collection, id })
