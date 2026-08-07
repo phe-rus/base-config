@@ -25,7 +25,6 @@ export const Route = createFileRoute('/sitemap.xml')({
 				const urls = [
 					`${origin}/`,
 					`${origin}/docs`,
-					`${origin}/docs/`,
 					...docs
 						.filter((doc) => doc.slug)
 						.map((doc) => `${origin}/docs/${doc.slug}`),
