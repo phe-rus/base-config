@@ -44,13 +44,6 @@
 			"bucket_name": "baseconfig"
 		},
 	],
-	// Self-reference: lets SSR read its own content (`base.find`/`findGlobal`,
-	// via `baseConfig({fetcher: ...})`, `src/config/base.config.ts`) through
-	// `env.SELF.fetch(...)` instead of a real `fetch()` back to this Worker's
-	// own public custom domain, which Cloudflare doesn't route reliably for a
-	// Worker calling itself (confirmed via a real production 522/`<!DOCTYPE>`
-	// incident). A Service binding is same-thread, no DNS/TLS, no public
-	// network hop at all.
 	"services": [
 		{
 			"binding": "SELF",
