@@ -103,7 +103,14 @@ export const Route = createFileRoute('/(frontend)/(pages)/$')({
 
 function RouteComponent() {
 	const { _splat } = Route.useParams()
-	const { page: pageLoader } = Route.useLoaderData()
+	const { page: initialPage } = Route.useLoaderData()
+	const { data: pageLoader } = useSuspenseQuery({
+		initialData: initialPage ?? undefined,
+		...base.findByID({
+			collection: 'pages',
+			id: initialPage?.id ?? ''
+		})
+	})
 
 	if (!pageLoader) {
 		return (
@@ -116,18 +123,10 @@ function RouteComponent() {
 		)
 	}
 
-	const { data: page } = useSuspenseQuery({
-		initialData: pageLoader ?? undefined,
-		...base.findByID({
-			collection: 'pages',
-			id: pageLoader?.id ?? ''
-		})
-	})
-
 	return (
 		<article className='flex flex-col gap-5 mx-auto'>
 			<Suspense fallback={<DefaultLoader />}>
-				<Renderer data={page.data} />
+				<Renderer data={pageLoader?.data} />
 			</Suspense>
 		</article>
 	)

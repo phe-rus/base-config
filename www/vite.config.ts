@@ -21,15 +21,15 @@ export default defineConfig(({ command }) => {
 				// server's connections on every edit).
 				...(dev
 					? {
-						'@baseconfig/core': path.resolve(
-							import.meta.dirname,
-							'../packages/config/src'
-						),
-						'@baseconfig/ui': path.resolve(
-							import.meta.dirname,
-							'../packages/ui/src'
-						)
-					}
+							'@baseconfig/core': path.resolve(
+								import.meta.dirname,
+								'../packages/config/src'
+							),
+							'@baseconfig/ui': path.resolve(
+								import.meta.dirname,
+								'../packages/ui/src'
+							)
+						}
 					: {})
 			},
 			tsconfigPaths: true

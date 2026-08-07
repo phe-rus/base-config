@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn'
 import stylesheet from '@/styles/globals.css?url'
+import { base } from '@baseconfig/core'
 import { Toaster } from '@baseconfig/ui/components/sonner'
 import { ThemeProvider } from '@baseconfig/ui/themes'
 import type { QueryClient } from '@tanstack/react-query'
@@ -45,6 +46,10 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 			{ rel: 'canonical', href: `${import.meta.env.VITE_ORIGIN}/` }
 		]
 	}),
+	beforeLoad: async ({ context }) => {
+		await context.query.ensureQueryData(base.findGlobal({ slug: 'topbar' }))
+		await context.query.ensureQueryData(base.find({ collection: 'pages' }))
+	},
 	shellComponent: RootDocument
 })
 
